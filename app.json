@@ -6,10 +6,10 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "expo1",
-    "updates": {
-      "url": "https://u.expo.dev/2110727a-634d-414f-84bd-3e946415e7b9",
-      "fallbackToCacheTimeout": 0
-    },
+      "updates": {
+  "url": "https://u.expo.dev/a3a734b6-9f27-4308-b090-5f7524398726",
+  "fallbackToCacheTimeout": 0
+},
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -32,8 +32,6 @@
       "package": "INVENTRA2.W",
       "googleServicesFile": "./google-services.json",
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ]
@@ -93,7 +91,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "2110727a-634d-414f-84bd-3e946415e7b9"
+        "projectId": "a3a734b6-9f27-4308-b090-5f7524398726"
       }
     },
     "runtimeVersion": {
