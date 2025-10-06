@@ -26,7 +26,7 @@ import {
   MediaType,
 } from "react-native-image-picker";
 // IMPORT FOR BARCODE SCANNER
-import { BarCodeScanner } from "expo-barcode-scanner";
+//import { BarCodeScanner } from "expo-barcode-scanner";
 import { auth, db, storage } from "../config/firebaseConfig";
 
 const { width } = Dimensions.get("window");
@@ -146,7 +146,7 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
   // EFFECT: Get Barcode Scanner Permissions
   useEffect(() => {
     const getBarCodeScannerPermissions = async () => {
-      const { status } = await BarCodeScanner.requestPermissionsAsync();
+      // const { status } = await BarCodeScanner.requestPermissionsAsync();
       setHasScannerPermission(status === "granted");
     };
 
@@ -976,11 +976,11 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
 
     return (
       <View style={styles.scannerContainer}>
-        <BarCodeScanner
+        {/* <BarCodeScanner
           // Only call the handler if a code hasn't already been detected
           onBarCodeScanned={scannerScanned ? undefined : handleBarCodeScanned}
           style={StyleSheet.absoluteFillObject}
-        />
+        /> */}
         <View style={styles.scanTargetOverlay}>
           <Text style={styles.scanTargetText}>
             Align the Barcode/SKU within this frame
