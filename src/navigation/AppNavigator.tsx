@@ -7,6 +7,8 @@ import Onboarding1 from "@/app/(Anboarding)/Onboarding1";
 import BusinessSelectionScreen from "@/app/(Auth)/BusinessSelectionScreen";
 import VerificationScreen from "@/app/(Auth)/VerificationScreen";
 import WelcomeScreen from "@/app/(Auth)/WelcomeScreen";
+import Cart from "@/app/(Routes)/Cart";
+import Checkout from "@/app/(Routes)/Checkout";
 import MessagesScreen from "@/app/(Routes)/MessagesScreen";
 import NotificationDetails from "@/app/(Routes)/NotificationDetails";
 import NotificationsScreen from "@/app/(Routes)/NotificationsScreen";
@@ -45,6 +47,8 @@ const AppNavigator = () => {
       <Stack.Screen name="QuickSell" component={QuickSellScreen} />
       <Stack.Screen name="Messages" component={MessagesScreen} />
       <Stack.Screen name="Profile" component={Profile} />
+      <Stack.Screen name="Cart" component={Cart} />
+      <Stack.Screen name="Checkout" component={Checkout} />
       <Stack.Screen name="ProductDetails" component={ProductDetails} />
 
       {/* Main app flow (bottom tabs) */}

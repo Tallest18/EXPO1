@@ -31,6 +31,8 @@ export type AppStackParamList = {
   TotalSummary: undefined;
   NewProduct: undefined;
   QuickSell: undefined;
+  Cart: undefined;
+  Checkout: undefined;
   Messages: undefined;
   SettingsScreen: undefined;
   Profile: { userId: string };

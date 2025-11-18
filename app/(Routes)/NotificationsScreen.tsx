@@ -5,11 +5,9 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useFonts } from "expo-font";
 import {
   collection,
-  // REMOVED: FirebaseFirestoreTypes - Use modular types instead
   onSnapshot,
   orderBy,
   query,
-  // ADDED: QueryDocumentSnapshot for correct modular type usage
   QueryDocumentSnapshot,
 } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
@@ -22,11 +20,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { db } from "../config/firebaseConfig"; // Assuming you have firebaseConfig.ts
+import { db } from "../config/firebaseConfig";
 
-// Define the type for the notification data.
 interface Notification {
-  id: string; // Changed to string to match Firestore document ID
+  id: string;
   type:
     | "low_stock"
     | "out_of_stock"
@@ -42,11 +39,12 @@ interface Notification {
   message: string;
   time: string;
   isRead: boolean;
-  productId?: string; // Changed to string
-  dateAdded: number; // Added for sorting
+  productId?: string;
+  dateAdded: number;
+  actionText?: string; // New field for action text
+  secondaryActionText?: string; // New field for secondary action
 }
 
-// Define the navigation stack parameter list for type safety.
 type RootStackParamList = {
   notifications: undefined;
   notificationDetails: { notification: Notification };
@@ -57,6 +55,38 @@ type NotificationsScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   "notifications"
 >;
+
+// Helper function to group notifications by date
+const groupNotificationsByDate = (notifications: Notification[]) => {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const weekAgo = new Date(today);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+
+  const groups: { [key: string]: Notification[] } = {
+    Today: [],
+    Yesterday: [],
+    "This Week": [],
+  };
+
+  notifications.forEach((notification) => {
+    const notifDate = new Date(notification.dateAdded);
+    const isToday = notifDate.toDateString() === today.toDateString();
+    const isYesterday = notifDate.toDateString() === yesterday.toDateString();
+    const isThisWeek = notifDate > weekAgo && !isToday && !isYesterday;
+
+    if (isToday) {
+      groups.Today.push(notification);
+    } else if (isYesterday) {
+      groups.Yesterday.push(notification);
+    } else if (isThisWeek) {
+      groups["This Week"].push(notification);
+    }
+  });
+
+  return groups;
+};
 
 const NotificationsScreen = () => {
   const navigation = useNavigation<NotificationsScreenNavigationProp>();
@@ -70,7 +100,6 @@ const NotificationsScreen = () => {
   });
 
   useEffect(() => {
-    // Reference to the notifications collection in Firestore
     const notificationsCollection = collection(db, "notifications");
     const notificationsQuery = query(
       notificationsCollection,
@@ -81,16 +110,13 @@ const NotificationsScreen = () => {
       notificationsQuery,
       (snapshot) => {
         const fetchedNotifications: Notification[] = [];
-        snapshot.forEach(
-          // CORRECTED: Use QueryDocumentSnapshot from 'firebase/firestore'
-          (doc: QueryDocumentSnapshot) => {
-            const data = doc.data();
-            fetchedNotifications.push({
-              id: doc.id,
-              ...data,
-            } as Notification);
-          }
-        );
+        snapshot.forEach((doc: QueryDocumentSnapshot) => {
+          const data = doc.data();
+          fetchedNotifications.push({
+            id: doc.id,
+            ...data,
+          } as Notification);
+        });
         setNotifications(fetchedNotifications);
         setLoading(false);
       },
@@ -100,7 +126,6 @@ const NotificationsScreen = () => {
       }
     );
 
-    // Clean up the listener on component unmount
     return () => unsubscribe();
   }, []);
 
@@ -108,37 +133,133 @@ const NotificationsScreen = () => {
     switch (type) {
       case "low_stock":
       case "out_of_stock":
-        return <Feather name="alert-circle" size={24} color="#FF8C42" />;
+        return (
+          <View style={[styles.iconWrapper, { backgroundColor: "#E3F2FD" }]}>
+            <Ionicons name="basket-outline" size={24} color="#2196F3" />
+          </View>
+        );
       case "high_selling":
-        return <Feather name="trending-up" size={24} color="#4CAF50" />;
+        return (
+          <View style={[styles.iconWrapper, { backgroundColor: "#E3F2FD" }]}>
+            <Ionicons name="cart-outline" size={24} color="#2196F3" />
+          </View>
+        );
+      case "zero_sales":
+        return (
+          <View style={[styles.iconWrapper, { backgroundColor: "#E3F2FD" }]}>
+            <Ionicons name="cart-outline" size={24} color="#2196F3" />
+          </View>
+        );
       case "expiry":
-        return <Feather name="calendar" size={24} color="#F59E0B" />;
+        return (
+          <View style={[styles.iconWrapper, { backgroundColor: "#E3F2FD" }]}>
+            <Ionicons name="basket-outline" size={24} color="#2196F3" />
+          </View>
+        );
       case "daily_summary":
       case "weekly_summary":
-        return <Feather name="bar-chart-2" size={24} color="#3B82F6" />;
+        return (
+          <View style={[styles.iconWrapper, { backgroundColor: "#E3F2FD" }]}>
+            <Ionicons name="stats-chart-outline" size={24} color="#2196F3" />
+          </View>
+        );
+      case "expense":
+        return (
+          <View style={[styles.iconWrapper, { backgroundColor: "#E3F2FD" }]}>
+            <Ionicons name="stats-chart-outline" size={24} color="#2196F3" />
+          </View>
+        );
+      case "backup":
+        return (
+          <View style={[styles.iconWrapper, { backgroundColor: "#E8EAF6" }]}>
+            <Ionicons name="settings-outline" size={24} color="#5C6BC0" />
+          </View>
+        );
+      case "app_update":
+        return (
+          <View style={[styles.iconWrapper, { backgroundColor: "#E3F2FD" }]}>
+            <Ionicons name="basket-outline" size={24} color="#2196F3" />
+          </View>
+        );
       default:
-        return <Ionicons name="notifications-outline" size={24} color="#666" />;
+        return (
+          <View style={[styles.iconWrapper, { backgroundColor: "#E3F2FD" }]}>
+            <Ionicons name="notifications-outline" size={24} color="#2196F3" />
+          </View>
+        );
     }
   };
 
-  const renderNotificationItem = ({ item }: { item: Notification }) => (
-    <TouchableOpacity
-      style={[
-        styles.notificationItem,
-        { backgroundColor: item.isRead ? "#F8F9FA" : "#E8F0FF" },
-      ]}
-      onPress={() =>
-        navigation.navigate("notificationDetails", { notification: item })
-      }
-    >
-      <View style={styles.iconContainer}>{getNotificationIcon(item.type)}</View>
-      <View style={styles.textContainer}>
-        <Text style={styles.notificationTitle}>{item.title}</Text>
-        <Text style={styles.notificationMessage}>{item.message}</Text>
-        <Text style={styles.notificationTime}>{item.time}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const getActionText = (type: Notification["type"]) => {
+    switch (type) {
+      case "low_stock":
+      case "out_of_stock":
+        return { primary: "Tap to restock", secondary: "View product page" };
+      case "high_selling":
+        return { primary: "Tap to see product trend", secondary: "" };
+      case "zero_sales":
+        return { primary: "Tap to open sales page", secondary: "" };
+      case "daily_summary":
+        return { primary: "Tap to open Daily Sales Summary", secondary: "" };
+      case "weekly_summary":
+        return {
+          primary: "Tap to view weekly performance graph",
+          secondary: "",
+        };
+      case "expense":
+        return { primary: "Add Expense", secondary: "" };
+      case "expiry":
+        return { primary: "Tap to discount item", secondary: "" };
+      case "backup":
+        return { primary: "Tap to sync", secondary: "" };
+      case "app_update":
+        return { primary: "Tap to update", secondary: "" };
+      default:
+        return { primary: "", secondary: "" };
+    }
+  };
+
+  const renderNotificationItem = ({ item }: { item: Notification }) => {
+    const actions = getActionText(item.type);
+
+    return (
+      <TouchableOpacity
+        style={styles.notificationItem}
+        onPress={() =>
+          navigation.navigate("notificationDetails", { notification: item })
+        }
+      >
+        <View style={styles.iconContainer}>
+          {getNotificationIcon(item.type)}
+        </View>
+        <View style={styles.textContainer}>
+          <View style={styles.headerRow}>
+            <Text style={styles.notificationTitle}>{item.title}</Text>
+            <Text style={styles.notificationTime}>{item.time}</Text>
+          </View>
+          <Text style={styles.notificationMessage}>{item.message}</Text>
+          {(actions.primary || actions.secondary) && (
+            <View style={styles.actionsRow}>
+              {actions.primary && (
+                <Text style={styles.actionText}>{actions.primary}</Text>
+              )}
+              {actions.secondary && (
+                <>
+                  <Text style={styles.actionSeparator}> | </Text>
+                  <Text style={styles.actionText}>{actions.secondary}</Text>
+                </>
+              )}
+            </View>
+          )}
+        </View>
+        {!item.isRead && (
+          <View style={styles.newBadge}>
+            <Text style={styles.newBadgeText}>New</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   if (loading || !fontsLoaded) {
     return (
@@ -149,21 +270,38 @@ const NotificationsScreen = () => {
     );
   }
 
+  const groupedNotifications = groupNotificationsByDate(notifications);
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <View style={styles.headerLeft}>
+          <Ionicons name="notifications" size={32} color="#FFA500" />
+          <Text style={styles.headerTitle}>Notifications</Text>
+        </View>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          {/* CORRECTED: Changed arrow-right to arrow-left for conventional back navigation */}
-          <Feather name="x" size={20} color="black" />
+          <View style={styles.closeButton}>
+            <Feather name="x" size={28} color="#000" />
+          </View>
         </TouchableOpacity>
       </View>
 
       <FlatList
-        data={notifications}
-        keyExtractor={(item) => item.id}
-        renderItem={renderNotificationItem}
+        data={Object.keys(groupedNotifications).filter(
+          (key) => groupedNotifications[key].length > 0
+        )}
+        keyExtractor={(item) => item}
+        renderItem={({ item: sectionTitle }) => (
+          <View>
+            <Text style={styles.sectionHeader}>{sectionTitle}</Text>
+            {groupedNotifications[sectionTitle].map((notification) => (
+              <View key={notification.id}>
+                {renderNotificationItem({ item: notification })}
+              </View>
+            ))}
+          </View>
+        )}
         contentContainerStyle={styles.listContentContainer}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -182,7 +320,7 @@ const NotificationsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F4F7FC", // Changed to a slightly lighter blue
+    backgroundColor: "#E8EEF7",
     paddingTop: 50,
   },
   loadingContainer: {
@@ -198,63 +336,117 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins-Regular",
   },
   header: {
-    flexDirection: "row", // Added to align items horizontally
-    justifyContent: "space-between", // Added to push items to the ends
-    alignItems: "center", // Added to vertically center
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 15,
-
-    marginBottom: 20,
+    marginBottom: 10,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   headerTitle: {
     fontSize: 28,
     color: "#000",
     fontFamily: "Poppins-Bold",
   },
+  closeButton: {
+    backgroundColor: "white",
+    borderRadius: 8,
+    padding: 8,
+  },
   listContentContainer: {
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
+  sectionHeader: {
+    fontSize: 14,
+    color: "#9CA3AF",
+    fontFamily: "Poppins-Regular",
+    marginTop: 10,
+    marginBottom: 12,
+  },
   notificationItem: {
     flexDirection: "row",
-    alignItems: "center",
-    padding: 18,
+    alignItems: "flex-start",
+    padding: 16,
     borderRadius: 12,
     marginBottom: 12,
+    backgroundColor: "#FFFFFF",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 3,
-    elevation: 2,
+    elevation: 1,
   },
   iconContainer: {
+    marginRight: 12,
+  },
+  iconWrapper: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 16,
   },
   textContainer: {
     flex: 1,
   },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 4,
+  },
   notificationTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
+    fontSize: 13,
+    color: "#9CA3AF",
     fontFamily: "Poppins-Regular",
+    flex: 1,
   },
   notificationMessage: {
-    fontSize: 14,
-    color: "#4B5563",
-    marginTop: 4,
+    fontSize: 15,
+    color: "#1F2937",
     fontFamily: "Poppins-Regular",
+    marginBottom: 8,
+    lineHeight: 20,
   },
   notificationTime: {
     fontSize: 12,
-    color: "#6B7280",
+    color: "#D1D5DB",
+    fontFamily: "Poppins-Regular",
+    marginLeft: 8,
+  },
+  actionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: 4,
+  },
+  actionText: {
+    fontSize: 13,
+    color: "#3B82F6",
+    fontFamily: "Poppins-Regular",
+  },
+  actionSeparator: {
+    fontSize: 13,
+    color: "#3B82F6",
+    marginHorizontal: 4,
+  },
+  newBadge: {
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    position: "absolute",
+    right: 12,
+    top: 16,
+  },
+  newBadgeText: {
+    fontSize: 11,
+    color: "#D97706",
     fontFamily: "Poppins-Regular",
   },
   emptyContainer: {
@@ -279,4 +471,5 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins-Regular",
   },
 });
+
 export default NotificationsScreen;

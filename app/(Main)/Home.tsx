@@ -5,12 +5,12 @@ import { useRouter } from "expo-router";
 import {
   addDoc,
   collection,
-  doc, // <-- CHANGED: Import for correct type
+  doc,
   DocumentData,
   getDoc,
   onSnapshot,
   orderBy,
-  query, // <-- ADDED: For adding documents (New Product)
+  query,
   QueryDocumentSnapshot,
   where,
 } from "firebase/firestore";
@@ -33,7 +33,7 @@ const { width } = Dimensions.get("window");
 
 // Updated Notification type to match the data structure from the backend
 interface Notification {
-  id: string; // Changed to string to match Firestore document ID
+  id: string;
   type:
     | "low_stock"
     | "out_of_stock"
@@ -50,7 +50,7 @@ interface Notification {
   time: string;
   isRead: boolean;
   productId?: string;
-  dateAdded: number; // Added for sorting
+  dateAdded: number;
 }
 
 // Fixed Product type definition
@@ -87,7 +87,7 @@ interface SalesSummaryItem {
   quantity: number;
   date: string;
   amount: number;
-  profit: number; // assuming profit is also part of a sale
+  profit: number;
 }
 
 const Home = () => {
@@ -103,7 +103,7 @@ const Home = () => {
     profit: 0,
     transactions: 0,
     stockLeft: 0,
-    salesSummary: [] as SalesSummaryItem[], // Explicitly typed as SalesSummaryItem[]
+    salesSummary: [] as SalesSummaryItem[],
   });
 
   const [fontsLoaded] = useFonts({
@@ -124,11 +124,11 @@ const Home = () => {
       const newProductData = {
         ...productData,
         userId: currentUser.uid,
-        dateAdded: new Date().toISOString(), // Use consistent date format for Product
-        createdAt: new Date(), // Additional timestamp for backend
+        dateAdded: new Date().toISOString(),
+        createdAt: new Date(),
       };
 
-      // 2. Corrected line for adding a document with modular SDK (v9)
+      // 2. Add document to Firestore
       const docRef = await addDoc(collection(db, "products"), newProductData);
 
       // 3. Update local state with the new product including the generated ID
@@ -176,18 +176,14 @@ const Home = () => {
       let totalProfit = 0;
       const salesSummary: SalesSummaryItem[] = [];
 
-      querySnapshot.forEach(
-        // Corrected type for modular SDK snapshot
-        (doc: QueryDocumentSnapshot<DocumentData>) => {
-          const sale = { id: doc.id, ...doc.data() } as SalesSummaryItem;
-          totalSales += sale.amount || 0;
-          totalProfit += sale.profit || 0;
-          salesSummary.push(sale);
-        }
-      );
+      querySnapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
+        const sale = { id: doc.id, ...doc.data() } as SalesSummaryItem;
+        totalSales += sale.amount || 0;
+        totalProfit += sale.profit || 0;
+        salesSummary.push(sale);
+      });
 
       setUserData((prev) => ({
-        // This is the corrected line
         ...prev,
         todaySales: totalSales,
         profit: totalProfit,
@@ -205,14 +201,11 @@ const Home = () => {
       let totalStock = 0;
       const inventoryProducts: Product[] = [];
 
-      productsSnap.forEach(
-        // Corrected type for modular SDK snapshot
-        (doc: QueryDocumentSnapshot<DocumentData>) => {
-          const productData = { id: doc.id, ...doc.data() } as Product;
-          totalStock += productData.unitsInStock || 0;
-          inventoryProducts.push(productData);
-        }
-      );
+      productsSnap.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
+        const productData = { id: doc.id, ...doc.data() } as Product;
+        totalStock += productData.unitsInStock || 0;
+        inventoryProducts.push(productData);
+      });
 
       setInventory(inventoryProducts);
       setUserData((prev) => ({
@@ -230,15 +223,12 @@ const Home = () => {
       notificationsQuery,
       (snapshot) => {
         const fetchedNotifications: Notification[] = [];
-        snapshot.forEach(
-          // Corrected type for modular SDK snapshot
-          (doc: QueryDocumentSnapshot<DocumentData>) => {
-            fetchedNotifications.push({
-              id: doc.id,
-              ...doc.data(),
-            } as Notification);
-          }
-        );
+        snapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
+          fetchedNotifications.push({
+            id: doc.id,
+            ...doc.data(),
+          } as Notification);
+        });
         setNotifications(fetchedNotifications);
       },
       (error) => {
@@ -258,16 +248,18 @@ const Home = () => {
     switch (type) {
       case "low_stock":
       case "out_of_stock":
-        return <Feather name="alert-circle" size={20} color="#FF8C42" />;
+        return <Feather name="package" size={24} color="#0056D2" />;
       case "high_selling":
-        return <Feather name="trending-up" size={20} color="#4CAF50" />;
+        return <Feather name="trending-up" size={24} color="#0056D2" />;
       case "expiry":
-        return <Feather name="calendar" size={20} color="#F59E0B" />;
+        return <Feather name="calendar" size={24} color="#0056D2" />;
       case "daily_summary":
       case "weekly_summary":
-        return <Feather name="bar-chart-2" size={20} color="#3B82F6" />;
+        return <Feather name="bar-chart-2" size={24} color="#0056D2" />;
       default:
-        return <Ionicons name="notifications-outline" size={20} color="#666" />;
+        return (
+          <Ionicons name="notifications-outline" size={24} color="#0056D2" />
+        );
     }
   };
 
@@ -373,33 +365,25 @@ const Home = () => {
   );
 
   const renderFooter = () => (
-    <View
-      style={{
-        marginTop: 20,
-        paddingLeft: 10,
-        backgroundColor: "white",
-        margin: 20,
-        borderRadius: 12,
-      }}
-    >
+    <View style={styles.notificationSection}>
       <View style={styles.notificationHeader}>
-        <Text style={styles.sectionTitle}>
-          <Ionicons name="notifications" size={30} color="#FACC15" />
-          Notification Summary
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Ionicons name="notifications" size={24} color="#FACC15" />
+          <Text style={styles.notificationHeaderTitle}>Notifications</Text>
+        </View>
         <TouchableOpacity
           onPress={() => router.push("/(Routes)/NotificationsScreen")}
         >
-          <Text style={styles.viewAll}>View All</Text>
+          <Text style={styles.viewAllLink}>View all notification</Text>
         </TouchableOpacity>
       </View>
 
       <FlatList
-        data={notifications.slice(0, 3)} // Displaying only the 3 most recent notifications
+        data={notifications.slice(0, 3)}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={styles.notificationItem}
+            style={styles.notificationCard}
             onPress={() =>
               router.push({
                 pathname: "/(Routes)/NotificationDetails" as any,
@@ -407,13 +391,32 @@ const Home = () => {
               })
             }
           >
-            <View style={styles.notifIconContainer}>
-              {getNotificationIcon(item.type)}
+            <View style={styles.notifLeftSection}>
+              <View style={styles.notifIconBox}>
+                {getNotificationIcon(item.type)}
+              </View>
+              <View style={styles.notifContent}>
+                <View style={styles.notifTitleRow}>
+                  <Text style={styles.notifTitle}>{item.title}</Text>
+                  <Text style={styles.notifTime}>{item.time}</Text>
+                </View>
+                <Text style={styles.notifMessage}>{item.message}</Text>
+                {/* Action links based on notification type */}
+                {(item.type === "low_stock" ||
+                  item.type === "out_of_stock") && (
+                  <Text style={styles.notifActions}>
+                    Tap to restock | View product page
+                  </Text>
+                )}
+                {item.type === "daily_summary" && (
+                  <Text style={styles.notifActions}>
+                    Tap to open Daily Sales Summary
+                  </Text>
+                )}
+              </View>
             </View>
-            <View style={styles.notifTextContainer}>
-              <Text style={styles.notificationText}>{item.message}</Text>
-              <Text style={styles.notificationTime}>{item.time}</Text>
-            </View>
+            {/* Yellow indicator dot */}
+            {!item.isRead && <View style={styles.unreadDot} />}
           </TouchableOpacity>
         )}
         ListEmptyComponent={
@@ -428,7 +431,7 @@ const Home = () => {
     <SafeAreaView style={styles.container}>
       <FlatList
         data={userData.salesSummary}
-        keyExtractor={(item) => item.id} // use the id from the SalesSummaryItem interface
+        keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.saleItem}>
             <Image
@@ -532,15 +535,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "white",
     borderRadius: 12,
-    padding: 16,
+    padding: 10,
     marginHorizontal: 4,
     elevation: 2,
   },
   infoValue: {
-    fontSize: 18,
+    fontSize: 20,
+    marginTop: 20,
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
-    marginTop: 6,
   },
   infoLabel: { color: "#777" },
   actionBox: {
@@ -587,52 +590,95 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontFamily: "Poppins-Regular",
   },
+
+  // Updated Notification Styles
+  notificationSection: {
+    marginTop: 20,
+    marginHorizontal: 20,
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 40,
+  },
   notificationHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
-    paddingRight: 10,
-    marginTop: 30,
+    marginBottom: 16,
   },
-  viewAll: {
-    color: "#0056D2",
+  notificationHeaderTitle: {
+    fontSize: 18,
     fontWeight: "600",
+    fontFamily: "Poppins-Bold",
+  },
+  viewAllLink: {
+    color: "#0056D2",
+    fontSize: 14,
     fontFamily: "Poppins-Regular",
-    fontSize: 20,
   },
-  notificationItem: {
+  notificationCard: {
     flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FBFBFB",
-    padding: 16,
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    backgroundColor: "#F8F9FA",
+    padding: 12,
     borderRadius: 8,
-    marginBottom: 18,
-    elevation: 1,
-    marginRight: 10,
+    marginBottom: 12,
   },
-  notifIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "white",
+  notifLeftSection: {
+    flexDirection: "row",
+    flex: 1,
+    gap: 12,
+  },
+  notifIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: "#E3F2FD",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
   },
-  notifTextContainer: {
+  notifContent: {
     flex: 1,
   },
-  notificationText: {
-    fontSize: 14,
-    fontWeight: "500",
-    fontFamily: "Poppins-Regular",
+  notifTitleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
   },
-  notificationTime: {
-    fontSize: 12,
-    color: "#777",
-    marginTop: 4,
+  notifTitle: {
+    fontSize: 14,
+    fontWeight: "600",
     fontFamily: "Poppins-Regular",
+    color: "#333",
+    flex: 1,
+  },
+  notifTime: {
+    fontSize: 11,
+    color: "#999",
+    fontFamily: "Poppins-Regular",
+    marginLeft: 8,
+  },
+  notifMessage: {
+    fontSize: 13,
+    color: "#666",
+    fontFamily: "Poppins-Regular",
+    marginBottom: 4,
+  },
+  notifActions: {
+    fontSize: 12,
+    color: "#0056D2",
+    fontFamily: "Poppins-Regular",
+    marginTop: 4,
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#FACC15",
+    marginTop: 8,
+    marginLeft: 8,
   },
 });
 

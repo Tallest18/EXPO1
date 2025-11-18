@@ -370,19 +370,8 @@ const Inventory: React.FC = () => {
               <View style={styles.stockStatusRow}>
                 {stockStatus.text !== "In Stock" ? (
                   <View
-                    style={[
-                      styles.stockTag,
-                      { backgroundColor: stockStatus.bgColor },
-                    ]}
+                    
                   >
-                    <Text
-                      style={[
-                        styles.stockTagText,
-                        { color: stockStatus.color },
-                      ]}
-                    >
-                      {stockStatus.text}
-                    </Text>
                   </View>
                 ) : null}
                 <Text style={styles.stockCount}>{product.unitsInStock}</Text>
@@ -640,7 +629,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 8,
     backgroundColor: "#F0F0F0",
-    marginRight: 16,
+    marginRight: 36,
   },
   productInfo: {
     flex: 1,
@@ -662,12 +651,13 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 10,
     borderWidth: 1,
-    borderColor: "#E7EEFA",
+    borderColor: "#B5CAEF",
     borderRadius: 8,
   },
   detailLabel: {
     fontSize: 12,
     color: "#666",
+    borderRadius: 8,
     marginBottom: 4,
     fontFamily: "Poppins-Regular",
   },
@@ -687,22 +677,28 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins-Regular",
   },
   stockCount: {
-    fontSize: 20,
+    fontSize: 30,
+    marginTop: 10,
     fontWeight: "700",
     color: "#000",
     fontFamily: "Poppins-Bold",
   },
   price: {
-    fontSize: 20,
+    fontSize: 30,
+    marginTop: 10,
     fontWeight: "700",
     color: "#000",
     fontFamily: "Poppins-Bold",
   },
   profitRow: {
     flexDirection: "row",
+    padding: 12,
+     borderWidth: 1,
+    borderColor: "#B5CAEF",
+    borderRadius: 6,
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 4,
   },
   profitLabel: {
     fontSize: 14,
@@ -712,7 +708,7 @@ const styles = StyleSheet.create({
   profitAmount: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#4CAF50",
+    color: "#1C1C1C",
     fontFamily: "Poppins-Regular",
   },
   emptyState: {
@@ -755,7 +751,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: "#B5CAEF",
   },
   clearSearchText: {
     color: "#666",
