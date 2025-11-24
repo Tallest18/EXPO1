@@ -39,6 +39,7 @@ export type AppStackParamList = {
   NotificationScreen: { email: string };
   NotificationDetails: undefined;
   ProductDetails: undefined;
+  SalesDetail: undefined;
 
   "(Main)": NavigatorScreenParams<MainTabParamList>;
   "(Auth)": undefined;

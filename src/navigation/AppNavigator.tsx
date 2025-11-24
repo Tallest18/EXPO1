@@ -15,6 +15,7 @@ import NotificationsScreen from "@/app/(Routes)/NotificationsScreen";
 import ProductDetails from "@/app/(Routes)/ProductDetails";
 import Profile from "@/app/(Routes)/Profile";
 import QuickSellScreen from "@/app/(Routes)/QuickSellScreen";
+import SalesDetailScreen from "@/app/(Routes)/SalesDetailScreen";
 import TotalSummaryScreen from "@/app/(Routes)/TotalSummaryScreen";
 import BottomTabNavigator from "./BottomTabNavigator";
 
@@ -43,7 +44,7 @@ const AppNavigator = () => {
         options={{ headerShown: false }}
       />
       <Stack.Screen name="TotalSummary" component={TotalSummaryScreen} />
-
+      <Stack.Screen name="SalesDetail" component={SalesDetailScreen} />
       <Stack.Screen name="QuickSell" component={QuickSellScreen} />
       <Stack.Screen name="Messages" component={MessagesScreen} />
       <Stack.Screen name="Profile" component={Profile} />

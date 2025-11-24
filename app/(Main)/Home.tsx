@@ -177,9 +177,19 @@ const Home = () => {
       const salesSummary: SalesSummaryItem[] = [];
 
       querySnapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
-        const sale = { id: doc.id, ...doc.data() } as SalesSummaryItem;
-        totalSales += sale.amount || 0;
-        totalProfit += sale.profit || 0;
+        const saleData = doc.data();
+        const sale = {
+          id: doc.id,
+          ...saleData,
+          amount: saleData.amount || 0,
+          profit: saleData.profit || 0,
+          quantity: saleData.quantity || 1,
+          name: saleData.name || "Unknown Product",
+          date: saleData.date || new Date().toISOString(),
+        } as SalesSummaryItem;
+
+        totalSales += sale.amount;
+        totalProfit += sale.profit;
         salesSummary.push(sale);
       });
 
@@ -263,6 +273,26 @@ const Home = () => {
     }
   };
 
+  // Helper function to format date for sales summary
+  const formatSalesDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (error) {
+      return "Recent";
+    }
+  };
+
+  // Helper function to safely format currency
+  const formatCurrency = (value: number | undefined) => {
+    return `₦${(value || 0).toFixed(2)}`;
+  };
+
   const renderHeader = () => (
     <>
       <View style={styles.header}>
@@ -308,12 +338,14 @@ const Home = () => {
           <Text style={styles.salesRate}>+6.5%</Text>
         </View>
         <Text style={styles.salesAmount}>
-          ₦{userData.todaySales.toFixed(2)}
+          {formatCurrency(userData.todaySales)}
         </Text>
 
         <View style={styles.profitRow}>
           <Text style={styles.profitLabel}>Profit</Text>
-          <Text style={styles.profitAmount}>₦{userData.profit.toFixed(2)}</Text>
+          <Text style={styles.profitAmount}>
+            {formatCurrency(userData.profit)}
+          </Text>
         </View>
       </View>
 
@@ -350,16 +382,64 @@ const Home = () => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>
-          <Feather name="dollar-sign" size={30} color="#0056D2" />
-          Sales Summary
-        </Text>
-        <TouchableOpacity
-          onPress={() => router.push("/(Routes)/TotalSummaryScreen")}
-        >
-          <Feather name="arrow-right" size={20} color="black" />
-        </TouchableOpacity>
+      {/* Updated Sales Summary Section */}
+      <View style={styles.salesSummarySection}>
+        <View style={styles.salesSummaryHeader}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Feather name="dollar-sign" size={24} color="#22C55E" />
+            <Text style={styles.salesSummaryHeaderTitle}>Sales Summary</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => router.push("/(Routes)/TotalSummaryScreen")}
+          >
+            <Text style={styles.viewAllLink}>View all sales</Text>
+          </TouchableOpacity>
+        </View>
+
+        <FlatList
+          data={userData.salesSummary.slice(0, 3)}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.salesSummaryCard}
+              onPress={() =>
+                router.push({
+                  pathname: "/(Routes)/SalesDetailScreen" as any,
+                  params: { sale: JSON.stringify(item) },
+                })
+              }
+            >
+              <View style={styles.salesSummaryLeftSection}>
+                <View style={styles.salesSummaryIconBox}>
+                  <Feather name="shopping-bag" size={24} color="#22C55E" />
+                </View>
+                <View style={styles.salesSummaryContent}>
+                  <View style={styles.salesSummaryTitleRow}>
+                    <Text style={styles.salesSummaryTitle}>
+                      {item.name || "Unknown Product"} ×{item.quantity || 1}
+                    </Text>
+                    <Text style={styles.salesSummaryTime}>
+                      {formatSalesDate(item.date)}
+                    </Text>
+                  </View>
+                  <Text style={styles.salesSummaryMessage}>
+                    Amount: {formatCurrency(item.amount)} • Profit:{" "}
+                    {formatCurrency(item.profit)}
+                  </Text>
+                  <Text style={styles.salesSummaryActions}>
+                    Tap to view sale details | View product
+                  </Text>
+                </View>
+              </View>
+              {/* Green indicator dot for recent sales */}
+              <View style={styles.recentSaleDot} />
+            </TouchableOpacity>
+          )}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No sales recorded yet</Text>
+          }
+          scrollEnabled={false}
+        />
       </View>
     </>
   );
@@ -430,30 +510,9 @@ const Home = () => {
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
-        data={userData.salesSummary}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.saleItem}>
-            <Image
-              source={{
-                uri: item.image || "https://via.placeholder.com/40",
-              }}
-              style={styles.saleImage}
-            />
-            <View style={{ flex: 1, marginLeft: 8 }}>
-              <Text style={styles.saleName}>
-                {item.name} x{item.quantity}
-              </Text>
-              <Text style={styles.saleDate}>{item.date}</Text>
-            </View>
-            <Text style={styles.saleAmount}>₦{item.amount}</Text>
-          </View>
-        )}
-        ListEmptyComponent={
-          <Text style={[styles.emptyText, { paddingHorizontal: 20 }]}>
-            No sales recorded yet
-          </Text>
-        }
+        data={[]} // Empty data since we're using ListHeaderComponent and ListFooterComponent
+        keyExtractor={() => "main-list"}
+        renderItem={null}
         ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
         contentContainerStyle={{ paddingBottom: 40 }}
@@ -559,39 +618,97 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
   },
-  sectionHeader: {
+
+  // Updated Sales Summary Styles (matching notification design)
+  salesSummarySection: {
+    marginTop: 20,
+    marginHorizontal: 20,
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 16,
+  },
+  salesSummaryHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 20,
-    marginBottom: 12,
-    paddingHorizontal: 20,
-  },
-  sectionTitle: { fontSize: 20, fontWeight: "600", fontFamily: "Poppins-Bold" },
-  saleItem: {
-    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    paddingHorizontal: 20,
+    marginBottom: 16,
   },
-  saleImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 6,
-    backgroundColor: "#eee",
+  salesSummaryHeaderTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    fontFamily: "Poppins-Bold",
   },
-  saleName: { fontWeight: "600", fontFamily: "Poppins-Regular" },
-  saleDate: { fontSize: 12, color: "#777", fontFamily: "Poppins-Regular" },
-  saleAmount: { fontWeight: "600", fontFamily: "Poppins-Regular" },
-  emptyText: {
-    textAlign: "center",
-    color: "#777",
-    marginTop: 10,
+  viewAllLink: {
+    color: "#0056D2",
+    fontSize: 14,
     fontFamily: "Poppins-Regular",
   },
+  salesSummaryCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    backgroundColor: "#F0F9FF",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  salesSummaryLeftSection: {
+    flexDirection: "row",
+    flex: 1,
+    gap: 12,
+  },
+  salesSummaryIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: "#DCFCE7",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  salesSummaryContent: {
+    flex: 1,
+  },
+  salesSummaryTitleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  salesSummaryTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: "Poppins-Regular",
+    color: "#333",
+    flex: 1,
+  },
+  salesSummaryTime: {
+    fontSize: 11,
+    color: "#999",
+    fontFamily: "Poppins-Regular",
+    marginLeft: 8,
+  },
+  salesSummaryMessage: {
+    fontSize: 13,
+    color: "#666",
+    fontFamily: "Poppins-Regular",
+    marginBottom: 4,
+  },
+  salesSummaryActions: {
+    fontSize: 12,
+    color: "#0056D2",
+    fontFamily: "Poppins-Regular",
+    marginTop: 4,
+  },
+  recentSaleDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#22C55E",
+    marginTop: 8,
+    marginLeft: 8,
+  },
 
-  // Updated Notification Styles
+  // Notification Styles (unchanged)
   notificationSection: {
     marginTop: 20,
     marginHorizontal: 20,
@@ -610,11 +727,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
-  },
-  viewAllLink: {
-    color: "#0056D2",
-    fontSize: 14,
-    fontFamily: "Poppins-Regular",
   },
   notificationCard: {
     flexDirection: "row",
@@ -679,6 +791,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#FACC15",
     marginTop: 8,
     marginLeft: 8,
+  },
+  emptyText: {
+    textAlign: "center",
+    color: "#777",
+    marginTop: 10,
+    fontFamily: "Poppins-Regular",
   },
 });
 

@@ -1,22 +1,27 @@
 import { router } from "expo-router";
 import React, { useEffect } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Dimensions, Image, StyleSheet, Text, View } from "react-native";
+
+const { width, height } = Dimensions.get("window");
 
 const Onboarding1 = () => {
   useEffect(() => {
-    // Navigate to the onboarding screen after 3 seconds
     const timer = setTimeout(() => {
       router.replace("/(Auth)/WelcomeScreen");
     }, 3000);
 
-    return () => clearTimeout(timer); // Clean up the timer on unmount
+    return () => clearTimeout(timer);
   }, []);
 
   return (
     <View style={styles.container}>
       <View style={styles.centerContent}>
-        <Text style={styles.title}>Inventra</Text>
-        <Text style={styles.subtitle}>Inventory Management System</Text>
+        <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
+          Inventra
+        </Text>
+        <Text style={styles.subtitle} numberOfLines={1} adjustsFontSizeToFit>
+          Inventory Management System
+        </Text>
       </View>
 
       <View style={styles.logoContainer}>
@@ -28,9 +33,13 @@ const Onboarding1 = () => {
               style={styles.image}
             />
           </View>
-          <Text style={styles.logoText}> Wonderfall</Text>
+          <Text style={styles.logoText} numberOfLines={1} adjustsFontSizeToFit>
+            Wonderfall
+          </Text>
         </View>
-        <Text style={styles.systemsText}> S Y S T E M S</Text>
+        <Text style={styles.systemsText} numberOfLines={1} adjustsFontSizeToFit>
+          S Y S T E M S
+        </Text>
       </View>
     </View>
   );
@@ -42,31 +51,42 @@ const styles = StyleSheet.create({
     backgroundColor: "#2046AE",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 80,
+    paddingVertical: 40,
   },
   centerContent: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    width: "100%",
+    paddingHorizontal: 20,
   },
   title: {
-    fontSize: 64,
+    fontSize: height * 0.08, // Responsive font size
     color: "#fff",
     fontFamily: "Poppins-Bold",
+    textAlign: "center",
+    width: "100%",
+    includeFontPadding: false,
   },
   subtitle: {
-    fontSize: 28,
+    fontSize: height * 0.03, // Responsive font size
     color: "#fff",
     fontWeight: "300",
     fontFamily: "Poppins-Regular",
+    textAlign: "center",
+    width: "100%",
+    marginTop: 10,
+    includeFontPadding: false,
   },
   logoContainer: {
     alignItems: "center",
     marginBottom: 20,
+    width: "100%",
+    paddingHorizontal: 20,
   },
   fromText: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 16,
     marginBottom: 2,
     fontFamily: "Poppins-Regular",
   },
@@ -74,6 +94,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 4,
+    width: "100%",
+    justifyContent: "center",
   },
   logoIcon: {
     width: 32,
@@ -84,29 +106,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 8,
   },
-  logoIconText: {
-    color: "#2046AE",
-    fontSize: 16,
-    fontWeight: "bold",
-    fontFamily: "Poppins-Regular",
-  },
   logoText: {
     color: "#fff",
-    fontSize: 28,
+    fontSize: 24,
     fontFamily: "Poppins-Bold",
     letterSpacing: 1,
+    flexShrink: 1,
+    includeFontPadding: false,
   },
   systemsText: {
     color: "#fff",
-    fontSize: 16,
-    letterSpacing: 6,
+    fontSize: 14,
+    letterSpacing: 4,
     fontWeight: "300",
-    marginLeft: 30,
     fontFamily: "Poppins-Regular",
+    includeFontPadding: false,
+    marginLeft: 28,
   },
   image: {
     height: 28,
     width: 28,
   },
 });
+
 export default Onboarding1;
