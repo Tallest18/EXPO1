@@ -21,7 +21,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "INVENTRA2.W",
-      "googleServicesFile": "./Googleservice-Info.plist",
+      "googleServicesFile": "./GoogleService-info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
@@ -44,7 +44,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.inventra.app",
+      "package": "INVENTRA2.W",
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.CAMERA",
