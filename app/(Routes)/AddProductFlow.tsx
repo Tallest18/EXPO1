@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { addDoc, collection } from "firebase/firestore";
+import { addDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import React, { useEffect, useState } from "react";
 import {
@@ -25,9 +25,13 @@ import {
   launchImageLibrary,
   MediaType,
 } from "react-native-image-picker";
-// IMPORT FOR BARCODE SCANNER
-//import { BarCodeScanner } from "expo-barcode-scanner";
 import { auth, db, storage } from "../config/firebaseConfig";
+// Import YOUR notification helpers
+import {
+  checkExpiringProducts,
+  checkLowStock,
+  notifyProductAdded
+} from "../notificationHelpers";
 
 const { width } = Dimensions.get("window");
 
@@ -103,18 +107,30 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
   onClose,
   onSaveProduct,
 }) => {
+  const [showInitialChoice, setShowInitialChoice] = useState(true);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [recentSearches] = useState<string[]>([
+    "Indomitable",
+    "Viva Soup",
+    "Eva",
+    "Shortbread Biscuit",
+    "Flora Biscuit",
+    "Bic Razor",
+  ]);
+  const [isSearching, setIsSearching] = useState(false);
+
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0.33);
   const [saving, setSaving] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
 
-  // BARCODE SCANNER STATES
   const [hasScannerPermission, setHasScannerPermission] = useState<
     boolean | null
   >(null);
-  const [scannerScanned, setScannerScanned] = useState(false); // To prevent multiple scans
+  const [scannerScanned, setScannerScanned] = useState(false);
 
-  // Form data state
   const [formData, setFormData] = useState<FormData>({
     productName: "",
     sku: "",
@@ -140,14 +156,20 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
 
   const steps = ["Product Info", "Pricing & Packaging", "Stock & Extras"];
 
-  // Check if user is authenticated
   const currentUser = auth.currentUser;
 
-  // EFFECT: Get Barcode Scanner Permissions
+  useEffect(() => {
+    if (visible) {
+      setShowInitialChoice(true);
+      setShowSearchModal(false);
+      setSearchQuery("");
+      setSearchResults([]);
+    }
+  }, [visible]);
+
   useEffect(() => {
     const getBarCodeScannerPermissions = async () => {
-      // const { status } = await BarCodeScanner.requestPermissionsAsync();
-      setHasScannerPermission(status === "granted");
+      // Barcode scanner permission logic
     };
 
     if (showScanner) {
@@ -155,7 +177,6 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
     }
   }, [showScanner]);
 
-  // Update progress based on filled fields
   useEffect(() => {
     const calculateProgress = () => {
       let filledFields = 0;
@@ -165,12 +186,10 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         totalFields = 4;
         if (formData.productName) filledFields++;
         if (formData.sku) filledFields++;
-        // NOTE: Category is hardcoded to "Food" on press, but we'll check if a value exists
         if (formData.category) filledFields++;
         if (formData.productImage) filledFields++;
       } else if (currentStep === 1) {
         totalFields = 4;
-        // quantityType defaults to "Single Items"
         if (formData.quantityType) filledFields++;
         if (formData.numberOfItems) filledFields++;
         if (formData.costPrice) filledFields++;
@@ -182,19 +201,103 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
           filledFields++;
         if (formData.supplier.name) filledFields++;
         if (formData.supplier.phone) filledFields++;
-        filledFields++; // Always count this step as having some progress
+        filledFields++;
       }
 
       const stepProgress = filledFields / totalFields;
-      // Calculate overall progress based on steps
       const baseProgress = currentStep * 0.33;
       const currentProgress = baseProgress + stepProgress * 0.33;
-      // Ensure progress doesn't exceed 1 (100%)
       setProgress(Math.min(currentProgress, 1));
     };
 
     calculateProgress();
   }, [formData, currentStep]);
+
+  const handleSearch = async (searchText: string) => {
+    if (!searchText.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+
+    try {
+      const productsRef = collection(db, "products");
+      const q = query(
+        productsRef,
+        where("userId", "==", currentUser?.uid)
+      );
+
+      const querySnapshot = await getDocs(q);
+      const results: Product[] = [];
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (
+          data.name?.toLowerCase().includes(searchText.toLowerCase()) ||
+          data.barcode?.includes(searchText)
+        ) {
+          results.push({
+            id: doc.id,
+            name: data.name,
+            category: data.category,
+            barcode: data.barcode,
+            image: data.image,
+            quantityType: data.quantityType,
+            unitsInStock: data.unitsInStock,
+            costPrice: data.costPrice,
+            sellingPrice: data.sellingPrice,
+            lowStockThreshold: data.lowStockThreshold,
+            expiryDate: data.expiryDate,
+            supplier: data.supplier,
+            dateAdded: data.dateAdded,
+            userId: data.userId,
+          } as Product);
+        }
+      });
+
+      setSearchResults(results);
+    } catch (error) {
+      console.error("Search error:", error);
+      Alert.alert("Error", "Failed to search products");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSelectProduct = (product: Product) => {
+    setFormData({
+      productName: product.name,
+      sku: product.barcode,
+      category: product.category,
+      productImage: product.image || null,
+      quantityType: product.quantityType,
+      numberOfItems: product.unitsInStock.toString(),
+      costPrice: product.costPrice.toString(),
+      sellingPrice: product.sellingPrice.toString(),
+      lowStockThreshold: product.lowStockThreshold.toString(),
+      expiryDate: {
+        day: product.expiryDate.split("/")[1] || "",
+        month: product.expiryDate.split("/")[0] || "",
+        year: product.expiryDate.split("/")[2] || "",
+      },
+      supplier: product.supplier,
+    });
+
+    setShowSearchModal(false);
+    setShowInitialChoice(false);
+    setCurrentStep(0);
+  };
+
+  const handleAddManually = () => {
+    setShowInitialChoice(false);
+    setCurrentStep(0);
+  };
+
+  const handleSearchClick = () => {
+    setShowInitialChoice(false);
+    setShowSearchModal(true);
+  };
 
   const updateFormData = (field: string, value: string | ImageAsset | null) => {
     if (field.includes(".")) {
@@ -212,26 +315,6 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         [field]: value,
       }));
     }
-  };
-
-  // BARCODE SCANNER HANDLER
-  const handleBarCodeScanned = ({ data }: { type: string; data: string }) => {
-    setScannerScanned(true); // Stop scanning immediately
-    updateFormData("sku", data);
-    Alert.alert(
-      "Barcode Scanned",
-      `SKU/Barcode: ${data}`,
-      [
-        {
-          text: "OK",
-          onPress: () => {
-            setShowScanner(false);
-            setScannerScanned(false);
-          },
-        },
-      ],
-      { cancelable: false }
-    );
   };
 
   const uploadImage = async (uri: string): Promise<string> => {
@@ -257,7 +340,6 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
   };
 
   const handlePickImage = async (useCamera: boolean) => {
-    // Request camera permissions on Android (This is for the IMAGE picker, not barcode)
     if (Platform.OS === "android") {
       const granted = await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.CAMERA,
@@ -340,18 +422,11 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
   };
 
   const nextStep = () => {
-    // Basic validation before moving to the next step
     if (currentStep === 0) {
-      if (
-        !formData.productName ||
-        !formData.sku ||
-        !formData.category
-        //||
-        // !formData.productImage
-      ) {
+      if (!formData.productName || !formData.sku || !formData.category) {
         Alert.alert(
           "Missing Information",
-          "Please fill in all required fields and upload an image for Product Info."
+          "Please fill in all required fields for Product Info."
         );
         return;
       }
@@ -372,7 +447,6 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
     if (currentStep < 2) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Show summary
       setCurrentStep(3);
     }
   };
@@ -385,6 +459,10 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
 
   const resetForm = () => {
     setCurrentStep(0);
+    setShowInitialChoice(true);
+    setShowSearchModal(false);
+    setSearchQuery("");
+    setSearchResults([]);
     setFormData({
       productName: "",
       sku: "",
@@ -401,13 +479,11 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
   };
 
   const handleSaveProduct = async () => {
-    // Check if user is authenticated
     if (!currentUser) {
       Alert.alert("Authentication Error", "Please log in to add products.");
       return;
     }
 
-    // Prevent double-tap
     if (saving) {
       return;
     }
@@ -420,7 +496,6 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         imageUrl = await uploadImage(formData.productImage.uri);
       }
 
-      // Prepare product data for Firestore
       const productData = {
         name: formData.productName || "Untitled Product",
         category: formData.category || "Food",
@@ -447,26 +522,40 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
 
       console.log("Saving product with userId:", currentUser.uid);
 
-      // Save to Firestore
-      // Using modular SDK: collection(db, "products")
       const docRef = await addDoc(collection(db, "products"), productData);
       console.log("Product saved with ID:", docRef.id);
 
-      // Create the product object with the generated ID for the callback
       const savedProduct: Product = {
         id: docRef.id,
         ...productData,
-      } as Product; // Cast to ensure it matches the interface
+      } as Product;
 
-      // Call the parent callback
+      // ===== NOTIFICATION INTEGRATION USING YOUR SYSTEM =====
+      
+      // 1. Notify that product was added
+      await notifyProductAdded(
+        currentUser.uid,
+        docRef.id,
+        productData.name
+      );
+
+      // 2. Check for low stock or out of stock
+      await checkLowStock(
+        currentUser.uid,
+        docRef.id,
+        productData.name,
+        productData.unitsInStock,
+        productData.lowStockThreshold
+      );
+
+      // 3. Check for expiring products (runs check on all products)
+      await checkExpiringProducts(currentUser.uid);
+
+      console.log("✅ All notifications created successfully");
+
       onSaveProduct(savedProduct);
-
-      // Close modal and reset form
-      // Note: onClose is called before resetForm to ensure modal state is clean
       onClose();
       resetForm();
-
-      // Alert moved to parent Inventory.tsx for better UX consistency after Firestore update
     } catch (error) {
       console.error("Error adding product:", error);
       Alert.alert(
@@ -474,11 +563,11 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         "Failed to add product. Please check your connection and try again."
       );
     } finally {
-      // Ensure saving state is reset, even if an error occurred
       setSaving(false);
     }
   };
 
+  // All render functions remain exactly the same as in the complete version
   const renderProgressBar = () => (
     <View style={styles.progressContainer}>
       {steps.map((step, index) => (
@@ -498,13 +587,11 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
             ]}
           >
             {index === currentStep && (
-              // Only render progress fill for the current active step
               <View
                 style={[styles.progressFill, { width: `${progress * 100}%` }]}
               />
             )}
             {index < currentStep && (
-              // Fill completed steps completely
               <View style={[styles.progressFill, { width: "100%" }]} />
             )}
           </View>
@@ -547,11 +634,9 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
             onChangeText={(value) => updateFormData("sku", value)}
             keyboardType="numeric"
           />
-          {/* Barcode scanner button */}
           <TouchableOpacity
             style={styles.scanButton}
             onPress={() => {
-              // Reset scanned state when opening scanner
               setScannerScanned(false);
               setShowScanner(true);
             }}
@@ -567,7 +652,6 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         </Text>
         <TouchableOpacity
           style={styles.dropdown}
-          // Defaulting category to a value for demonstration
           onPress={() => updateFormData("category", "Food")}
         >
           <Text
@@ -613,7 +697,7 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
               {imageUploading && (
                 <View style={styles.uploadingOverlay}>
                   <ActivityIndicator size="small" color="#fff" />
-                  <Text style={{ color: "#fff", marginTop: 5 }}>
+                  <Text style={{ color: "#fff", marginTop: 5, fontFamily: "Poppins-Regular" }}>
                     Uploading...
                   </Text>
                 </View>
@@ -655,7 +739,6 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
                   <View style={styles.radioInner} />
                 )}
               </View>
-              {/* CORRECTED: Wrapping text in a <Text> component */}
               <Text style={styles.radioText}>{type}</Text>
             </TouchableOpacity>
           ))}
@@ -691,36 +774,15 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
           />
         </View>
         <View style={styles.priceOptions}>
-          <TouchableOpacity
-            style={styles.priceOption}
-            onPress={() => updateFormData("costPrice", "100")}
-          >
-            <Text style={styles.priceOptionText}>₦100</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.priceOption}
-            onPress={() => updateFormData("costPrice", "200")}
-          >
-            <Text style={styles.priceOptionText}>₦200</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.priceOption}
-            onPress={() => updateFormData("costPrice", "500")}
-          >
-            <Text style={styles.priceOptionText}>₦500</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.priceOption}
-            onPress={() => updateFormData("costPrice", "800")}
-          >
-            <Text style={styles.priceOptionText}>₦800</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.priceOption}
-            onPress={() => updateFormData("costPrice", "1000")}
-          >
-            <Text style={styles.priceOptionText}>₦1000</Text>
-          </TouchableOpacity>
+          {["100", "200", "500", "800", "1000"].map((price) => (
+            <TouchableOpacity
+              key={price}
+              style={styles.priceOption}
+              onPress={() => updateFormData("costPrice", price)}
+            >
+              <Text style={styles.priceOptionText}>₦{price}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
@@ -740,36 +802,15 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
           />
         </View>
         <View style={styles.priceOptions}>
-          <TouchableOpacity
-            style={styles.priceOption}
-            onPress={() => updateFormData("sellingPrice", "100")}
-          >
-            <Text style={styles.priceOptionText}>₦100</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.priceOption}
-            onPress={() => updateFormData("sellingPrice", "200")}
-          >
-            <Text style={styles.priceOptionText}>₦200</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.priceOption}
-            onPress={() => updateFormData("sellingPrice", "500")}
-          >
-            <Text style={styles.priceOptionText}>₦500</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.priceOption}
-            onPress={() => updateFormData("sellingPrice", "800")}
-          >
-            <Text style={styles.priceOptionText}>₦800</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.priceOption}
-            onPress={() => updateFormData("sellingPrice", "1000")}
-          >
-            <Text style={styles.priceOptionText}>₦1000</Text>
-          </TouchableOpacity>
+          {["100", "200", "500", "800", "1000"].map((price) => (
+            <TouchableOpacity
+              key={price}
+              style={styles.priceOption}
+              onPress={() => updateFormData("sellingPrice", price)}
+            >
+              <Text style={styles.priceOptionText}>₦{price}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
     </ScrollView>
@@ -794,7 +835,7 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         <Text style={styles.label}>Expiry Date</Text>
         <View style={styles.dateInputs}>
           <TextInput
-            style={[styles.dateInput, { marginHorizontal: 0, marginRight: 10 }]} // Adjust margins for first input
+            style={[styles.dateInput, { marginHorizontal: 0, marginRight: 10 }]}
             placeholder="DD"
             value={formData.expiryDate.day}
             onChangeText={(value) => updateFormData("expiryDate.day", value)}
@@ -810,7 +851,7 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
             maxLength={2}
           />
           <TextInput
-            style={[styles.dateInput, { marginLeft: 10, marginHorizontal: 0 }]} // Adjust margins for last input
+            style={[styles.dateInput, { marginLeft: 10, marginHorizontal: 0 }]}
             placeholder="YYYY"
             value={formData.expiryDate.year}
             onChangeText={(value) => updateFormData("expiryDate.year", value)}
@@ -953,7 +994,6 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
     </ScrollView>
   );
 
-  // BARCODE SCANNER MODAL CONTENT RENDERER
   const renderBarcodeScanner = () => {
     if (hasScannerPermission === null) {
       return (
@@ -976,11 +1016,6 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
 
     return (
       <View style={styles.scannerContainer}>
-        {/* <BarCodeScanner
-          // Only call the handler if a code hasn't already been detected
-          onBarCodeScanned={scannerScanned ? undefined : handleBarCodeScanned}
-          style={StyleSheet.absoluteFillObject}
-        /> */}
         <View style={styles.scanTargetOverlay}>
           <Text style={styles.scanTargetText}>
             Align the Barcode/SKU within this frame
@@ -996,7 +1031,189 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
     );
   };
 
-  // Check authentication before rendering
+  const renderInitialChoice = () => (
+    <Modal
+      visible={showInitialChoice}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <TouchableOpacity 
+        style={styles.modalBackdrop} 
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <View style={styles.bottomSheetContainer}>
+          <TouchableOpacity 
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+            style={styles.bottomSheetContent}
+          >
+            <View style={styles.handleBar} />
+            
+            <Text style={styles.bottomSheetHeader}>Add Product</Text>
+            
+            <Text style={styles.initialChoiceTitle}>
+              How would you like to{"\n"}add a product?
+            </Text>
+            <Text style={styles.initialChoiceSubtitle}>
+              You can search from existing products or{"\n"}add a new one manually
+            </Text>
+
+            <TouchableOpacity
+              style={styles.searchButtonInitial}
+              onPress={handleSearchClick}
+            >
+              <Ionicons
+                name="search-outline"
+                size={20}
+                color="#666"
+                style={{ marginRight: 10 }}
+              />
+              <Text style={styles.searchButtonInitialText}>Search</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.addManuallyButton}
+              onPress={handleAddManually}
+            >
+              <Ionicons
+                name="add"
+                size={20}
+                color="#FFF"
+                style={{ marginRight: 8 }}
+              />
+              <Text style={styles.addManuallyButtonText}>Add Manually</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  const renderSearchModal = () => (
+    <Modal
+      visible={showSearchModal}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => {
+        setShowSearchModal(false);
+        setShowInitialChoice(true);
+      }}
+    >
+      <SafeAreaView style={styles.searchModalContainer}>
+        <View style={styles.searchHeader}>
+          <Text style={styles.searchHeaderTitle}>Search Product</Text>
+          <TouchableOpacity
+            onPress={() => {
+              setShowSearchModal(false);
+              setShowInitialChoice(true);
+            }}
+            style={styles.searchCloseButton}
+          >
+            <Ionicons name="close" size={24} color="#000" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.searchInputContainer}>
+          <Ionicons
+            name="search-outline"
+            size={20}
+            color="#999"
+            style={styles.searchIcon}
+          />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for anything"
+            value={searchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              handleSearch(text);
+            }}
+            autoFocus
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => {
+                setSearchQuery("");
+                setSearchResults([]);
+              }}
+              style={styles.clearSearchButton}
+            >
+              <Ionicons name="close-circle" size={20} color="#999" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <ScrollView style={styles.searchContent}>
+          {searchQuery.length === 0 && (
+            <View style={styles.recentSearchesSection}>
+              <Text style={styles.recentSearchesHeader}>Recent</Text>
+              {recentSearches.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.recentSearchItem}
+                  onPress={() => {
+                    setSearchQuery(item);
+                    handleSearch(item);
+                  }}
+                >
+                  <Ionicons name="search-outline" size={18} color="#666" />
+                  <Text style={styles.recentSearchText}>{item}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {searchQuery.length > 0 && (
+            <View style={styles.searchResultsSection}>
+              <Text style={styles.searchResultsHeader}>
+                Showing results for &quot;<Text style={styles.searchQueryText}>{searchQuery}</Text>&quot;
+              </Text>
+
+              {isSearching ? (
+                <View style={styles.searchLoadingContainer}>
+                  <ActivityIndicator size="large" color="#007AFF" />
+                </View>
+              ) : searchResults.length > 0 ? (
+                searchResults.map((product) => (
+                  <TouchableOpacity
+                    key={product.id}
+                    style={styles.searchResultItem}
+                    onPress={() => handleSelectProduct(product)}
+                  >
+                    {product.image?.uri ? (
+                      <Image
+                        source={{ uri: product.image.uri }}
+                        style={styles.searchResultImage}
+                      />
+                    ) : (
+                      <View style={styles.searchResultImagePlaceholder}>
+                        <Ionicons name="image-outline" size={24} color="#999" />
+                      </View>
+                    )}
+                    <View style={styles.searchResultInfo}>
+                      <Text style={styles.searchResultName}>
+                        {product.name}
+                      </Text>
+                      <Text style={styles.searchResultButton}>Add Product</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.noResultsContainer}>
+                  <Text style={styles.noResultsText}>
+                    No products found for &quot;{searchQuery}&quot;
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+
   if (!currentUser) {
     return (
       <Modal
@@ -1020,89 +1237,95 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
   }
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-    >
-      <SafeAreaView style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>New Product</Text>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>✕</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Progress Bar */}
-        {currentStep < 3 && renderProgressBar()}
-
-        {/* Content */}
-        {currentStep === 0 && renderStep1()}
-        {currentStep === 1 && renderStep2()}
-        {currentStep === 2 && renderStep3()}
-        {currentStep === 3 && renderSummary()}
-
-        {/* Navigation Buttons */}
-        {currentStep < 3 && (
-          <View style={styles.navigationButtons}>
-            {currentStep > 0 && (
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={prevStep}
-                disabled={saving || imageUploading}
-              >
-                <Text style={styles.backButtonText}>← Back</Text>
-              </TouchableOpacity>
-            )}
+    <>
+      <Modal
+        visible={visible && !showInitialChoice && !showSearchModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>New Product</Text>
             <TouchableOpacity
-              style={[
-                styles.nextButton,
-                (saving || imageUploading) && { opacity: 0.7 },
-              ]}
-              onPress={nextStep}
-              disabled={saving || imageUploading}
+              style={styles.closeButton}
+              onPress={() => {
+                onClose();
+                resetForm();
+              }}
             >
-              <Text style={styles.nextButtonText}>
-                {currentStep === 2 ? "Confirm" : "Next"} →
-              </Text>
+              <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>
-        )}
 
-        {/* Barcode Scanner Modal (Corrected Implementation) */}
-        <Modal visible={showScanner} transparent animationType="slide">
-          <SafeAreaView style={styles.scannerModalContainer}>
-            <View style={styles.scannerModalHeader}>
-              <Text style={styles.scannerModalTitle}>Scan Barcode</Text>
+          {currentStep < 3 && renderProgressBar()}
+
+          {currentStep === 0 && renderStep1()}
+          {currentStep === 1 && renderStep2()}
+          {currentStep === 2 && renderStep3()}
+          {currentStep === 3 && renderSummary()}
+
+          {currentStep < 3 && (
+            <View style={styles.navigationButtons}>
+              {currentStep > 0 && (
+                <TouchableOpacity
+                  style={styles.backButton}
+                  onPress={prevStep}
+                  disabled={saving || imageUploading}
+                >
+                  <Text style={styles.backButtonText}>← Back</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
-                onPress={() => {
-                  setShowScanner(false);
-                  setScannerScanned(false);
-                }}
+                style={[
+                  styles.nextButton,
+                  (saving || imageUploading) && { opacity: 0.7 },
+                ]}
+                onPress={nextStep}
+                disabled={saving || imageUploading}
               >
-                <Ionicons name="close" size={30} color="#FFF" />
+                <Text style={styles.nextButtonText}>
+                  {currentStep === 2 ? "Confirm" : "Next"} →
+                </Text>
               </TouchableOpacity>
             </View>
-            {renderBarcodeScanner()}
-          </SafeAreaView>
-        </Modal>
+          )}
 
-        {/* Loading Overlay */}
-        {(saving || imageUploading) && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#2046AE" />
-            <Text style={styles.loadingText}>
-              {imageUploading ? "Uploading image..." : "Saving product..."}
-            </Text>
+          {(saving || imageUploading) && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#2046AE" />
+              <Text style={styles.loadingText}>
+                {imageUploading ? "Uploading image..." : "Saving product..."}
+              </Text>
+            </View>
+          )}
+        </SafeAreaView>
+      </Modal>
+
+      {visible && showInitialChoice && renderInitialChoice()}
+
+      {visible && renderSearchModal()}
+
+      <Modal visible={showScanner} transparent animationType="slide">
+        <SafeAreaView style={styles.scannerModalContainer}>
+          <View style={styles.scannerModalHeader}>
+            <Text style={styles.scannerModalTitle}>Scan Barcode</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setShowScanner(false);
+                setScannerScanned(false);
+              }}
+            >
+              <Ionicons name="close" size={30} color="#FFF" />
+            </TouchableOpacity>
           </View>
-        )}
-      </SafeAreaView>
-    </Modal>
+          {renderBarcodeScanner()}
+        </SafeAreaView>
+      </Modal>
+    </>
   );
 };
 
-// Styles
+// Styles - Same as complete version with Poppins fonts
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1122,6 +1345,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#000",
+    fontFamily: "Poppins-SemiBold",
   },
   closeButton: {
     padding: 5,
@@ -1135,12 +1359,246 @@ const styles = StyleSheet.create({
   closeButtonText: {
     fontSize: 16,
     color: "#666",
+    fontFamily: "Poppins-Regular",
   },
   errorText: {
     fontSize: 18,
     color: "#FF3B30",
     textAlign: "center",
     marginBottom: 20,
+    fontFamily: "Poppins-Regular",
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  bottomSheetContainer: {
+    justifyContent: "flex-end",
+  },
+  bottomSheetContent: {
+    backgroundColor: "#FFF",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 24,
+    paddingBottom: 34,
+    paddingTop: 8,
+  },
+  handleBar: {
+    width: 100,
+    height: 4,
+    backgroundColor: "black",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  bottomSheetHeader: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#007AFF",
+    textAlign: "center",
+    marginBottom: 24,
+    fontFamily: "Poppins-SemiBold",
+  },
+  initialChoiceTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#000",
+    textAlign: "center",
+    marginBottom: 12,
+    fontFamily: "Poppins-SemiBold",
+  },
+  initialChoiceSubtitle: {
+    fontSize: 14,
+    color: "#8E8E93",
+    textAlign: "center",
+    marginBottom: 32,
+    lineHeight: 20,
+    fontFamily: "Poppins-Regular",
+  },
+  searchButtonInitial: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 50,
+    paddingVertical: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#007AFF",
+  },
+  searchButtonInitialText: {
+    fontSize: 16,
+    color: "#666",
+    fontWeight: "500",
+    fontFamily: "Poppins-Medium",
+  },
+  addManuallyButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    backgroundColor: "#007AFF",
+    borderRadius: 50,
+    paddingVertical: 16,
+  },
+  addManuallyButtonText: {
+    fontSize: 16,
+    color: "#FFF",
+    fontWeight: "600",
+    fontFamily: "Poppins-SemiBold",
+  },
+  searchModalContainer: {
+    flex: 1,
+    backgroundColor: "#F5F7FA",
+  },
+  searchHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: "#FFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E0E0E0",
+  },
+  searchHeaderTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000",
+    fontFamily: "Poppins-SemiBold",
+  },
+  searchCloseButton: {
+    padding: 5,
+  },
+  searchInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF",
+    marginHorizontal: 15,
+    marginVertical: 15,
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: "#000",
+    fontFamily: "Poppins-Regular",
+  },
+  clearSearchButton: {
+    padding: 5,
+  },
+  searchContent: {
+    flex: 1,
+  },
+  recentSearchesSection: {
+    backgroundColor: "#FFF",
+    paddingVertical: 10,
+  },
+  recentSearchesHeader: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#007AFF",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    fontFamily: "Poppins-SemiBold",
+  },
+  recentSearchItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+  },
+  recentSearchText: {
+    fontSize: 15,
+    color: "#000",
+    marginLeft: 15,
+    fontFamily: "Poppins-Regular",
+  },
+  searchResultsSection: {
+    flex: 1,
+  },
+  searchResultsHeader: {
+    fontSize: 14,
+    color: "#666",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: "#F5F7FA",
+    fontFamily: "Poppins-Regular",
+  },
+  searchQueryText: {
+    fontWeight: "600",
+    color: "#007AFF",
+    fontFamily: "Poppins-SemiBold",
+  },
+  searchLoadingContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  searchResultItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+  },
+  searchResultImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    marginRight: 15,
+  },
+  searchResultImagePlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    backgroundColor: "#F0F0F0",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 15,
+  },
+  searchResultInfo: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  searchResultName: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#000",
+    flex: 1,
+    fontFamily: "Poppins-Medium",
+  },
+  searchResultButton: {
+    fontSize: 14,
+    color: "#007AFF",
+    fontWeight: "500",
+    fontFamily: "Poppins-Medium",
+  },
+  noResultsContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  noResultsText: {
+    fontSize: 15,
+    color: "#666",
+    textAlign: "center",
+    fontFamily: "Poppins-Regular",
   },
   progressContainer: {
     flexDirection: "row",
@@ -1158,7 +1616,7 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     marginBottom: 8,
-    backgroundColor: "#E0E0E0", // Default color
+    backgroundColor: "#E0E0E0",
   },
   progressFill: {
     height: "100%",
@@ -1168,6 +1626,7 @@ const styles = StyleSheet.create({
   stepText: {
     fontSize: 12,
     fontWeight: "500",
+    fontFamily: "Poppins-Medium",
   },
   stepContent: {
     flex: 1,
@@ -1181,6 +1640,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#000",
     marginBottom: 8,
+    fontFamily: "Poppins-SemiBold",
   },
   required: {
     color: "#FF3B30",
@@ -1191,6 +1651,7 @@ const styles = StyleSheet.create({
     padding: 15,
     fontSize: 16,
     color: "#000",
+    fontFamily: "Poppins-Regular",
   },
   inputWithButton: {
     flexDirection: "row",
@@ -1206,11 +1667,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  scanButtonText: {
-    color: "#007AFF",
-    fontSize: 14,
-    fontWeight: "500",
-  },
   dropdown: {
     backgroundColor: "#F0F4F8",
     borderRadius: 8,
@@ -1219,10 +1675,12 @@ const styles = StyleSheet.create({
   dropdownText: {
     fontSize: 16,
     color: "#000",
+    fontFamily: "Poppins-Regular",
   },
   dropdownPlaceholder: {
     fontSize: 16,
     color: "#999",
+    fontFamily: "Poppins-Regular",
   },
   imageUploadContainer: {
     borderWidth: 2,
@@ -1252,6 +1710,7 @@ const styles = StyleSheet.create({
     color: "#FF3B30",
     fontSize: 14,
     fontWeight: "500",
+    fontFamily: "Poppins-Medium",
   },
   imageUploadArea: {
     alignItems: "center",
@@ -1265,55 +1724,13 @@ const styles = StyleSheet.create({
     color: "#666",
     textAlign: "center",
     marginBottom: 15,
-  },
-  takePictureButton: {
-    backgroundColor: "#F0F4F8",
-    borderRadius: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    marginBottom: 10,
-  },
-  takePictureButtonText: {
-    color: "#007AFF",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  galleryLink: {
-    color: "#007AFF",
-    fontSize: 14,
-    textDecorationLine: "underline",
-    marginBottom: 15,
+    fontFamily: "Poppins-Regular",
   },
   imageUploadInfo: {
     fontSize: 12,
     color: "#999",
     marginBottom: 5,
-  },
-  orSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 15,
-    width: "100%",
-  },
-  orLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E0E0E0",
-  },
-  orText: {
-    marginHorizontal: 10,
-    color: "#999",
-    fontSize: 12,
-  },
-  searchOnlineButton: {
-    backgroundColor: "#F0F4F8",
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-  },
-  searchOnlineText: {
-    color: "#666",
-    fontSize: 14,
+    fontFamily: "Poppins-Regular",
   },
   radioGroup: {
     flexDirection: "row",
@@ -1344,6 +1761,7 @@ const styles = StyleSheet.create({
   radioText: {
     fontSize: 14,
     color: "#000",
+    fontFamily: "Poppins-Regular",
   },
   priceInput: {
     flexDirection: "row",
@@ -1357,6 +1775,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
     marginRight: 5,
+    fontFamily: "Poppins-Regular",
   },
   priceTextInput: {
     flex: 1,
@@ -1364,6 +1783,7 @@ const styles = StyleSheet.create({
     paddingLeft: 0,
     fontSize: 16,
     color: "#000",
+    fontFamily: "Poppins-Regular",
   },
   priceOptions: {
     flexDirection: "row",
@@ -1382,6 +1802,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#007AFF",
     fontWeight: "500",
+    fontFamily: "Poppins-Medium",
   },
   dateInputs: {
     flexDirection: "row",
@@ -1397,6 +1818,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 5,
     textAlign: "center",
+    fontFamily: "Poppins-Regular",
   },
   supplierSection: {
     backgroundColor: "#FFF",
@@ -1427,6 +1849,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
     fontWeight: "500",
+    fontFamily: "Poppins-Medium",
   },
   nextButton: {
     backgroundColor: "#007AFF",
@@ -1441,8 +1864,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#FFF",
     fontWeight: "600",
+    fontFamily: "Poppins-SemiBold",
   },
-  // Summary Styles
   summaryContent: {
     flex: 1,
     backgroundColor: "#F5F7FA",
@@ -1453,6 +1876,7 @@ const styles = StyleSheet.create({
     color: "#000",
     padding: 20,
     paddingBottom: 10,
+    fontFamily: "Poppins-Bold",
   },
   summaryImageContainer: {
     alignItems: "center",
@@ -1476,6 +1900,7 @@ const styles = StyleSheet.create({
     color: "#000",
     marginBottom: 15,
     letterSpacing: 0.5,
+    fontFamily: "Poppins-Bold",
   },
   summaryRow: {
     flexDirection: "row",
@@ -1487,6 +1912,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     flex: 1,
+    fontFamily: "Poppins-Regular",
   },
   summaryValue: {
     fontSize: 14,
@@ -1494,6 +1920,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     flex: 1,
     textAlign: "right",
+    fontFamily: "Poppins-Medium",
   },
   saveProductButton: {
     backgroundColor: "#007AFF",
@@ -1507,47 +1934,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#FFF",
     fontWeight: "600",
+    fontFamily: "Poppins-SemiBold",
   },
-  // Image Picker Modal Styles
-  imagePickerModal: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  imagePickerContent: {
-    backgroundColor: "#FFF",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-  },
-  imagePickerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    textAlign: "center",
-    marginBottom: 20,
-    color: "#000",
-  },
-  imagePickerOption: {
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
-  },
-  imagePickerOptionText: {
-    fontSize: 16,
-    color: "#007AFF",
-    textAlign: "center",
-  },
-  imagePickerCancel: {
-    paddingVertical: 15,
-    marginTop: 10,
-  },
-  imagePickerCancelText: {
-    fontSize: 16,
-    color: "#FF3B30",
-    textAlign: "center",
-    fontWeight: "500",
-  },
-  // Loading Overlay
   loadingOverlay: {
     position: "absolute",
     top: 0,
@@ -1564,6 +1952,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#2046AE",
     fontWeight: "500",
+    fontFamily: "Poppins-Medium",
   },
   uploadingOverlay: {
     position: "absolute",
@@ -1576,7 +1965,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  // BARCODE SCANNER STYLES
   scannerModalContainer: {
     flex: 1,
     backgroundColor: "#000",
@@ -1593,6 +1981,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#FFF",
+    fontFamily: "Poppins-SemiBold",
   },
   scannerContainer: {
     flex: 1,
@@ -1608,12 +1997,12 @@ const styles = StyleSheet.create({
     color: "#FFF",
     textAlign: "center",
     padding: 20,
+    fontFamily: "Poppins-Regular",
   },
   scanTargetOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "center",
     alignItems: "center",
-    // Creates a square "hole" effect for scanning
     borderWidth: width / 2,
     borderColor: "rgba(255, 255, 255, 0.1)",
   },
@@ -1622,7 +2011,8 @@ const styles = StyleSheet.create({
     color: "#FFF",
     padding: 10,
     borderRadius: 5,
-    marginTop: 100, // Position it below the actual scan area
+    marginTop: 100,
+    fontFamily: "Poppins-Regular",
   },
   scannerScannedOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -1635,6 +2025,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#FFF",
     fontWeight: "bold",
+    fontFamily: "Poppins-Bold",
   },
 });
 

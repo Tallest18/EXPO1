@@ -1,7 +1,12 @@
+import { auth, db } from "@/app/config/firebaseConfig";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React from "react";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { collection, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,21 +20,98 @@ type Option = {
   title: string;
   icon: keyof typeof Ionicons.glyphMap;
   action: () => void;
+  badge?: number;
 };
+
 const More = () => {
-  const options: Option[] = [
+  const [userName, setUserName] = useState<string>("Guest User");
+  const [userPhone, setUserPhone] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
+
+  // Fetch user data when component mounts
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        await fetchUserData(user.uid);
+        // Start listening to notifications
+        const unsubscribeNotifications = listenToNotifications(user.uid);
+        return () => unsubscribeNotifications();
+      } else {
+        setUserName("Guest User");
+        setUserPhone("");
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const fetchUserData = async (userId: string) => {
+    try {
+      // Fetch user document from Firestore
+      const userDoc = await getDoc(doc(db, "users", userId));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        console.log("User data from Firestore:", userData);
+        
+        setUserName(
+          userData.name || 
+          userData.businessName || 
+          userData.displayName || 
+          "Guest User"
+        );
+        setUserPhone(
+          userData.phone || 
+          userData.phoneNumber || 
+          userData.mobile || 
+          ""
+        );
+      } else {
+        console.log("No user document found in Firestore");
+        if (auth.currentUser?.displayName) {
+          setUserName(auth.currentUser.displayName);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Listen to real-time notifications
+  const listenToNotifications = (userId: string) => {
+    try {
+      const notificationsRef = collection(db, "notifications");
+      const q = query(
+        notificationsRef,
+        where("userId", "==", userId),
+        where("isRead", "==", false)
+      );
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const unreadCount = snapshot.size;
+        setUnreadNotifications(unreadCount);
+        console.log(`Unread notifications: ${unreadCount}`);
+      }, (error) => {
+        console.error("Error listening to notifications:", error);
+      });
+
+      return unsubscribe;
+    } catch (error) {
+      console.error("Error setting up notifications listener:", error);
+      return () => {};
+    }
+  };
+
+  const accountOptions: Option[] = [
     {
-      title: "My Account",
-      icon: "person-circle-outline",
+      title: "Profile",
+      icon: "person-outline",
       action: () => {
-        router.push("/(Routes)/AccountScreen");
-      },
-    },
-    {
-      title: "Notifications",
-      icon: "notifications-outline",
-      action: () => {
-        router.push("/(Routes)/NotificationsScreen");
+        router.push("/(Routes)/Profile");
       },
     },
     {
@@ -40,6 +122,34 @@ const More = () => {
       },
     },
     {
+      title: "Notifications",
+      icon: "notifications-outline",
+      action: () => {
+        router.push("/(Routes)/NotificationsScreen");
+      },
+      badge: unreadNotifications > 0 ? unreadNotifications : undefined,
+    },
+  ];
+
+  const businessOptions: Option[] = [
+    {
+      title: "Business Information",
+      icon: "briefcase-outline",
+      action: () => {
+        router.push("/(Routes)/BusinessInfoScreen");
+      },
+    },
+    {
+      title: "Change Profile Photo",
+      icon: "camera-outline",
+      action: () => {
+        router.push("/(Routes)/Profile");
+      },
+    },
+  ];
+
+  const supportOptions: Option[] = [
+    {
       title: "Help & Support",
       icon: "help-circle-outline",
       action: () => {
@@ -47,70 +157,286 @@ const More = () => {
       },
     },
     {
-      title: "Sign Out",
-      icon: "log-out-outline",
+      title: "Privacy Policy",
+      icon: "document-text-outline",
       action: () => {
-        // Corrected the navigation path to the absolute path from the app root
-        router.replace("/(Anboarding)/Onboarding1");
+        router.push("/(Routes)/PrivacyPolicy");
       },
     },
   ];
 
+  const handleLogout = async () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Logout",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await signOut(auth);
+              router.replace("/(Anboarding)/Onboarding1");
+            } catch (error) {
+              console.error("Error during logout:", error);
+              Alert.alert("Error", "Failed to logout. Please try again.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const renderOption = (option: Option) => (
+    <TouchableOpacity
+      key={option.title}
+      style={styles.optionItem}
+      onPress={option.action}
+    >
+      <View style={styles.iconContainer}>
+        <Ionicons name={option.icon} size={20} color="#2046AE" />
+      </View>
+      <Text style={styles.optionText}>{option.title}</Text>
+      {option.badge && option.badge > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{option.badge > 99 ? '99+' : option.badge}</Text>
+        </View>
+      )}
+      <Ionicons name="chevron-forward-outline" size={20} color="#C0C0C0" />
+    </TouchableOpacity>
+  );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.safeArea, styles.centered]}>
+        <ActivityIndicator size="large" color="#2046AE" />
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container}>
+        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>More</Text>
+          <Text style={styles.headerSubtitle}>Account and app settings</Text>
         </View>
-        {options.map((option, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.optionItem}
-            onPress={option.action}
-          >
-            <Ionicons name={option.icon} size={24} color="#2046AE" />
-            <Text style={styles.optionText}>{option.title}</Text>
-            <Ionicons
-              name="chevron-forward-outline"
-              size={20}
-              color="#888"
-              style={styles.chevron}
-            />
-          </TouchableOpacity>
-        ))}
+
+        {/* User Profile Card */}
+        <TouchableOpacity 
+          style={styles.profileCard}
+          onPress={() => router.push("/(Routes)/Profile")}
+        >
+          <View style={styles.profileIcon}>
+            <Ionicons name="person" size={28} color="#fff" />
+          </View>
+          <View style={styles.profileInfo}>
+            <Text style={styles.profileName}>{userName}</Text>
+            {userPhone && (
+              <Text style={styles.profilePhone}>{userPhone}</Text>
+            )}
+          </View>
+        </TouchableOpacity>
+
+        {/* Account Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>ACCOUNT</Text>
+          {accountOptions.map(renderOption)}
+        </View>
+
+        {/* Business Profile Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>MY BUSINESS PROFILE</Text>
+          {businessOptions.map(renderOption)}
+        </View>
+
+        {/* Support Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>SUPPORT</Text>
+          {supportOptions.map(renderOption)}
+        </View>
+
+        {/* Logout Button */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={20} color="#E74C3C" />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerBrand}>Inventra</Text>
+          <Text style={styles.footerTagline}>Version 1.0.1</Text>
+          <Text style={styles.footerCredit}>
+            Made with ❤️ by Nigeria traders
+          </Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    paddingTop: 0,
+    backgroundColor: "#E7EEFA",
+  },
+  centered: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
   container: {
     flex: 1,
-    backgroundColor: "#E7EEFA",
-    padding: 16,
+    backgroundColor: "#F5F7FA",
   },
   header: {
-    marginBottom: 20,
+    paddingHorizontal: 20,
+    paddingTop: 30,
+    paddingBottom: 20,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#1a1a1a",
+    marginBottom: 4,
+    fontFamily: "Poppins-Bold",
+  },
+  headerSubtitle: {
+    fontSize: 15,
+    color: "#8E8E93",
+    fontFamily: "Poppins-Regular",
+  },
+  profileCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#2046AE",
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 24,
+  },
+  profileIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  profileInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  profileName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#fff",
+    marginBottom: 4,
+    fontFamily: "Poppins-SemiBold",
+  },
+  profilePhone: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.8)",
+    fontFamily: "Poppins-Regular",
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#8E8E93",
+    paddingHorizontal: 20,
+    marginBottom: 8,
+    letterSpacing: 0.5,
+    fontFamily: "Poppins-SemiBold",
   },
   optionItem: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 10,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+    marginLeft: 20,
+    marginRight: 20,
+    borderRadius: 12,
+  },
+  iconContainer: {
+    width: 24,
+    alignItems: "center",
   },
   optionText: {
     flex: 1,
-    marginLeft: 15,
+    marginLeft: 16,
     fontSize: 16,
+    color: "#1a1a1a",
+    fontFamily: "Poppins-Regular",
   },
-  chevron: {
-    marginLeft: "auto",
+  badge: {
+    backgroundColor: "#E74C3C",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+    marginRight: 8,
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+    fontFamily: "Poppins-SemiBold",
+  },
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    borderRadius: 50,
+    borderWidth: 1,
+    borderColor: "#E74C3C",
+    paddingVertical: 14,
+    marginHorizontal: 20,
+    marginBottom: 24,
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#E74C3C",
+    marginLeft: 8,
+    fontFamily: "Poppins-SemiBold",
+  },
+  footer: {
+    alignItems: "center",
+    paddingVertical: 24,
+    paddingBottom: 40,
+  },
+  footerBrand: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#2046AE",
+    marginBottom: 4,
+    fontFamily: "Poppins-Bold",
+  },
+  footerTagline: {
+    fontSize: 13,
+    color: "#8E8E93",
+    marginBottom: 4,
+    fontFamily: "Poppins-Regular",
+  },
+  footerCredit: {
+    fontSize: 13,
+    color: "#8E8E93",
+    fontFamily: "Poppins-Regular",
   },
 });
+
 export default More;
