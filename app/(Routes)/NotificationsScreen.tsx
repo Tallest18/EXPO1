@@ -20,7 +20,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { db } from "../config/firebaseConfig";
+import { auth, db } from "../config/firebaseConfig";
 
 interface Notification {
   id: string;
@@ -41,6 +41,7 @@ interface Notification {
   isRead: boolean;
   productId?: string;
   dateAdded: number;
+  userId?: string;
 }
 
 // Helper function to group notifications by date
@@ -88,6 +89,7 @@ const groupNotificationsByDate = (notifications: Notification[]) => {
 const NotificationsScreen = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [fontsLoaded] = useFonts({
     "Poppins-Regular": require("../../assets/fonts/Poppins-Regular.ttf"),
@@ -96,33 +98,57 @@ const NotificationsScreen = () => {
   });
 
   useEffect(() => {
-    const notificationsCollection = collection(db, "notifications");
-    const notificationsQuery = query(
-      notificationsCollection,
-      orderBy("dateAdded", "desc")
-    );
+    // Check if user is authenticated
+    const user = auth.currentUser;
+    
+    if (!user) {
+      console.log("No authenticated user");
+      setError("Please log in to view notifications");
+      setLoading(false);
+      return;
+    }
 
-    const unsubscribe = onSnapshot(
-      notificationsQuery,
-      (snapshot) => {
-        const fetchedNotifications: Notification[] = [];
-        snapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
-          const data = doc.data();
-          fetchedNotifications.push({
-            id: doc.id,
-            ...data,
-          } as Notification);
-        });
-        setNotifications(fetchedNotifications);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Firestore error:", error);
-        setLoading(false);
-      }
-    );
+    console.log("Setting up notification listener for user:", user.uid);
 
-    return () => unsubscribe();
+    try {
+      const notificationsCollection = collection(db, "notifications");
+      const notificationsQuery = query(
+        notificationsCollection,
+        orderBy("dateAdded", "desc")
+      );
+
+      const unsubscribe = onSnapshot(
+        notificationsQuery,
+        (snapshot) => {
+          const fetchedNotifications: Notification[] = [];
+          snapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
+            const data = doc.data();
+            fetchedNotifications.push({
+              id: doc.id,
+              ...data,
+            } as Notification);
+          });
+          console.log("Fetched notifications:", fetchedNotifications.length);
+          setNotifications(fetchedNotifications);
+          setLoading(false);
+          setError(null);
+        },
+        (error) => {
+          console.error("Firestore error:", error);
+          setError("Failed to load notifications. Please try again.");
+          setLoading(false);
+        }
+      );
+
+      return () => {
+        console.log("Cleaning up notification listener");
+        unsubscribe();
+      };
+    } catch (error) {
+      console.error("Error setting up notification listener:", error);
+      setError("Failed to initialize notifications");
+      setLoading(false);
+    }
   }, []);
 
   const getNotificationIcon = (type: Notification["type"]) => {
@@ -273,6 +299,37 @@ const NotificationsScreen = () => {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0056D2" />
           <Text style={styles.loadingText}>Loading notifications...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Ionicons name="notifications" size={24} color="#FACC15" />
+            <Text style={styles.headerTitle}>Notifications</Text>
+          </View>
+          <TouchableOpacity onPress={() => router.back()}>
+            <View style={styles.feather}>
+              <Feather name="x" size={24} color="#000" />
+            </View>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.emptyContainer}>
+          <Feather name="alert-circle" size={64} color="#E0E0E0" />
+          <Text style={styles.emptyText}>{error}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => {
+              setLoading(true);
+              setError(null);
+            }}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -477,6 +534,19 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontFamily: "Poppins-Regular",
     lineHeight: 20,
+  },
+  retryButton: {
+    marginTop: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    backgroundColor: "#0056D2",
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Poppins-Regular",
   },
 });
 

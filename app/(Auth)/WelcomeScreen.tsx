@@ -167,7 +167,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             />
 
             <Text style={styles.infoText}>
-              We'll send you a one-time password (OTP) to verify your number.
+              We&apos;ll send you a one-time password (OTP) to verify your number.
             </Text>
 
             <TouchableOpacity

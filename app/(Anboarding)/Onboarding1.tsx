@@ -8,7 +8,7 @@ const Onboarding1 = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       router.replace("/(Auth)/WelcomeScreen");
-    }, 3000);
+    }, 5000);
 
     return () => clearTimeout(timer);
   }, []);
