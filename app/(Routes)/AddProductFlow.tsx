@@ -26,16 +26,22 @@ import {
   MediaType,
 } from "react-native-image-picker";
 import { auth, db, storage } from "../config/firebaseConfig";
-// Import YOUR notification helpers
 import {
   checkExpiringProducts,
   checkLowStock,
-  notifyProductAdded
+  notifyProductAdded,
 } from "../notificationHelpers";
 
 const { width } = Dimensions.get("window");
 
-// Types
+const CATEGORIES = [
+  "Foodstuffs",
+  "Soft Drinks",
+  "Beverages",
+  "Noodles & Pasta",
+  "Snacks & Biscuits",
+];
+
 interface Product {
   id: string;
   name: string;
@@ -90,6 +96,11 @@ interface FormData {
     name: string;
     phone: string;
   };
+  unitsPerCarton: string;
+  numberOfCartons: string;
+  costPricePerCarton: string;
+  sellingPricePerCarton: string;
+  sellingPricePerUnit: string;
 }
 
 interface ImageAsset {
@@ -101,7 +112,6 @@ interface ImageAsset {
   height?: number;
 }
 
-// Main Component
 const AddProductFlow: React.FC<AddProductFlowProps> = ({
   visible,
   onClose,
@@ -120,16 +130,11 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
     "Bic Razor",
   ]);
   const [isSearching, setIsSearching] = useState(false);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
   const [currentStep, setCurrentStep] = useState(0);
-  const [progress, setProgress] = useState(0.33);
   const [saving, setSaving] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
-
-  const [hasScannerPermission, setHasScannerPermission] = useState<
-    boolean | null
-  >(null);
-  const [scannerScanned, setScannerScanned] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     productName: "",
@@ -150,9 +155,12 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
       name: "",
       phone: "",
     },
+    unitsPerCarton: "",
+    numberOfCartons: "",
+    costPricePerCarton: "",
+    sellingPricePerCarton: "",
+    sellingPricePerUnit: "",
   });
-
-  const [showScanner, setShowScanner] = useState(false);
 
   const steps = ["Product Info", "Pricing & Packaging", "Stock & Extras"];
 
@@ -164,54 +172,9 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
       setShowSearchModal(false);
       setSearchQuery("");
       setSearchResults([]);
+      setShowCategoryDropdown(false);
     }
   }, [visible]);
-
-  useEffect(() => {
-    const getBarCodeScannerPermissions = async () => {
-      // Barcode scanner permission logic
-    };
-
-    if (showScanner) {
-      getBarCodeScannerPermissions();
-    }
-  }, [showScanner]);
-
-  useEffect(() => {
-    const calculateProgress = () => {
-      let filledFields = 0;
-      let totalFields = 0;
-
-      if (currentStep === 0) {
-        totalFields = 4;
-        if (formData.productName) filledFields++;
-        if (formData.sku) filledFields++;
-        if (formData.category) filledFields++;
-        if (formData.productImage) filledFields++;
-      } else if (currentStep === 1) {
-        totalFields = 4;
-        if (formData.quantityType) filledFields++;
-        if (formData.numberOfItems) filledFields++;
-        if (formData.costPrice) filledFields++;
-        if (formData.sellingPrice) filledFields++;
-      } else if (currentStep === 2) {
-        totalFields = 5;
-        if (formData.lowStockThreshold) filledFields++;
-        if (formData.expiryDate.month && formData.expiryDate.year)
-          filledFields++;
-        if (formData.supplier.name) filledFields++;
-        if (formData.supplier.phone) filledFields++;
-        filledFields++;
-      }
-
-      const stepProgress = filledFields / totalFields;
-      const baseProgress = currentStep * 0.33;
-      const currentProgress = baseProgress + stepProgress * 0.33;
-      setProgress(Math.min(currentProgress, 1));
-    };
-
-    calculateProgress();
-  }, [formData, currentStep]);
 
   const handleSearch = async (searchText: string) => {
     if (!searchText.trim()) {
@@ -223,10 +186,7 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
 
     try {
       const productsRef = collection(db, "products");
-      const q = query(
-        productsRef,
-        where("userId", "==", currentUser?.uid)
-      );
+      const q = query(productsRef, where("userId", "==", currentUser?.uid));
 
       const querySnapshot = await getDocs(q);
       const results: Product[] = [];
@@ -282,6 +242,11 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         year: product.expiryDate.split("/")[2] || "",
       },
       supplier: product.supplier,
+      unitsPerCarton: "",
+      numberOfCartons: "",
+      costPricePerCarton: "",
+      sellingPricePerCarton: "",
+      sellingPricePerUnit: "",
     });
 
     setShowSearchModal(false);
@@ -349,12 +314,12 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
           buttonNeutral: "Ask Me Later",
           buttonNegative: "Cancel",
           buttonPositive: "OK",
-        }
+        },
       );
       if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
         Alert.alert(
           "Permission Denied",
-          "You need to grant camera permission to use this feature."
+          "You need to grant camera permission to use this feature.",
         );
         return;
       }
@@ -379,7 +344,7 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         console.log("Image picker error: ", response.errorCode);
         Alert.alert(
           "Error",
-          response.errorMessage || "An unknown error occurred."
+          response.errorMessage || "An unknown error occurred.",
         );
       } else if (response.assets && response.assets.length > 0) {
         const asset: Asset = response.assets[0];
@@ -395,52 +360,60 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
       console.log("Caught an unexpected error:", error);
       Alert.alert(
         "Unexpected Error",
-        "An unexpected error occurred while picking an image."
+        "An unexpected error occurred while picking an image.",
       );
     }
   };
 
-  const showImagePickerOptions = () => {
-    Alert.alert(
-      "Select Product Image",
-      "Choose how you would like to upload a new photo.",
-      [
-        {
-          text: "Take Photo",
-          onPress: () => handlePickImage(true),
-        },
-        {
-          text: "Choose from Gallery",
-          onPress: () => handlePickImage(false),
-        },
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-      ]
-    );
-  };
-
   const nextStep = () => {
     if (currentStep === 0) {
-      if (!formData.productName || !formData.sku || !formData.category) {
+      if (!formData.productName || !formData.category) {
         Alert.alert(
           "Missing Information",
-          "Please fill in all required fields for Product Info."
+          "Please fill in all required fields for Product Info.",
         );
         return;
       }
     } else if (currentStep === 1) {
-      if (
-        !formData.numberOfItems ||
-        !formData.costPrice ||
-        !formData.sellingPrice
-      ) {
-        Alert.alert(
-          "Missing Information",
-          "Please fill in all required fields for Pricing & Packaging."
-        );
-        return;
+      if (formData.quantityType === "Single Items") {
+        if (
+          !formData.numberOfItems ||
+          !formData.costPrice ||
+          !formData.sellingPrice
+        ) {
+          Alert.alert(
+            "Missing Information",
+            "Please fill in all required fields for Pricing & Packaging.",
+          );
+          return;
+        }
+      } else if (formData.quantityType === "Carton") {
+        if (
+          !formData.unitsPerCarton ||
+          !formData.numberOfCartons ||
+          !formData.costPricePerCarton ||
+          !formData.sellingPricePerCarton
+        ) {
+          Alert.alert(
+            "Missing Information",
+            "Please fill in all required fields for Carton packaging.",
+          );
+          return;
+        }
+      } else if (formData.quantityType === "Both") {
+        if (
+          !formData.unitsPerCarton ||
+          !formData.numberOfCartons ||
+          !formData.costPricePerCarton ||
+          !formData.sellingPricePerCarton ||
+          !formData.sellingPricePerUnit
+        ) {
+          Alert.alert(
+            "Missing Information",
+            "Please fill in all required fields for Both packaging types.",
+          );
+          return;
+        }
       }
     }
 
@@ -463,6 +436,7 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
     setShowSearchModal(false);
     setSearchQuery("");
     setSearchResults([]);
+    setShowCategoryDropdown(false);
     setFormData({
       productName: "",
       sku: "",
@@ -475,6 +449,11 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
       lowStockThreshold: "",
       expiryDate: { day: "", month: "", year: "" },
       supplier: { name: "", phone: "" },
+      unitsPerCarton: "",
+      numberOfCartons: "",
+      costPricePerCarton: "",
+      sellingPricePerCarton: "",
+      sellingPricePerUnit: "",
     });
   };
 
@@ -496,15 +475,37 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         imageUrl = await uploadImage(formData.productImage.uri);
       }
 
+      let unitsInStock = 0;
+      let finalCostPrice = 0;
+      let finalSellingPrice = 0;
+
+      if (formData.quantityType === "Single Items") {
+        unitsInStock = parseInt(formData.numberOfItems) || 0;
+        finalCostPrice = parseFloat(formData.costPrice) || 0;
+        finalSellingPrice = parseFloat(formData.sellingPrice) || 0;
+      } else if (formData.quantityType === "Carton") {
+        const unitsPerCarton = parseInt(formData.unitsPerCarton) || 0;
+        const numberOfCartons = parseInt(formData.numberOfCartons) || 0;
+        unitsInStock = unitsPerCarton * numberOfCartons;
+        finalCostPrice = parseFloat(formData.costPricePerCarton) || 0;
+        finalSellingPrice = parseFloat(formData.sellingPricePerCarton) || 0;
+      } else if (formData.quantityType === "Both") {
+        const unitsPerCarton = parseInt(formData.unitsPerCarton) || 0;
+        const numberOfCartons = parseInt(formData.numberOfCartons) || 0;
+        unitsInStock = unitsPerCarton * numberOfCartons;
+        finalCostPrice = parseFloat(formData.costPricePerCarton) || 0;
+        finalSellingPrice = parseFloat(formData.sellingPricePerUnit) || 0;
+      }
+
       const productData = {
         name: formData.productName || "Untitled Product",
-        category: formData.category || "Food",
+        category: formData.category || "Foodstuffs",
         barcode: formData.sku || "",
         image: imageUrl ? { uri: imageUrl } : null,
         quantityType: formData.quantityType || "Single Items",
-        unitsInStock: parseInt(formData.numberOfItems) || 0,
-        costPrice: parseFloat(formData.costPrice) || 0,
-        sellingPrice: parseFloat(formData.sellingPrice) || 0,
+        unitsInStock: unitsInStock,
+        costPrice: finalCostPrice,
+        sellingPrice: finalSellingPrice,
         lowStockThreshold: parseInt(formData.lowStockThreshold) || 10,
         expiryDate:
           formData.expiryDate.month && formData.expiryDate.year
@@ -520,38 +521,22 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         userId: currentUser.uid,
       };
 
-      console.log("Saving product with userId:", currentUser.uid);
-
       const docRef = await addDoc(collection(db, "products"), productData);
-      console.log("Product saved with ID:", docRef.id);
 
       const savedProduct: Product = {
         id: docRef.id,
         ...productData,
       } as Product;
 
-      // ===== NOTIFICATION INTEGRATION USING YOUR SYSTEM =====
-      
-      // 1. Notify that product was added
-      await notifyProductAdded(
-        currentUser.uid,
-        docRef.id,
-        productData.name
-      );
-
-      // 2. Check for low stock or out of stock
+      await notifyProductAdded(currentUser.uid, docRef.id, productData.name);
       await checkLowStock(
         currentUser.uid,
         docRef.id,
         productData.name,
         productData.unitsInStock,
-        productData.lowStockThreshold
+        productData.lowStockThreshold,
       );
-
-      // 3. Check for expiring products (runs check on all products)
       await checkExpiringProducts(currentUser.uid);
-
-      console.log("✅ All notifications created successfully");
 
       onSaveProduct(savedProduct);
       onClose();
@@ -560,323 +545,597 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
       console.error("Error adding product:", error);
       Alert.alert(
         "Error",
-        "Failed to add product. Please check your connection and try again."
+        "Failed to add product. Please check your connection and try again.",
       );
     } finally {
       setSaving(false);
     }
   };
 
-  // All render functions remain exactly the same as in the complete version
   const renderProgressBar = () => (
     <View style={styles.progressContainer}>
       {steps.map((step, index) => (
-        <View key={index} style={styles.stepContainer}>
-          <View
-            style={[
-              styles.stepIndicator,
-              {
-                backgroundColor: index <= currentStep ? "#007AFF" : "#E0E0E0",
-                width:
-                  index === 0
-                    ? width * 0.25
-                    : index === 1
-                    ? width * 0.35
-                    : width * 0.25,
-              },
-            ]}
-          >
-            {index === currentStep && (
-              <View
-                style={[styles.progressFill, { width: `${progress * 100}%` }]}
-              />
-            )}
-            {index < currentStep && (
-              <View style={[styles.progressFill, { width: "100%" }]} />
-            )}
-          </View>
+        <View key={index} style={styles.stepItem}>
           <Text
             style={[
               styles.stepText,
-              { color: index <= currentStep ? "#007AFF" : "#999" },
+              index <= currentStep
+                ? styles.stepTextActive
+                : styles.stepTextInactive,
             ]}
           >
             {step}
           </Text>
+          <View
+            style={[
+              styles.progressBar,
+              index <= currentStep
+                ? styles.progressBarActive
+                : styles.progressBarInactive,
+            ]}
+          />
         </View>
       ))}
     </View>
   );
 
   const renderStep1 = () => (
-    <ScrollView style={styles.stepContent}>
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>
-          Product Name <Text style={styles.required}>*</Text>
-        </Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Type here..."
-          value={formData.productName}
-          onChangeText={(value) => updateFormData("productName", value)}
-        />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>
-          SKU / Barcode <Text style={styles.required}>*</Text>
-        </Text>
-        <View style={styles.inputWithButton}>
+    <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
+      {/* Card 1: Product Name and Category */}
+      <View style={styles.card}>
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>
+            Product Name <Text style={styles.required}>*</Text>
+          </Text>
           <TextInput
-            style={[styles.input, { flex: 1, marginRight: 10 }]}
-            placeholder="Type 8-13 digits here..."
-            value={formData.sku}
-            onChangeText={(value) => updateFormData("sku", value)}
-            keyboardType="numeric"
+            style={styles.input}
+            placeholder="Type here..."
+            placeholderTextColor="#CBD5E0"
+            value={formData.productName}
+            onChangeText={(value) => updateFormData("productName", value)}
           />
+        </View>
+
+        <View style={[styles.fieldGroup, { marginBottom: 0 }]}>
+          <Text style={styles.label}>
+            Product Category <Text style={styles.required}>*</Text>
+          </Text>
           <TouchableOpacity
-            style={styles.scanButton}
-            onPress={() => {
-              setScannerScanned(false);
-              setShowScanner(true);
-            }}
+            style={styles.dropdown}
+            onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
           >
-            <Ionicons name="barcode" size={20} color="#007AFF" />
+            <Text
+              style={
+                formData.category
+                  ? styles.dropdownText
+                  : styles.dropdownPlaceholder
+              }
+            >
+              {formData.category || "Category"}
+            </Text>
+            <Ionicons
+              name={showCategoryDropdown ? "chevron-up" : "chevron-down"}
+              size={18}
+              color="#718096"
+            />
           </TouchableOpacity>
+
+          {showCategoryDropdown && (
+            <View style={styles.dropdownMenu}>
+              {CATEGORIES.map((category, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    updateFormData("category", category);
+                    setShowCategoryDropdown(false);
+                  }}
+                >
+                  <Text style={styles.dropdownItemText}>{category}</Text>
+                  {formData.category === category && (
+                    <Ionicons name="checkmark" size={18} color="#1155CC" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
       </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>
-          Product Category <Text style={styles.required}>*</Text>
-        </Text>
-        <TouchableOpacity
-          style={styles.dropdown}
-          onPress={() => updateFormData("category", "Food")}
-        >
-          <Text
-            style={
-              formData.category
-                ? styles.dropdownText
-                : styles.dropdownPlaceholder
-            }
-          >
-            {formData.category || "Select Category (e.g., Food)"}
+      {/* Card 2: Upload Product Image and Search Online */}
+      <View style={styles.card}>
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>
+            Upload Product Image <Text style={styles.required}>*</Text>
           </Text>
-        </TouchableOpacity>
-      </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>
-          Upload Product Image <Text style={styles.required}>*</Text>
-        </Text>
-        <TouchableOpacity
-          onPress={showImagePickerOptions}
-          style={styles.imageUploadContainer}
-          disabled={imageUploading}
-        >
           {formData.productImage ? (
-            <View style={styles.uploadedImageContainer}>
+            <View style={styles.uploadedImageWrapper}>
               <Image
                 source={{ uri: formData.productImage.uri }}
                 style={styles.uploadedImage}
               />
-              <TouchableOpacity
-                style={styles.removeButton}
-                onPress={() => updateFormData("productImage", null)}
-              >
-                <Text style={styles.removeButtonText}>Remove</Text>
-              </TouchableOpacity>
+              <View style={styles.imageButtonsRow}>
+                <TouchableOpacity
+                  style={styles.imageBtnOutline}
+                  onPress={() => handlePickImage(true)}
+                >
+                  <Text style={styles.imageBtnOutlineText}>Take Picture</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.imageBtnOutline}
+                  onPress={() => handlePickImage(false)}
+                >
+                  <Text style={styles.imageBtnOutlineText}>
+                    Select from gallery
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ) : (
-            <View style={styles.imageUploadArea}>
-              <Text style={styles.imageUploadIcon}>📷</Text>
-              <Text style={styles.imageUploadText}>
-                Tap to take a picture, or select from gallery
+            <View style={styles.imageUploadBox}>
+              <View style={styles.imageIconCircle}>
+                <Ionicons name="cloud-upload" size={40} color="#1155CC" />
+              </View>
+              <Text style={styles.imageUploadTitle}>
+                Click to upload or select
               </Text>
-              {imageUploading && (
-                <View style={styles.uploadingOverlay}>
-                  <ActivityIndicator size="small" color="#fff" />
-                  <Text style={{ color: "#fff", marginTop: 5, fontFamily: "Poppins-Regular" }}>
-                    Uploading...
+
+              <View style={styles.imageButtonsRow}>
+                <TouchableOpacity
+                  style={styles.imageBtnOutline}
+                  onPress={() => handlePickImage(true)}
+                  disabled={imageUploading}
+                >
+                  <Text style={styles.imageBtnOutlineText}>Take Picture</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.imageBtnOutline}
+                  onPress={() => handlePickImage(false)}
+                  disabled={imageUploading}
+                >
+                  <Text style={styles.imageBtnOutlineText}>
+                    Select from gallery
                   </Text>
-                </View>
-              )}
+                </TouchableOpacity>
+              </View>
+
               <Text style={styles.imageUploadInfo}>
-                Files Supported: PNG, JPG, SVG.
+                Files Supported: PNG, JPG, SVG.{"\n"}Maximum Size 1MB
               </Text>
-              <Text style={styles.imageUploadInfo}>Maximum Size 1MB</Text>
+
+              {imageUploading && (
+                <ActivityIndicator
+                  size="small"
+                  color="#1155CC"
+                  style={{ marginTop: 8 }}
+                />
+              )}
             </View>
           )}
+        </View>
+
+        <TouchableOpacity style={styles.searchOnlineBtn}>
+          <Ionicons name="search-outline" size={16} color="#1155CC" />
+          <Text style={styles.searchOnlineText}>Search online</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
   );
 
   const renderStep2 = () => (
-    <ScrollView style={styles.stepContent}>
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>
-          Quantity Type: <Text style={styles.required}>*</Text>
-        </Text>
-        <View style={styles.radioGroup}>
-          {["Single Items", "Carton", "Both"].map((type) => (
-            <TouchableOpacity
-              key={type}
-              style={styles.radioOption}
-              onPress={() => updateFormData("quantityType", type)}
-            >
-              <View
-                style={[
-                  styles.radioCircle,
-                  {
-                    backgroundColor:
-                      formData.quantityType === type ? "#007AFF" : "#FFF",
-                  },
-                ]}
+    <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.card}>
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>
+            Quantity Type <Text style={styles.required}>*</Text>
+          </Text>
+          <View style={styles.radioGroup}>
+            {["Single Items", "Carton", "Both"].map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={styles.radioOption}
+                onPress={() => updateFormData("quantityType", type)}
               >
-                {formData.quantityType === type && (
-                  <View style={styles.radioInner} />
-                )}
+                <View
+                  style={[
+                    styles.radioCircle,
+                    formData.quantityType === type && styles.radioCircleActive,
+                  ]}
+                >
+                  {formData.quantityType === type && (
+                    <View style={styles.radioInner} />
+                  )}
+                </View>
+                <Text style={styles.radioText}>{type}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {formData.quantityType === "Single Items" && (
+          <>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>
+                No. of Items (Unit) <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="How many pieces dey inside one carton?"
+                placeholderTextColor="#CBD5E0"
+                value={formData.numberOfItems}
+                onChangeText={(value) => updateFormData("numberOfItems", value)}
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>
+                Cost Price (How much you buy am?){" "}
+                <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.priceInputWrapper}>
+                <Text style={styles.currency}>₦</Text>
+                <TextInput
+                  style={styles.priceInput}
+                  placeholder="0.00"
+                  placeholderTextColor="#CBD5E0"
+                  value={formData.costPrice}
+                  onChangeText={(value) => updateFormData("costPrice", value)}
+                  keyboardType="numeric"
+                />
               </View>
-              <Text style={styles.radioText}>{type}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
+              <View style={styles.priceOptionsRow}>
+                {["100", "200", "500", "800", "1000"].map((price) => (
+                  <TouchableOpacity
+                    key={price}
+                    style={styles.priceChip}
+                    onPress={() => updateFormData("costPrice", price)}
+                  >
+                    <Text style={styles.priceChipText}>₦{price}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>
-          No. of Items (Unit) <Text style={styles.required}>*</Text>
-        </Text>
-        <TextInput
-          style={styles.input}
-          placeholder="How many pieces dey inside one carton?"
-          value={formData.numberOfItems}
-          onChangeText={(value) => updateFormData("numberOfItems", value)}
-          keyboardType="numeric"
-        />
-      </View>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>
+                Selling Price (How much you won sell am?){" "}
+                <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.priceInputWrapper}>
+                <Text style={styles.currency}>₦</Text>
+                <TextInput
+                  style={styles.priceInput}
+                  placeholder="0.00"
+                  placeholderTextColor="#CBD5E0"
+                  value={formData.sellingPrice}
+                  onChangeText={(value) =>
+                    updateFormData("sellingPrice", value)
+                  }
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.priceOptionsRow}>
+                {["100", "200", "500", "800", "1000"].map((price) => (
+                  <TouchableOpacity
+                    key={price}
+                    style={styles.priceChip}
+                    onPress={() => updateFormData("sellingPrice", price)}
+                  >
+                    <Text style={styles.priceChipText}>₦{price}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </>
+        )}
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>
-          Cost Price (How much you buy am?){" "}
-          <Text style={styles.required}>*</Text>
-        </Text>
-        <View style={styles.priceInput}>
-          <Text style={styles.currency}>₦</Text>
-          <TextInput
-            style={styles.priceTextInput}
-            placeholder="0.00"
-            value={formData.costPrice}
-            onChangeText={(value) => updateFormData("costPrice", value)}
-            keyboardType="numeric"
-          />
-        </View>
-        <View style={styles.priceOptions}>
-          {["100", "200", "500", "800", "1000"].map((price) => (
-            <TouchableOpacity
-              key={price}
-              style={styles.priceOption}
-              onPress={() => updateFormData("costPrice", price)}
-            >
-              <Text style={styles.priceOptionText}>₦{price}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
+        {formData.quantityType === "Carton" && (
+          <>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>
+                Units per Carton <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="How many pieces dey inside one carton?"
+                placeholderTextColor="#CBD5E0"
+                value={formData.unitsPerCarton}
+                onChangeText={(value) =>
+                  updateFormData("unitsPerCarton", value)
+                }
+                keyboardType="numeric"
+              />
+            </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>
-          Selling Price (How much you won sell am?){" "}
-          <Text style={styles.required}>*</Text>
-        </Text>
-        <View style={styles.priceInput}>
-          <Text style={styles.currency}>₦</Text>
-          <TextInput
-            style={styles.priceTextInput}
-            placeholder="0.00"
-            value={formData.sellingPrice}
-            onChangeText={(value) => updateFormData("sellingPrice", value)}
-            keyboardType="numeric"
-          />
-        </View>
-        <View style={styles.priceOptions}>
-          {["100", "200", "500", "800", "1000"].map((price) => (
-            <TouchableOpacity
-              key={price}
-              style={styles.priceOption}
-              onPress={() => updateFormData("sellingPrice", price)}
-            >
-              <Text style={styles.priceOptionText}>₦{price}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>
+                No. of Cartons <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="How many carton?"
+                placeholderTextColor="#CBD5E0"
+                value={formData.numberOfCartons}
+                onChangeText={(value) =>
+                  updateFormData("numberOfCartons", value)
+                }
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>
+                Cost Price (How much you buy 1 carton?){" "}
+                <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.priceInputWrapper}>
+                <Text style={styles.currency}>₦</Text>
+                <TextInput
+                  style={styles.priceInput}
+                  placeholder="0.00"
+                  placeholderTextColor="#CBD5E0"
+                  value={formData.costPricePerCarton}
+                  onChangeText={(value) =>
+                    updateFormData("costPricePerCarton", value)
+                  }
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.priceOptionsRow}>
+                {["100", "200", "500", "800", "1000"].map((price) => (
+                  <TouchableOpacity
+                    key={price}
+                    style={styles.priceChip}
+                    onPress={() => updateFormData("costPricePerCarton", price)}
+                  >
+                    <Text style={styles.priceChipText}>₦{price}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>
+                Selling Price (How much you won sell am?){" "}
+                <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.priceInputWrapper}>
+                <Text style={styles.currency}>₦</Text>
+                <TextInput
+                  style={styles.priceInput}
+                  placeholder="0.00"
+                  placeholderTextColor="#CBD5E0"
+                  value={formData.sellingPricePerCarton}
+                  onChangeText={(value) =>
+                    updateFormData("sellingPricePerCarton", value)
+                  }
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.priceOptionsRow}>
+                {["100", "200", "500", "800", "1000"].map((price) => (
+                  <TouchableOpacity
+                    key={price}
+                    style={styles.priceChip}
+                    onPress={() =>
+                      updateFormData("sellingPricePerCarton", price)
+                    }
+                  >
+                    <Text style={styles.priceChipText}>₦{price}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </>
+        )}
+
+        {formData.quantityType === "Both" && (
+          <>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>
+                Units per Carton <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="How many pieces dey inside one carton?"
+                placeholderTextColor="#CBD5E0"
+                value={formData.unitsPerCarton}
+                onChangeText={(value) =>
+                  updateFormData("unitsPerCarton", value)
+                }
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>
+                No. of Cartons <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="How many carton?"
+                placeholderTextColor="#CBD5E0"
+                value={formData.numberOfCartons}
+                onChangeText={(value) =>
+                  updateFormData("numberOfCartons", value)
+                }
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>
+                Cost Price (How much you buy 1 carton?){" "}
+                <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.priceInputWrapper}>
+                <Text style={styles.currency}>₦</Text>
+                <TextInput
+                  style={styles.priceInput}
+                  placeholder="0.00"
+                  placeholderTextColor="#CBD5E0"
+                  value={formData.costPricePerCarton}
+                  onChangeText={(value) =>
+                    updateFormData("costPricePerCarton", value)
+                  }
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.priceOptionsRow}>
+                {["100", "200", "500", "800", "1000"].map((price) => (
+                  <TouchableOpacity
+                    key={price}
+                    style={styles.priceChip}
+                    onPress={() => updateFormData("costPricePerCarton", price)}
+                  >
+                    <Text style={styles.priceChipText}>₦{price}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>
+                Selling Price (for 1 carton?){" "}
+                <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.priceInputWrapper}>
+                <Text style={styles.currency}>₦</Text>
+                <TextInput
+                  style={styles.priceInput}
+                  placeholder="0.00"
+                  placeholderTextColor="#CBD5E0"
+                  value={formData.sellingPricePerCarton}
+                  onChangeText={(value) =>
+                    updateFormData("sellingPricePerCarton", value)
+                  }
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.priceOptionsRow}>
+                {["100", "200", "500", "800", "1000"].map((price) => (
+                  <TouchableOpacity
+                    key={price}
+                    style={styles.priceChip}
+                    onPress={() =>
+                      updateFormData("sellingPricePerCarton", price)
+                    }
+                  >
+                    <Text style={styles.priceChipText}>₦{price}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>
+                Selling Price (for 1 unit item inside?){" "}
+                <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.priceInputWrapper}>
+                <Text style={styles.currency}>₦</Text>
+                <TextInput
+                  style={styles.priceInput}
+                  placeholder="0.00"
+                  placeholderTextColor="#CBD5E0"
+                  value={formData.sellingPricePerUnit}
+                  onChangeText={(value) =>
+                    updateFormData("sellingPricePerUnit", value)
+                  }
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.priceOptionsRow}>
+                {["100", "200", "500", "800", "1000"].map((price) => (
+                  <TouchableOpacity
+                    key={price}
+                    style={styles.priceChip}
+                    onPress={() => updateFormData("sellingPricePerUnit", price)}
+                  >
+                    <Text style={styles.priceChipText}>₦{price}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </>
+        )}
       </View>
     </ScrollView>
   );
 
   const renderStep3 = () => (
-    <ScrollView style={styles.stepContent}>
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>
-          Low stock Threshold <Text style={styles.required}>*</Text>
-        </Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter threshold number"
-          value={formData.lowStockThreshold}
-          onChangeText={(value) => updateFormData("lowStockThreshold", value)}
-          keyboardType="numeric"
-        />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Expiry Date</Text>
-        <View style={styles.dateInputs}>
+    <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.card}>
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>
+            Low stock Threshold <Text style={styles.required}>*</Text>
+          </Text>
           <TextInput
-            style={[styles.dateInput, { marginHorizontal: 0, marginRight: 10 }]}
-            placeholder="DD"
-            value={formData.expiryDate.day}
-            onChangeText={(value) => updateFormData("expiryDate.day", value)}
+            style={styles.input}
+            placeholder="Select Number"
+            placeholderTextColor="#CBD5E0"
+            value={formData.lowStockThreshold}
+            onChangeText={(value) => updateFormData("lowStockThreshold", value)}
             keyboardType="numeric"
-            maxLength={2}
-          />
-          <TextInput
-            style={styles.dateInput}
-            placeholder="MM"
-            value={formData.expiryDate.month}
-            onChangeText={(value) => updateFormData("expiryDate.month", value)}
-            keyboardType="numeric"
-            maxLength={2}
-          />
-          <TextInput
-            style={[styles.dateInput, { marginLeft: 10, marginHorizontal: 0 }]}
-            placeholder="YYYY"
-            value={formData.expiryDate.year}
-            onChangeText={(value) => updateFormData("expiryDate.year", value)}
-            keyboardType="numeric"
-            maxLength={4}
           />
         </View>
-      </View>
 
-      <View style={styles.supplierSection}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Supplier (Optional)</Text>
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Expiry Date</Text>
+          <View style={styles.dateRow}>
+            <TextInput
+              style={styles.dateBox}
+              placeholder="DD"
+              placeholderTextColor="#CBD5E0"
+              value={formData.expiryDate.day}
+              onChangeText={(value) => updateFormData("expiryDate.day", value)}
+              keyboardType="numeric"
+              maxLength={2}
+            />
+            <TextInput
+              style={styles.dateBox}
+              placeholder="MM"
+              placeholderTextColor="#CBD5E0"
+              value={formData.expiryDate.month}
+              onChangeText={(value) =>
+                updateFormData("expiryDate.month", value)
+              }
+              keyboardType="numeric"
+              maxLength={2}
+            />
+            <TextInput
+              style={styles.dateBox}
+              placeholder="YYYY"
+              placeholderTextColor="#CBD5E0"
+              value={formData.expiryDate.year}
+              onChangeText={(value) => updateFormData("expiryDate.year", value)}
+              keyboardType="numeric"
+              maxLength={4}
+            />
+          </View>
+        </View>
+
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Supplier</Text>
           <TextInput
             style={styles.input}
             placeholder="Full Name..."
+            placeholderTextColor="#CBD5E0"
             value={formData.supplier.name}
             onChangeText={(value) => updateFormData("supplier.name", value)}
           />
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Phone Number (Optional)</Text>
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Phone Number</Text>
           <TextInput
             style={styles.input}
             placeholder="Type here..."
+            placeholderTextColor="#CBD5E0"
             value={formData.supplier.phone}
             onChangeText={(value) => updateFormData("supplier.phone", value)}
             keyboardType="phone-pad"
@@ -887,7 +1146,7 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
   );
 
   const renderSummary = () => (
-    <ScrollView style={styles.summaryContent}>
+    <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
       <Text style={styles.summaryTitle}>Summary</Text>
 
       {formData.productImage && (
@@ -899,7 +1158,7 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         </View>
       )}
 
-      <View style={styles.summarySection}>
+      <View style={styles.card}>
         <Text style={styles.summaryHeader}>PRODUCT INFO</Text>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Name:</Text>
@@ -909,39 +1168,122 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
           <Text style={styles.summaryLabel}>Category:</Text>
           <Text style={styles.summaryValue}>{formData.category || "N/A"}</Text>
         </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Barcode:</Text>
-          <Text style={styles.summaryValue}>{formData.sku || "N/A"}</Text>
-        </View>
       </View>
 
-      <View style={styles.summarySection}>
+      <View style={styles.card}>
         <Text style={styles.summaryHeader}>QUANTITY & PRICING</Text>
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Units in Stock:</Text>
-          <Text style={styles.summaryValue}>
-            {formData.numberOfItems || "0"}
-          </Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Unit Type:</Text>
+          <Text style={styles.summaryLabel}>Quantity Type:</Text>
           <Text style={styles.summaryValue}>{formData.quantityType}</Text>
         </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Cost Price:</Text>
-          <Text style={styles.summaryValue}>
-            ₦{formData.costPrice || "0.00"}
-          </Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Selling Price:</Text>
-          <Text style={styles.summaryValue}>
-            ₦{formData.sellingPrice || "0.00"}
-          </Text>
-        </View>
+
+        {formData.quantityType === "Single Items" && (
+          <>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Units in Stock:</Text>
+              <Text style={styles.summaryValue}>
+                {formData.numberOfItems || "0"}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Cost Price:</Text>
+              <Text style={styles.summaryValue}>
+                ₦{formData.costPrice || "0.00"}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Selling Price:</Text>
+              <Text style={styles.summaryValue}>
+                ₦{formData.sellingPrice || "0.00"}
+              </Text>
+            </View>
+          </>
+        )}
+
+        {formData.quantityType === "Carton" && (
+          <>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Units per Carton:</Text>
+              <Text style={styles.summaryValue}>
+                {formData.unitsPerCarton || "0"}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Number of Cartons:</Text>
+              <Text style={styles.summaryValue}>
+                {formData.numberOfCartons || "0"}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Total Units:</Text>
+              <Text style={styles.summaryValue}>
+                {(parseInt(formData.unitsPerCarton) || 0) *
+                  (parseInt(formData.numberOfCartons) || 0)}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Cost Price (per carton):</Text>
+              <Text style={styles.summaryValue}>
+                ₦{formData.costPricePerCarton || "0.00"}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>
+                Selling Price (per carton):
+              </Text>
+              <Text style={styles.summaryValue}>
+                ₦{formData.sellingPricePerCarton || "0.00"}
+              </Text>
+            </View>
+          </>
+        )}
+
+        {formData.quantityType === "Both" && (
+          <>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Units per Carton:</Text>
+              <Text style={styles.summaryValue}>
+                {formData.unitsPerCarton || "0"}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Number of Cartons:</Text>
+              <Text style={styles.summaryValue}>
+                {formData.numberOfCartons || "0"}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Total Units:</Text>
+              <Text style={styles.summaryValue}>
+                {(parseInt(formData.unitsPerCarton) || 0) *
+                  (parseInt(formData.numberOfCartons) || 0)}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Cost Price (per carton):</Text>
+              <Text style={styles.summaryValue}>
+                ₦{formData.costPricePerCarton || "0.00"}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>
+                Selling Price (per carton):
+              </Text>
+              <Text style={styles.summaryValue}>
+                ₦{formData.sellingPricePerCarton || "0.00"}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Selling Price (per unit):</Text>
+              <Text style={styles.summaryValue}>
+                ₦{formData.sellingPricePerUnit || "0.00"}
+              </Text>
+            </View>
+          </>
+        )}
       </View>
 
-      <View style={styles.summarySection}>
+      <View style={styles.card}>
         <Text style={styles.summaryHeader}>STOCK SETTINGS</Text>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Low Stock Threshold:</Text>
@@ -961,7 +1303,7 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         </View>
       </View>
 
-      <View style={styles.summarySection}>
+      <View style={styles.card}>
         <Text style={styles.summaryHeader}>SUPPLIER INFO</Text>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Name:</Text>
@@ -979,7 +1321,7 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
 
       <TouchableOpacity
         style={[
-          styles.saveProductButton,
+          styles.confirmBtn,
           (saving || imageUploading) && { opacity: 0.7 },
         ]}
         onPress={handleSaveProduct}
@@ -988,49 +1330,14 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         {saving || imageUploading ? (
           <ActivityIndicator color="#FFFFFF" size="small" />
         ) : (
-          <Text style={styles.saveProductButtonText}>Save Product ✓</Text>
+          <>
+            <Text style={styles.confirmBtnText}>Confirm</Text>
+            <Ionicons name="arrow-forward" size={18} color="#FFF" />
+          </>
         )}
       </TouchableOpacity>
     </ScrollView>
   );
-
-  const renderBarcodeScanner = () => {
-    if (hasScannerPermission === null) {
-      return (
-        <View style={styles.scannerMessageContainer}>
-          <Text style={styles.scannerMessageText}>
-            Requesting camera permission...
-          </Text>
-        </View>
-      );
-    }
-    if (hasScannerPermission === false) {
-      return (
-        <View style={styles.scannerMessageContainer}>
-          <Text style={[styles.scannerMessageText, { color: "#FF3B30" }]}>
-            No access to camera. Please grant permission in device settings.
-          </Text>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.scannerContainer}>
-        <View style={styles.scanTargetOverlay}>
-          <Text style={styles.scanTargetText}>
-            Align the Barcode/SKU within this frame
-          </Text>
-        </View>
-        {scannerScanned && (
-          <View style={styles.scannerScannedOverlay}>
-            <ActivityIndicator size="large" color="#FFF" />
-            <Text style={styles.scannerScannedText}>Barcode detected...</Text>
-          </View>
-        )}
-      </View>
-    );
-  };
-
   const renderInitialChoice = () => (
     <Modal
       visible={showInitialChoice}
@@ -1038,26 +1345,27 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <TouchableOpacity 
-        style={styles.modalBackdrop} 
+      <TouchableOpacity
+        style={styles.modalBackdrop}
         activeOpacity={1}
         onPress={onClose}
       >
         <View style={styles.bottomSheetContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             activeOpacity={1}
             onPress={(e) => e.stopPropagation()}
             style={styles.bottomSheetContent}
           >
             <View style={styles.handleBar} />
-            
+
             <Text style={styles.bottomSheetHeader}>Add Product</Text>
-            
+
             <Text style={styles.initialChoiceTitle}>
               How would you like to{"\n"}add a product?
             </Text>
             <Text style={styles.initialChoiceSubtitle}>
-              You can search from existing products or{"\n"}add a new one manually
+              You can search from existing products or{"\n"}add a new one
+              manually
             </Text>
 
             <TouchableOpacity
@@ -1168,12 +1476,13 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
           {searchQuery.length > 0 && (
             <View style={styles.searchResultsSection}>
               <Text style={styles.searchResultsHeader}>
-                Showing results for &quot;<Text style={styles.searchQueryText}>{searchQuery}</Text>&quot;
+                Showing results for &quot;
+                <Text style={styles.searchQueryText}>{searchQuery}</Text>&quot;
               </Text>
 
               {isSearching ? (
                 <View style={styles.searchLoadingContainer}>
-                  <ActivityIndicator size="large" color="#007AFF" />
+                  <ActivityIndicator size="large" color="#1155CC" />
                 </View>
               ) : searchResults.length > 0 ? (
                 searchResults.map((product) => (
@@ -1228,8 +1537,8 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
           ]}
         >
           <Text style={styles.errorText}>Please log in to add products</Text>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>Close</Text>
+          <TouchableOpacity style={styles.addManuallyButton} onPress={onClose}>
+            <Text style={styles.addManuallyButtonText}>Close</Text>
           </TouchableOpacity>
         </View>
       </Modal>
@@ -1247,13 +1556,13 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
           <View style={styles.header}>
             <Text style={styles.headerTitle}>New Product</Text>
             <TouchableOpacity
-              style={styles.closeButton}
+              style={styles.closeBtn}
               onPress={() => {
                 onClose();
                 resetForm();
               }}
             >
-              <Text style={styles.closeButtonText}>✕</Text>
+              <Ionicons name="close" size={22} color="#1A202C" />
             </TouchableOpacity>
           </View>
 
@@ -1268,31 +1577,34 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
             <View style={styles.navigationButtons}>
               {currentStep > 0 && (
                 <TouchableOpacity
-                  style={styles.backButton}
+                  style={styles.backBtn}
                   onPress={prevStep}
                   disabled={saving || imageUploading}
                 >
-                  <Text style={styles.backButtonText}>← Back</Text>
+                  <Ionicons name="arrow-back" size={18} color="#4A5568" />
+                  <Text style={styles.backBtnText}>Back</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
                 style={[
-                  styles.nextButton,
+                  styles.nextBtn,
                   (saving || imageUploading) && { opacity: 0.7 },
+                  currentStep === 0 && { flex: 1 },
                 ]}
                 onPress={nextStep}
                 disabled={saving || imageUploading}
               >
-                <Text style={styles.nextButtonText}>
-                  {currentStep === 2 ? "Confirm" : "Next"} →
+                <Text style={styles.nextBtnText}>
+                  {currentStep === 2 ? "Confirm" : "Next"}
                 </Text>
+                <Ionicons name="arrow-forward" size={18} color="#FFF" />
               </TouchableOpacity>
             </View>
           )}
 
           {(saving || imageUploading) && (
             <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color="#2046AE" />
+              <ActivityIndicator size="large" color="#1155CC" />
               <Text style={styles.loadingText}>
                 {imageUploading ? "Uploading image..." : "Saving product..."}
               </Text>
@@ -1304,69 +1616,430 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
       {visible && showInitialChoice && renderInitialChoice()}
 
       {visible && renderSearchModal()}
-
-      <Modal visible={showScanner} transparent animationType="slide">
-        <SafeAreaView style={styles.scannerModalContainer}>
-          <View style={styles.scannerModalHeader}>
-            <Text style={styles.scannerModalTitle}>Scan Barcode</Text>
-            <TouchableOpacity
-              onPress={() => {
-                setShowScanner(false);
-                setScannerScanned(false);
-              }}
-            >
-              <Ionicons name="close" size={30} color="#FFF" />
-            </TouchableOpacity>
-          </View>
-          {renderBarcodeScanner()}
-        </SafeAreaView>
-      </Modal>
     </>
   );
 };
-
-// Styles - Same as complete version with Poppins fonts
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F7FA",
+    backgroundColor: "#E7EEFA",
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: "#FFF",
+    paddingVertical: 16,
+    backgroundColor: "#E7EEFA",
     borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
+    borderBottomColor: "#E2E8F0",
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "600",
-    color: "#000",
+    color: "#1A202C",
     fontFamily: "Poppins-SemiBold",
   },
-  closeButton: {
-    padding: 5,
-    backgroundColor: "#F0F0F0",
+  closeBtn: {
+    width: 40,
+    height: 40,
     borderRadius: 8,
-    width: 32,
-    height: 32,
+    backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
   },
-  closeButtonText: {
-    fontSize: 16,
-    color: "#666",
-    fontFamily: "Poppins-Regular",
-  },
   errorText: {
-    fontSize: 18,
-    color: "#FF3B30",
+    fontSize: 16,
+    color: "#E53E3E",
     textAlign: "center",
     marginBottom: 20,
     fontFamily: "Poppins-Regular",
+  },
+  progressContainer: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: "#FFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+    margin: 20,
+    gap: 10,
+  },
+  stepItem: {
+    flex: 1,
+  },
+  stepText: {
+    fontSize: 12,
+    fontWeight: "500",
+    fontFamily: "Poppins-Medium",
+    marginBottom: 6,
+  },
+  stepTextActive: {
+    color: "#1155CC",
+  },
+  stepTextInactive: {
+    color: "#A0AEC0",
+  },
+  progressBar: {
+    height: 8,
+    borderRadius: 4,
+  },
+  progressBarActive: {
+    backgroundColor: "#1155CC",
+  },
+  progressBarInactive: {
+    backgroundColor: "#E2E8F0",
+  },
+  stepContent: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  card: {
+    backgroundColor: "#FFF",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  fieldGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#2D3748",
+    marginBottom: 6,
+    fontFamily: "Poppins-SemiBold",
+  },
+  required: {
+    color: "#E53E3E",
+  },
+  input: {
+    backgroundColor: "#EDF2F7",
+    borderRadius: 6,
+    padding: 12,
+    fontSize: 13,
+    color: "#2D3748",
+    fontFamily: "Poppins-Regular",
+  },
+  dropdown: {
+    backgroundColor: "#EDF2F7",
+    borderRadius: 6,
+    padding: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  dropdownText: {
+    fontSize: 13,
+    color: "#2D3748",
+    fontFamily: "Poppins-Regular",
+  },
+  dropdownPlaceholder: {
+    fontSize: 13,
+    color: "#CBD5E0",
+    fontFamily: "Poppins-Regular",
+  },
+  dropdownMenu: {
+    backgroundColor: "#FFF",
+    borderRadius: 6,
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    overflow: "hidden",
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F7FAFC",
+  },
+  dropdownItemText: {
+    fontSize: 13,
+    color: "#2D3748",
+    fontFamily: "Poppins-Regular",
+  },
+  imageUploadBox: {
+    backgroundColor: "#FFF",
+    borderRadius: 8,
+    padding: 20,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  imageIconCircle: {
+    marginBottom: 10,
+  },
+  imageUploadTitle: {
+    fontSize: 13,
+    color: "#4A5568",
+    marginBottom: 14,
+    fontFamily: "Poppins-Medium",
+  },
+  imageButtonsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 10,
+  },
+  imageBtnOutline: {
+    backgroundColor: "transparent",
+    borderRadius: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#CBD5E0",
+  },
+  imageBtnOutlineText: {
+    fontSize: 12,
+    color: "#4A5568",
+    fontWeight: "500",
+    fontFamily: "Poppins-Medium",
+  },
+  imageUploadInfo: {
+    fontSize: 10,
+    color: "#718096",
+    textAlign: "center",
+    fontFamily: "Poppins-Regular",
+    lineHeight: 14,
+  },
+  uploadedImageWrapper: {
+    alignItems: "center",
+  },
+  uploadedImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  searchOnlineBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#EDF2F7",
+    borderRadius: 6,
+    paddingVertical: 12,
+    gap: 6,
+  },
+  searchOnlineText: {
+    fontSize: 13,
+    color: "#1155CC",
+    fontWeight: "500",
+    fontFamily: "Poppins-Medium",
+  },
+  radioGroup: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 14,
+  },
+  radioOption: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  radioCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: "#CBD5E0",
+    marginRight: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  radioCircleActive: {
+    borderColor: "#1155CC",
+  },
+  radioInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#1155CC",
+  },
+  radioText: {
+    fontSize: 13,
+    color: "#2D3748",
+    fontFamily: "Poppins-Regular",
+  },
+  priceInputWrapper: {
+    flexDirection: "row",
+    backgroundColor: "#EDF2F7",
+    borderRadius: 6,
+    alignItems: "center",
+    paddingLeft: 12,
+    marginBottom: 10,
+  },
+  currency: {
+    fontSize: 13,
+    color: "#718096",
+    marginRight: 6,
+    fontFamily: "Poppins-Regular",
+  },
+  priceInput: {
+    flex: 1,
+    padding: 12,
+    paddingLeft: 0,
+    fontSize: 13,
+    color: "#2D3748",
+    fontFamily: "Poppins-Regular",
+  },
+  priceOptionsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  priceChip: {
+    backgroundColor: "#EDF2F7",
+    borderRadius: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  priceChipText: {
+    fontSize: 12,
+    color: "#1155CC",
+    fontWeight: "500",
+    fontFamily: "Poppins-Medium",
+  },
+  dateRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  dateBox: {
+    backgroundColor: "#EDF2F7",
+    borderRadius: 6,
+    padding: 12,
+    fontSize: 13,
+    color: "#2D3748",
+    flex: 1,
+    textAlign: "center",
+    fontFamily: "Poppins-Regular",
+  },
+  navigationButtons: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    backgroundColor: "#FFF",
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+  },
+  backBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 8,
+    paddingVertical: 12,
+  },
+  backBtnText: {
+    fontSize: 14,
+    color: "#4A5568",
+    fontWeight: "500",
+    fontFamily: "Poppins-Medium",
+  },
+  nextBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#1155CC",
+    borderRadius: 8,
+    paddingVertical: 12,
+  },
+  nextBtnText: {
+    fontSize: 14,
+    color: "#FFF",
+    fontWeight: "600",
+    fontFamily: "Poppins-SemiBold",
+  },
+  summaryTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1A202C",
+    paddingHorizontal: 4,
+    marginBottom: 14,
+    fontFamily: "Poppins-Bold",
+  },
+  summaryImageContainer: {
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  summaryImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 10,
+  },
+  summaryHeader: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#2D3748",
+    marginBottom: 10,
+    letterSpacing: 0.5,
+    fontFamily: "Poppins-Bold",
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: "#718096",
+    flex: 1,
+    fontFamily: "Poppins-Regular",
+  },
+  summaryValue: {
+    fontSize: 12,
+    color: "#2D3748",
+    fontWeight: "500",
+    flex: 1,
+    textAlign: "right",
+    fontFamily: "Poppins-Medium",
+  },
+  confirmBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#1155CC",
+    borderRadius: 8,
+    paddingVertical: 14,
+    marginTop: 8,
+  },
+  confirmBtnText: {
+    fontSize: 14,
+    color: "#FFF",
+    fontWeight: "600",
+    fontFamily: "Poppins-SemiBold",
+  },
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: "#1155CC",
+    fontWeight: "500",
+    fontFamily: "Poppins-Medium",
   },
   modalBackdrop: {
     flex: 1,
@@ -1385,35 +2058,35 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   handleBar: {
-    width: 100,
+    width: 60,
     height: 4,
-    backgroundColor: "black",
+    backgroundColor: "#1155CC",
     borderRadius: 2,
     alignSelf: "center",
-    marginBottom: 20,
+    marginBottom: 16,
   },
   bottomSheetHeader: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
-    color: "#007AFF",
+    color: "#1155CC",
     textAlign: "center",
-    marginBottom: 24,
+    marginBottom: 20,
     fontFamily: "Poppins-SemiBold",
   },
   initialChoiceTitle: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: "600",
-    color: "#000",
+    color: "#1A202C",
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: 10,
     fontFamily: "Poppins-SemiBold",
   },
   initialChoiceSubtitle: {
-    fontSize: 14,
-    color: "#8E8E93",
+    fontSize: 13,
+    color: "#718096",
     textAlign: "center",
-    marginBottom: 32,
-    lineHeight: 20,
+    marginBottom: 28,
+    lineHeight: 19,
     fontFamily: "Poppins-Regular",
   },
   searchButtonInitial: {
@@ -1423,14 +2096,14 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: "#fff",
     borderRadius: 50,
-    paddingVertical: 16,
-    marginBottom: 12,
+    paddingVertical: 13,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#007AFF",
+    borderColor: "#1155CC",
   },
   searchButtonInitialText: {
-    fontSize: 16,
-    color: "#666",
+    fontSize: 14,
+    color: "#1C1C1C",
     fontWeight: "500",
     fontFamily: "Poppins-Medium",
   },
@@ -1439,76 +2112,76 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     width: "100%",
-    backgroundColor: "#007AFF",
+    backgroundColor: "#1155CC",
     borderRadius: 50,
-    paddingVertical: 16,
+    paddingVertical: 13,
   },
   addManuallyButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#FFF",
     fontWeight: "600",
     fontFamily: "Poppins-SemiBold",
   },
   searchModalContainer: {
     flex: 1,
-    backgroundColor: "#F5F7FA",
+    backgroundColor: "#F7FAFC",
   },
   searchHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingVertical: 14,
     backgroundColor: "#FFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
+    borderBottomColor: "#E2E8F0",
   },
   searchHeaderTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "600",
-    color: "#000",
+    color: "#1A202C",
     fontFamily: "Poppins-SemiBold",
   },
   searchCloseButton: {
-    padding: 5,
+    padding: 4,
   },
   searchInputContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFF",
-    marginHorizontal: 15,
-    marginVertical: 15,
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
+    marginHorizontal: 16,
+    marginVertical: 14,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: "#E2E8F0",
   },
   searchIcon: {
-    marginRight: 10,
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    color: "#000",
+    fontSize: 14,
+    color: "#2D3748",
     fontFamily: "Poppins-Regular",
   },
   clearSearchButton: {
-    padding: 5,
+    padding: 4,
   },
   searchContent: {
     flex: 1,
   },
   recentSearchesSection: {
     backgroundColor: "#FFF",
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
   recentSearchesHeader: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
-    color: "#007AFF",
+    color: "#1155CC",
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 8,
     textTransform: "uppercase",
     letterSpacing: 0.5,
     fontFamily: "Poppins-SemiBold",
@@ -1517,34 +2190,34 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+    borderBottomColor: "#F7FAFC",
   },
   recentSearchText: {
-    fontSize: 15,
-    color: "#000",
-    marginLeft: 15,
+    fontSize: 13,
+    color: "#2D3748",
+    marginLeft: 10,
     fontFamily: "Poppins-Regular",
   },
   searchResultsSection: {
     flex: 1,
   },
   searchResultsHeader: {
-    fontSize: 14,
-    color: "#666",
+    fontSize: 12,
+    color: "#718096",
     paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: "#F5F7FA",
+    paddingVertical: 12,
+    backgroundColor: "#F7FAFC",
     fontFamily: "Poppins-Regular",
   },
   searchQueryText: {
     fontWeight: "600",
-    color: "#007AFF",
+    color: "#1155CC",
     fontFamily: "Poppins-SemiBold",
   },
   searchLoadingContainer: {
-    padding: 40,
+    padding: 36,
     alignItems: "center",
   },
   searchResultItem: {
@@ -1552,24 +2225,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FFF",
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+    borderBottomColor: "#F7FAFC",
   },
   searchResultImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 8,
-    marginRight: 15,
+    width: 46,
+    height: 46,
+    borderRadius: 6,
+    marginRight: 12,
   },
   searchResultImagePlaceholder: {
-    width: 50,
-    height: 50,
-    borderRadius: 8,
-    backgroundColor: "#F0F0F0",
+    width: 46,
+    height: 46,
+    borderRadius: 6,
+    backgroundColor: "#EDF2F7",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 15,
+    marginRight: 12,
   },
   searchResultInfo: {
     flex: 1,
@@ -1578,454 +2251,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   searchResultName: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "500",
-    color: "#000",
+    color: "#2D3748",
     flex: 1,
     fontFamily: "Poppins-Medium",
   },
   searchResultButton: {
-    fontSize: 14,
-    color: "#007AFF",
+    fontSize: 12,
+    color: "#1155CC",
     fontWeight: "500",
     fontFamily: "Poppins-Medium",
   },
   noResultsContainer: {
-    padding: 40,
+    padding: 36,
     alignItems: "center",
   },
   noResultsText: {
-    fontSize: 15,
-    color: "#666",
+    fontSize: 13,
+    color: "#718096",
     textAlign: "center",
     fontFamily: "Poppins-Regular",
-  },
-  progressContainer: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: "#FFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
-  },
-  stepContainer: {
-    flex: 1,
-    alignItems: "center",
-  },
-  stepIndicator: {
-    height: 4,
-    borderRadius: 2,
-    marginBottom: 8,
-    backgroundColor: "#E0E0E0",
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: "#007AFF",
-    borderRadius: 2,
-  },
-  stepText: {
-    fontSize: 12,
-    fontWeight: "500",
-    fontFamily: "Poppins-Medium",
-  },
-  stepContent: {
-    flex: 1,
-    padding: 20,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#000",
-    marginBottom: 8,
-    fontFamily: "Poppins-SemiBold",
-  },
-  required: {
-    color: "#FF3B30",
-  },
-  input: {
-    backgroundColor: "#F0F4F8",
-    borderRadius: 8,
-    padding: 15,
-    fontSize: 16,
-    color: "#000",
-    fontFamily: "Poppins-Regular",
-  },
-  inputWithButton: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  scanButton: {
-    backgroundColor: "#FFF",
-    borderWidth: 1,
-    borderColor: "#007AFF",
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  dropdown: {
-    backgroundColor: "#F0F4F8",
-    borderRadius: 8,
-    padding: 15,
-  },
-  dropdownText: {
-    fontSize: 16,
-    color: "#000",
-    fontFamily: "Poppins-Regular",
-  },
-  dropdownPlaceholder: {
-    fontSize: 16,
-    color: "#999",
-    fontFamily: "Poppins-Regular",
-  },
-  imageUploadContainer: {
-    borderWidth: 2,
-    borderColor: "#E0E0E0",
-    borderStyle: "dashed",
-    borderRadius: 8,
-    padding: 20,
-    alignItems: "center",
-  },
-  uploadedImageContainer: {
-    alignItems: "center",
-  },
-  uploadedImage: {
-    width: 150,
-    height: 150,
-    borderRadius: 8,
-    marginBottom: 10,
-  },
-  removeButton: {
-    borderWidth: 1,
-    borderColor: "#FF3B30",
-    borderRadius: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-  },
-  removeButtonText: {
-    color: "#FF3B30",
-    fontSize: 14,
-    fontWeight: "500",
-    fontFamily: "Poppins-Medium",
-  },
-  imageUploadArea: {
-    alignItems: "center",
-  },
-  imageUploadIcon: {
-    fontSize: 40,
-    marginBottom: 10,
-  },
-  imageUploadText: {
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 15,
-    fontFamily: "Poppins-Regular",
-  },
-  imageUploadInfo: {
-    fontSize: 12,
-    color: "#999",
-    marginBottom: 5,
-    fontFamily: "Poppins-Regular",
-  },
-  radioGroup: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  radioOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: 20,
-    marginBottom: 10,
-  },
-  radioCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: "#007AFF",
-    marginRight: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  radioInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#FFF",
-  },
-  radioText: {
-    fontSize: 14,
-    color: "#000",
-    fontFamily: "Poppins-Regular",
-  },
-  priceInput: {
-    flexDirection: "row",
-    backgroundColor: "#F0F4F8",
-    borderRadius: 8,
-    alignItems: "center",
-    paddingLeft: 15,
-    marginBottom: 15,
-  },
-  currency: {
-    fontSize: 16,
-    color: "#666",
-    marginRight: 5,
-    fontFamily: "Poppins-Regular",
-  },
-  priceTextInput: {
-    flex: 1,
-    padding: 15,
-    paddingLeft: 0,
-    fontSize: 16,
-    color: "#000",
-    fontFamily: "Poppins-Regular",
-  },
-  priceOptions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  priceOption: {
-    backgroundColor: "#F0F4F8",
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  priceOptionText: {
-    fontSize: 14,
-    color: "#007AFF",
-    fontWeight: "500",
-    fontFamily: "Poppins-Medium",
-  },
-  dateInputs: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginHorizontal: -5,
-  },
-  dateInput: {
-    backgroundColor: "#F0F4F8",
-    borderRadius: 8,
-    padding: 15,
-    fontSize: 16,
-    color: "#000",
-    flex: 1,
-    marginHorizontal: 5,
-    textAlign: "center",
-    fontFamily: "Poppins-Regular",
-  },
-  supplierSection: {
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    padding: 20,
-    marginTop: 10,
-  },
-  navigationButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: "#FFF",
-    borderTopWidth: 1,
-    borderTopColor: "#E0E0E0",
-  },
-  backButton: {
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 8,
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    flex: 1,
-    marginRight: 10,
-    alignItems: "center",
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: "#666",
-    fontWeight: "500",
-    fontFamily: "Poppins-Medium",
-  },
-  nextButton: {
-    backgroundColor: "#007AFF",
-    borderRadius: 8,
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    flex: 1,
-    marginLeft: 10,
-    alignItems: "center",
-  },
-  nextButtonText: {
-    fontSize: 16,
-    color: "#FFF",
-    fontWeight: "600",
-    fontFamily: "Poppins-SemiBold",
-  },
-  summaryContent: {
-    flex: 1,
-    backgroundColor: "#F5F7FA",
-  },
-  summaryTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#000",
-    padding: 20,
-    paddingBottom: 10,
-    fontFamily: "Poppins-Bold",
-  },
-  summaryImageContainer: {
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  summaryImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 12,
-  },
-  summarySection: {
-    backgroundColor: "#FFF",
-    marginHorizontal: 20,
-    marginBottom: 15,
-    borderRadius: 12,
-    padding: 20,
-  },
-  summaryHeader: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#000",
-    marginBottom: 15,
-    letterSpacing: 0.5,
-    fontFamily: "Poppins-Bold",
-  },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: "#666",
-    flex: 1,
-    fontFamily: "Poppins-Regular",
-  },
-  summaryValue: {
-    fontSize: 14,
-    color: "#000",
-    fontWeight: "500",
-    flex: 1,
-    textAlign: "right",
-    fontFamily: "Poppins-Medium",
-  },
-  saveProductButton: {
-    backgroundColor: "#007AFF",
-    borderRadius: 12,
-    marginHorizontal: 20,
-    marginVertical: 20,
-    paddingVertical: 18,
-    alignItems: "center",
-  },
-  saveProductButtonText: {
-    fontSize: 16,
-    color: "#FFF",
-    fontWeight: "600",
-    fontFamily: "Poppins-SemiBold",
-  },
-  loadingOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1000,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 18,
-    color: "#2046AE",
-    fontWeight: "500",
-    fontFamily: "Poppins-Medium",
-  },
-  uploadingOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  scannerModalContainer: {
-    flex: 1,
-    backgroundColor: "#000",
-  },
-  scannerModalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  scannerModalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#FFF",
-    fontFamily: "Poppins-SemiBold",
-  },
-  scannerContainer: {
-    flex: 1,
-  },
-  scannerMessageContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#000",
-  },
-  scannerMessageText: {
-    fontSize: 18,
-    color: "#FFF",
-    textAlign: "center",
-    padding: 20,
-    fontFamily: "Poppins-Regular",
-  },
-  scanTargetOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: width / 2,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-  },
-  scanTargetText: {
-    backgroundColor: "rgba(0,0,0,0.5)",
-    color: "#FFF",
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 100,
-    fontFamily: "Poppins-Regular",
-  },
-  scannerScannedOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 122, 255, 0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  scannerScannedText: {
-    marginTop: 10,
-    fontSize: 18,
-    color: "#FFF",
-    fontWeight: "bold",
-    fontFamily: "Poppins-Bold",
   },
 });
 

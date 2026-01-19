@@ -773,7 +773,7 @@ const Finance = () => {
         <View style={styles.summaryContainer}>
           <View style={styles.summaryRow}>
             <View style={[styles.summaryCard, styles.profitCard]}>
-              <Text style={styles.summaryLabel}>Total Profit</Text>
+              <Text style={styles.summaryLabel}>Total Sales</Text>
               <Text style={styles.summaryValue}>
                 {formatCurrency(financialSummary.totalProfit)}
               </Text>
@@ -792,7 +792,7 @@ const Finance = () => {
             </View>
 
             <View style={[styles.summaryCard, styles.revenueCard]}>
-              <Text style={styles.summaryLabelDark}>Total Revenue</Text>
+              <Text style={styles.summaryLabelDark}>Total Cost</Text>
               <Text style={styles.summaryValueDark}>
                 {formatCurrency(financialSummary.totalRevenue)}
               </Text>
@@ -803,7 +803,7 @@ const Finance = () => {
             </View>
 
             <View style={[styles.summaryCard, styles.expenseCard]}>
-              <Text style={styles.summaryLabelDark}>Total Expenses</Text>
+              <Text style={styles.summaryLabelDark}>Total Profit</Text>
               <Text style={styles.summaryValueDark}>
                 {formatCurrency(financialSummary.totalExpenses)}
               </Text>
@@ -829,13 +829,13 @@ const Finance = () => {
           <View style={styles.dailySummaryCard}>
             <View style={styles.dailySummaryRow}>
               <View style={styles.dailySummaryItem}>
-                <Text style={styles.dailySummaryLabel}>Total Revenue</Text>
+                <Text style={styles.dailySummaryLabel}>Sale Amount</Text>
                 <Text style={styles.dailySummaryValue}>
                   {formatCurrency(dailySummary.revenue)}
                 </Text>
               </View>
               <View style={styles.dailySummaryItem2}>
-                <Text style={styles.dailySummaryLabel}>Total Profit</Text>
+                <Text style={styles.dailySummaryLabel}>Profit</Text>
                 <Text style={styles.dailySummaryValue}>
                   {formatCurrency(dailySummary.profit)}
                 </Text>
@@ -843,11 +843,11 @@ const Finance = () => {
             </View>
             <View style={styles.dailySummaryRow}>
               <View style={styles.dailySummaryItem3}>
-                <Text style={styles.dailySummaryLabel}>Total Sales</Text>
+                <Text style={styles.dailySummaryLabel}>Transactions</Text>
                 <Text style={styles.dailySummaryValue}>{dailySummary.sales}</Text>
               </View>
               <View style={styles.dailySummaryItem3}>
-                <Text style={styles.dailySummaryLabel}>Total Orders</Text>
+                <Text style={styles.dailySummaryLabel}>Items Sold</Text>
                 <Text style={styles.dailySummaryValue}>{dailySummary.orders}</Text>
               </View>
             </View>
@@ -1068,7 +1068,7 @@ const Finance = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F7FA",
+    backgroundColor: "#E7EEFA",
     paddingTop: 10,
   },
   centered: {
@@ -1121,6 +1121,7 @@ const styles = StyleSheet.create({
   },
   periodTextActive: {
     color: "#FFFFFF",
+    fontFamily: "Poppins-SemiBold",
   },
   summaryContainer: {
     paddingHorizontal: 20,

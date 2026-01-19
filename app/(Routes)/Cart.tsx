@@ -62,7 +62,7 @@ const Cart: React.FC = () => {
 
   useEffect(() => {
     loadCartProducts();
-  }, [params.cartData]);
+  }, [params.cartData, params.timestamp]);
 
   const loadCartProducts = async (): Promise<void> => {
     setLoading(true);
@@ -74,6 +74,8 @@ const Cart: React.FC = () => {
         try {
           cartItems = JSON.parse(params.cartData as string);
           console.log("Cart items received:", cartItems);
+          console.log("Number of unique items:", cartItems.length);
+          console.log("Total quantity:", cartItems.reduce((sum, item) => sum + item.quantity, 0));
         } catch (parseError) {
           console.error("Error parsing cart data:", parseError);
           Alert.alert("Error", "Failed to load cart data");
@@ -94,7 +96,7 @@ const Cart: React.FC = () => {
       const cartWithProducts = await Promise.all(
         cartItems.map(async (item) => {
           try {
-            console.log("Loading product:", item.productId);
+            console.log(`Loading product ${item.productId} with quantity ${item.quantity}`);
             const productDoc = await getDoc(
               doc(db, "products", item.productId)
             );
@@ -116,7 +118,7 @@ const Cart: React.FC = () => {
         })
       );
 
-      console.log("Cart with products:", cartWithProducts);
+      console.log("Cart with products loaded:", cartWithProducts);
       setCart(cartWithProducts);
     } catch (error) {
       console.error("Error loading cart:", error);
@@ -181,6 +183,10 @@ const Cart: React.FC = () => {
     }, 0);
   };
 
+  const getTotalItems = (): number => {
+    return cart.reduce((total, item) => total + item.quantity, 0);
+  };
+
   const proceedToCheckout = (): void => {
     if (cart.length === 0) {
       Alert.alert("Empty Cart", "Please add items to your cart first");
@@ -200,6 +206,8 @@ const Cart: React.FC = () => {
       console.warn("Cart item missing product data:", item);
       return null;
     }
+
+    const itemTotal = item.product.sellingPrice * item.quantity;
 
     return (
       <View key={`${item.productId}-${index}`} style={styles.cartItem}>
@@ -226,26 +234,35 @@ const Cart: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.productPrice}>
-            ₦{item.product.sellingPrice.toLocaleString()}
-          </Text>
+          <View style={styles.priceQuantityRow}>
+            <Text style={styles.productPrice}>
+              ₦{item.product.sellingPrice.toLocaleString()}
+            </Text>
+            <Text style={styles.quantityLabel}>x {item.quantity}</Text>
+          </View>
 
-          <View style={styles.quantityControl}>
-            <TouchableOpacity
-              onPress={() => decrementQuantity(item.productId)}
-              style={styles.quantityButton}
-            >
-              <Text style={styles.quantityButtonText}>−</Text>
-            </TouchableOpacity>
+          <View style={styles.bottomRow}>
+            <View style={styles.quantityControl}>
+              <TouchableOpacity
+                onPress={() => decrementQuantity(item.productId)}
+                style={styles.quantityButton}
+              >
+                <Text style={styles.quantityButtonText}>−</Text>
+              </TouchableOpacity>
 
-            <Text style={styles.quantityText}>{item.quantity}</Text>
+              <Text style={styles.quantityText}>{item.quantity}</Text>
 
-            <TouchableOpacity
-              onPress={() => incrementQuantity(item.productId)}
-              style={styles.quantityButton}
-            >
-              <Text style={styles.quantityButtonText}>+</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => incrementQuantity(item.productId)}
+                style={styles.quantityButton}
+              >
+                <Text style={styles.quantityButtonText}>+</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.itemTotal}>
+              ₦{itemTotal.toLocaleString()}
+            </Text>
           </View>
         </View>
       </View>
@@ -280,14 +297,17 @@ const Cart: React.FC = () => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
+          <Feather name="arrow-left" size={24} color="#000" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Shopping Cart</Text>
-        <View style={styles.back}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <Feather name="arrow-left" size={24} color="#000" />
-          </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <Text style={styles.itemCount}>
+            {getTotalItems()} {getTotalItems() === 1 ? "item" : "items"}
+          </Text>
         </View>
       </View>
 
@@ -352,16 +372,25 @@ const styles = StyleSheet.create({
     paddingBottom: 15,
     backgroundColor: "#D6E4F5",
   },
-  back: {
-    backgroundColor: "#fff",
-  },
   headerTitle: {
     fontSize: 20,
     fontFamily: "Poppins-Bold",
     color: "#000",
+    flex: 1,
+    textAlign: "center",
   },
   backButton: {
     padding: 8,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+  },
+  headerRight: {
+    padding: 8,
+  },
+  itemCount: {
+    fontSize: 14,
+    fontFamily: "Poppins-Regular",
+    color: "#666",
   },
   cartContainer: {
     flex: 1,
@@ -413,11 +442,26 @@ const styles = StyleSheet.create({
   removeButton: {
     padding: 2,
   },
+  priceQuantityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
   productPrice: {
     fontSize: 15,
     fontFamily: "Poppins-Bold",
     color: "#000",
-    marginBottom: 8,
+  },
+  quantityLabel: {
+    fontSize: 14,
+    fontFamily: "Poppins-Regular",
+    color: "#666",
+  },
+  bottomRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   quantityControl: {
     flexDirection: "row",
@@ -445,6 +489,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     minWidth: 20,
     textAlign: "center",
+  },
+  itemTotal: {
+    fontSize: 16,
+    fontFamily: "Poppins-Bold",
+    color: "#007AFF",
   },
   footer: {
     backgroundColor: "#D6E4F5",

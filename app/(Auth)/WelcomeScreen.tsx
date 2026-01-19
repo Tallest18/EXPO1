@@ -24,7 +24,7 @@ import { auth, config } from "../config/firebaseConfig";
 interface WelcomeScreenProps {
   onNavigateToVerification?: (
     phoneNumber: string,
-    verificationId: string
+    verificationId: string,
   ) => void;
 }
 
@@ -67,7 +67,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
     if (!validatePhoneNumber(formattedPhone)) {
       Alert.alert(
         "Error",
-        "Please enter a valid phone number with country code"
+        "Please enter a valid phone number with country code",
       );
       return;
     }
@@ -83,7 +83,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
       const verificationId = await phoneProvider.verifyPhoneNumber(
         formattedPhone,
-        recaptchaVerifier.current as ApplicationVerifier
+        recaptchaVerifier.current as ApplicationVerifier,
       );
 
       if (onNavigateToVerification) {
@@ -167,7 +167,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             />
 
             <Text style={styles.infoText}>
-              We&apos;ll send you a one-time password (OTP) to verify your number.
+              We&apos;ll send you a one-time password (OTP) to verify your
+              number.
             </Text>
 
             <TouchableOpacity
@@ -189,7 +190,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#2046AE" },
+  container: { flex: 1, backgroundColor: "#1155CC" },
   topSection: {
     flex: 1,
     justifyContent: "center",
@@ -259,7 +260,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   continueButton: {
-    backgroundColor: "#2046AE",
+    backgroundColor: "#1155CC",
     borderRadius: 25,
     paddingVertical: 16,
     alignItems: "center",

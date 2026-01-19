@@ -2,7 +2,7 @@ import { auth, db } from "@/app/config/firebaseConfig";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { collection, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -20,23 +20,18 @@ type Option = {
   title: string;
   icon: keyof typeof Ionicons.glyphMap;
   action: () => void;
-  badge?: number;
 };
 
 const More = () => {
   const [userName, setUserName] = useState<string>("Guest User");
   const [userPhone, setUserPhone] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
 
   // Fetch user data when component mounts
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         await fetchUserData(user.uid);
-        // Start listening to notifications
-        const unsubscribeNotifications = listenToNotifications(user.uid);
-        return () => unsubscribeNotifications();
       } else {
         setUserName("Guest User");
         setUserPhone("");
@@ -81,62 +76,12 @@ const More = () => {
     }
   };
 
-  // Listen to real-time notifications
-  const listenToNotifications = (userId: string) => {
-    try {
-      const notificationsRef = collection(db, "notifications");
-      const q = query(
-        notificationsRef,
-        where("userId", "==", userId),
-        where("isRead", "==", false)
-      );
-
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const unreadCount = snapshot.size;
-        setUnreadNotifications(unreadCount);
-        console.log(`Unread notifications: ${unreadCount}`);
-      }, (error) => {
-        console.error("Error listening to notifications:", error);
-      });
-
-      return unsubscribe;
-    } catch (error) {
-      console.error("Error setting up notifications listener:", error);
-      return () => {};
-    }
-  };
-
-  const accountOptions: Option[] = [
-    {
-      title: "Profile",
-      icon: "person-outline",
-      action: () => {
-        router.push("/(Routes)/Profile");
-      },
-    },
-    {
-      title: "Settings",
-      icon: "settings-outline",
-      action: () => {
-        router.push("/(Routes)/SettingsScreen");
-      },
-    },
-    {
-      title: "Notifications",
-      icon: "notifications-outline",
-      action: () => {
-        router.push("/(Routes)/NotificationsScreen");
-      },
-      badge: unreadNotifications > 0 ? unreadNotifications : undefined,
-    },
-  ];
-
   const businessOptions: Option[] = [
     {
       title: "Business Information",
       icon: "briefcase-outline",
       action: () => {
-        router.push("/(Routes)/BusinessInfoScreen");
+        router.push("/(Routes)/Profile");
       },
     },
     {
@@ -201,11 +146,6 @@ const More = () => {
         <Ionicons name={option.icon} size={20} color="#2046AE" />
       </View>
       <Text style={styles.optionText}>{option.title}</Text>
-      {option.badge && option.badge > 0 && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{option.badge > 99 ? '99+' : option.badge}</Text>
-        </View>
-      )}
       <Ionicons name="chevron-forward-outline" size={20} color="#C0C0C0" />
     </TouchableOpacity>
   );
@@ -242,12 +182,6 @@ const More = () => {
             )}
           </View>
         </TouchableOpacity>
-
-        {/* Account Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ACCOUNT</Text>
-          {accountOptions.map(renderOption)}
-        </View>
 
         {/* Business Profile Section */}
         <View style={styles.section}>
@@ -378,22 +312,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#1a1a1a",
     fontFamily: "Poppins-Regular",
-  },
-  badge: {
-    backgroundColor: "#E74C3C",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 6,
-    marginRight: 8,
-  },
-  badgeText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-    fontFamily: "Poppins-SemiBold",
   },
   logoutButton: {
     flexDirection: "row",

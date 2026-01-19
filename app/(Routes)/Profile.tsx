@@ -24,7 +24,7 @@ const Profile = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [profileImage, setProfileImage] = useState(
-    "https://via.placeholder.com/150"
+    "https://via.placeholder.com/150",
   );
   const [businessName, setBusinessName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -52,7 +52,7 @@ const Profile = () => {
             setPhoneNumber(userData.phone || userData.phoneNumber || "");
             setBusinessType(userData.businessType || "");
             setProfileImage(
-              userData.profileImage || "https://via.placeholder.com/150"
+              userData.profileImage || "https://via.placeholder.com/150",
             );
           } else {
             // Create doc if it doesn't exist
@@ -71,289 +71,287 @@ const Profile = () => {
     };
 
     fetchUserData();
-}, []);
-// ✅ Upload image + save to Firestore
-const uploadImage = async (uri: string) => {
-setImageUploading(true);
-try {
-const response = await fetch(uri);
-const blob = await response.blob();
-const user = auth.currentUser;
-if (!user) throw new Error("User not authenticated.");
-  const fileRef = ref(storage, `profile_pictures/${user.uid}`);
-  await uploadBytes(fileRef, blob);
+  }, []);
+  // ✅ Upload image + save to Firestore
+  const uploadImage = async (uri: string) => {
+    setImageUploading(true);
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const user = auth.currentUser;
+      if (!user) throw new Error("User not authenticated.");
+      const fileRef = ref(storage, `profile_pictures/${user.uid}`);
+      await uploadBytes(fileRef, blob);
 
-  const downloadURL = await getDownloadURL(fileRef);
-  setProfileImage(downloadURL);
+      const downloadURL = await getDownloadURL(fileRef);
+      setProfileImage(downloadURL);
 
-  // Update Firestore immediately
-  const userDocRef = doc(db, "users", user.uid);
-  await updateDoc(userDocRef, { profileImage: downloadURL });
+      // Update Firestore immediately
+      const userDocRef = doc(db, "users", user.uid);
+      await updateDoc(userDocRef, { profileImage: downloadURL });
 
-  Alert.alert("Success", "Profile picture updated successfully.");
-} catch (error) {
-  console.error("Image upload error:", error);
-  Alert.alert("Error", "Failed to upload image.");
-} finally {
-  setImageUploading(false);
-}
-};
-// ✅ Handle picking image
-const handlePickImage = async (useCamera: boolean) => {
-const permissionResult = useCamera
-? await ImagePicker.requestCameraPermissionsAsync()
-: await ImagePicker.requestMediaLibraryPermissionsAsync();
-if (permissionResult.granted === false) {
-  Alert.alert(
-    "Permission Denied",
-    "Permission to access camera or gallery is required!"
-  );
-  return;
-}
+      Alert.alert("Success", "Profile picture updated successfully.");
+    } catch (error) {
+      console.error("Image upload error:", error);
+      Alert.alert("Error", "Failed to upload image.");
+    } finally {
+      setImageUploading(false);
+    }
+  };
+  // ✅ Handle picking image
+  const handlePickImage = async (useCamera: boolean) => {
+    const permissionResult = useCamera
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.granted === false) {
+      Alert.alert(
+        "Permission Denied",
+        "Permission to access camera or gallery is required!",
+      );
+      return;
+    }
 
-const pickerOptions = {
-  mediaTypes: ImagePicker.MediaTypeOptions.Images,
-  allowsEditing: true,
-  aspect: [1, 1] as [number, number],
-  quality: 0.7,
-};
+    const pickerOptions = {
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1] as [number, number],
+      quality: 0.7,
+    };
 
-const pickerResult = useCamera
-  ? await ImagePicker.launchCameraAsync(pickerOptions)
-  : await ImagePicker.launchImageLibraryAsync(pickerOptions);
+    const pickerResult = useCamera
+      ? await ImagePicker.launchCameraAsync(pickerOptions)
+      : await ImagePicker.launchImageLibraryAsync(pickerOptions);
 
-if (!pickerResult.canceled) {
-  uploadImage(pickerResult.assets[0].uri);
-}
-};
-// ✅ Save name + keep image in Firestore
-const handleSave = async () => {
-if (!businessName.trim()) {
-Alert.alert("Required", "Please enter your business name");
-return;
-}
-setLoading(true);
-const user = auth.currentUser;
-if (user) {
-  try {
-    const userDocRef = doc(db, "users", user.uid);
-    await updateDoc(userDocRef, {
-      name: businessName,
-      businessName: businessName,
-      profileImage: profileImage,
-      updatedAt: new Date().toISOString(),
-    });
+    if (!pickerResult.canceled) {
+      uploadImage(pickerResult.assets[0].uri);
+    }
+  };
+  // ✅ Save name + keep image in Firestore
+  const handleSave = async () => {
+    if (!businessName.trim()) {
+      Alert.alert("Required", "Please enter your business name");
+      return;
+    }
+    setLoading(true);
+    const user = auth.currentUser;
+    if (user) {
+      try {
+        const userDocRef = doc(db, "users", user.uid);
+        await updateDoc(userDocRef, {
+          name: businessName,
+          businessName: businessName,
+          profileImage: profileImage,
+          updatedAt: new Date().toISOString(),
+        });
 
-    Alert.alert("Success", "Profile details saved!");
-    router.back();
-  } catch (error) {
-    console.error("Error saving profile:", error);
-    Alert.alert("Error", "Failed to save profile details.");
+        Alert.alert("Success", "Profile details saved!");
+        router.back();
+      } catch (error) {
+        console.error("Error saving profile:", error);
+        Alert.alert("Error", "Failed to save profile details.");
+      }
+    }
+    setLoading(false);
+  };
+  const showImagePickerOptions = () => {
+    Alert.alert(
+      "Change Profile Picture",
+      "How would you like to select a new photo?",
+      [
+        { text: "Take Photo", onPress: () => handlePickImage(true) },
+        { text: "Choose from Gallery", onPress: () => handlePickImage(false) },
+        { text: "Cancel", style: "cancel" },
+      ],
+    );
+  };
+  if (!fontsLoaded) {
+    return null;
   }
-}
-setLoading(false);
-};
-const showImagePickerOptions = () => {
-Alert.alert(
-"Change Profile Picture",
-"How would you like to select a new photo?",
-[
-{ text: "Take Photo", onPress: () => handlePickImage(true) },
-{ text: "Choose from Gallery", onPress: () => handlePickImage(false) },
-{ text: "Cancel", style: "cancel" },
-]
-);
-};
-if (!fontsLoaded) {
-return null;
-}
-return (
-<SafeAreaView style={styles.container}>
-<ScrollView contentContainerStyle={styles.scrollContent}>
-{/* Header */}
-<View style={styles.header}>
-<TouchableOpacity
-onPress={() => router.back()}
-style={styles.backButton}
->
-<Ionicons name="arrow-back-outline" size={24} color="#111827" />
-</TouchableOpacity>
-<Text style={styles.headerTitle}>Edit Profile</Text>
-</View>
-    {/* Profile Picture */}
-    <View style={styles.profileSection}>
-      <TouchableOpacity
-        onPress={showImagePickerOptions}
-        style={styles.profileImageContainer}
-      >
-        <Image source={{ uri: profileImage }} style={styles.profileImage} />
-        {imageUploading && (
-          <View style={styles.uploadingOverlay}>
-            <ActivityIndicator size="small" color="#fff" />
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back-outline" size={24} color="#111827" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Edit Profile</Text>
+        </View>
+        {/* Profile Picture */}
+        <View style={styles.profileSection}>
+          <TouchableOpacity
+            onPress={showImagePickerOptions}
+            style={styles.profileImageContainer}
+          >
+            <Image source={{ uri: profileImage }} style={styles.profileImage} />
+            {imageUploading && (
+              <View style={styles.uploadingOverlay}>
+                <ActivityIndicator size="small" color="#fff" />
+              </View>
+            )}
+            <View style={styles.cameraIconContainer}>
+              <Feather name="camera" size={20} color="#fff" />
+            </View>
+          </TouchableOpacity>
+          <Text style={styles.imageTip}>Tap to change picture</Text>
+        </View>
+
+        {/* Business Name Input */}
+        <View style={styles.formSection}>
+          <Text style={styles.label}>Business Name *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your business name"
+            value={businessName}
+            onChangeText={setBusinessName}
+            autoCapitalize="words"
+            returnKeyType="done"
+          />
+        </View>
+
+        {/* Phone Number (Read-only) */}
+        {phoneNumber && (
+          <View style={styles.formSection}>
+            <Text style={styles.label}>Phone Number</Text>
+            <TextInput
+              style={[styles.input, styles.readOnlyInput]}
+              value={phoneNumber}
+              editable={false}
+            />
+            <Text style={styles.helpText}>Phone number cannot be changed</Text>
           </View>
         )}
-        <View style={styles.cameraIconContainer}>
-          <Feather name="camera" size={20} color="#fff" />
-        </View>
-      </TouchableOpacity>
-      <Text style={styles.imageTip}>Tap to change picture</Text>
-    </View>
 
-    {/* Business Name Input */}
-    <View style={styles.formSection}>
-      <Text style={styles.label}>Business Name *</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter your business name"
-        value={businessName}
-        onChangeText={setBusinessName}
-        autoCapitalize="words"
-        returnKeyType="done"
-      />
-    </View>
+        {/* Business Type (Read-only) */}
+        {businessType && (
+          <View style={styles.formSection}>
+            <Text style={styles.label}>Business Type</Text>
+            <TextInput
+              style={[styles.input, styles.readOnlyInput]}
+              value={
+                businessType === "retail" ? "Retail Shop" : "Service Business"
+              }
+              editable={false}
+            />
+          </View>
+        )}
 
-    {/* Phone Number (Read-only) */}
-    {phoneNumber && (
-      <View style={styles.formSection}>
-        <Text style={styles.label}>Phone Number</Text>
-        <TextInput
-          style={[styles.input, styles.readOnlyInput]}
-          value={phoneNumber}
-          editable={false}
-        />
-        <Text style={styles.helpText}>
-          Phone number cannot be changed
-        </Text>
-      </View>
-    )}
-
-    {/* Business Type (Read-only) */}
-    {businessType && (
-      <View style={styles.formSection}>
-        <Text style={styles.label}>Business Type</Text>
-        <TextInput
-          style={[styles.input, styles.readOnlyInput]}
-          value={
-            businessType === "retail" ? "Retail Shop" : "Service Business"
-          }
-          editable={false}
-        />
-      </View>
-    )}
-
-    {/* Save Button */}
-    <TouchableOpacity
-      style={[styles.saveButton, loading && styles.disabled]}
-      onPress={handleSave}
-      disabled={loading}
-    >
-      {loading ? (
-        <ActivityIndicator color="#fff" />
-      ) : (
-        <Text style={styles.saveButtonText}>Save Changes</Text>
-      )}
-    </TouchableOpacity>
-  </ScrollView>
-</SafeAreaView>
-);
+        {/* Save Button */}
+        <TouchableOpacity
+          style={[styles.saveButton, loading && styles.disabled]}
+          onPress={handleSave}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.saveButtonText}>Save Changes</Text>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
 };
 const styles = StyleSheet.create({
-container: { flex: 1, backgroundColor: "#F4F7FC", marginTop: 30 },
-scrollContent: { paddingBottom: 40 },
-header: {
-flexDirection: "row",
-alignItems: "center",
-paddingHorizontal: 20,
-paddingTop: 20,
-paddingBottom: 16,
-backgroundColor: "#F4F7FC",
-marginBottom: 20,
-},
-backButton: { marginRight: 10, padding: 5 },
-headerTitle: {
-fontSize: 20,
-fontWeight: "bold",
-color: "#111827",
-fontFamily: "Poppins-Bold",
-},
-profileSection: { alignItems: "center", marginBottom: 30 },
-profileImageContainer: {
-width: 150,
-height: 150,
-borderRadius: 75,
-backgroundColor: "#E0E0E0",
-justifyContent: "center",
-alignItems: "center",
-},
-profileImage: { width: 150, height: 150, borderRadius: 75 },
-cameraIconContainer: {
-position: "absolute",
-bottom: 0,
-right: 0,
-backgroundColor: "#007AFF",
-padding: 10,
-borderRadius: 20,
-borderWidth: 2,
-borderColor: "#F4F7FC",
-},
-uploadingOverlay: {
-...StyleSheet.absoluteFillObject,
-backgroundColor: "rgba(0,0,0,0.5)",
-borderRadius: 75,
-justifyContent: "center",
-alignItems: "center",
-},
-imageTip: {
-marginTop: 10,
-fontSize: 14,
-color: "#6B7280",
-fontFamily: "Poppins-Regular",
-},
-formSection: { paddingHorizontal: 20, marginBottom: 20 },
-label: {
-fontSize: 16,
-fontWeight: "600",
-color: "#111827",
-marginBottom: 8,
-fontFamily: "Poppins-Bold",
-},
-input: {
-backgroundColor: "#FFFFFF",
-borderRadius: 12,
-paddingHorizontal: 16,
-paddingVertical: 14,
-fontSize: 16,
-color: "#111827",
-borderWidth: 1,
-borderColor: "#E5E7EB",
-fontFamily: "Poppins-Regular",
-},
-readOnlyInput: {
-backgroundColor: "#F9FAFB",
-color: "#6B7280",
-},
-helpText: {
-fontSize: 12,
-color: "#6B7280",
-marginTop: 4,
-fontFamily: "Poppins-Regular",
-},
-saveButton: {
-backgroundColor: "#007AFF",
-marginHorizontal: 20,
-borderRadius: 12,
-paddingVertical: 16,
-alignItems: "center",
-justifyContent: "center",
-},
-saveButtonText: {
-fontSize: 18,
-fontWeight: "bold",
-color: "#FFFFFF",
-fontFamily: "Poppins-Bold",
-},
-disabled: {
-opacity: 0.6,
-},
+  container: { flex: 1, backgroundColor: "#F4F7FC" },
+  scrollContent: { paddingBottom: 40 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+    backgroundColor: "#F4F7FC",
+    marginBottom: 20,
+  },
+  backButton: { marginRight: 10, padding: 5 },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#111827",
+    fontFamily: "Poppins-Bold",
+  },
+  profileSection: { alignItems: "center", marginBottom: 30 },
+  profileImageContainer: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: "#E0E0E0",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  profileImage: { width: 150, height: 150, borderRadius: 75 },
+  cameraIconContainer: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    backgroundColor: "#1155CC",
+    padding: 10,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: "#F4F7FC",
+  },
+  uploadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 75,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  imageTip: {
+    marginTop: 10,
+    fontSize: 14,
+    color: "#6B7280",
+    fontFamily: "Poppins-Regular",
+  },
+  formSection: { paddingHorizontal: 20, marginBottom: 20 },
+  label: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 8,
+    fontFamily: "Poppins-Bold",
+  },
+  input: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: "#111827",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    fontFamily: "Poppins-Regular",
+  },
+  readOnlyInput: {
+    backgroundColor: "#F9FAFB",
+    color: "#6B7280",
+  },
+  helpText: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 4,
+    fontFamily: "Poppins-Regular",
+  },
+  saveButton: {
+    backgroundColor: "#1155CC",
+    marginHorizontal: 20,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  saveButtonText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontFamily: "Poppins-Bold",
+  },
+  disabled: {
+    opacity: 0.6,
+  },
 });
 export default Profile;

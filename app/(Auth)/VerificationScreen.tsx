@@ -51,7 +51,7 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
   // Use props first, then route params, then defaults
   const phoneNumber = propPhoneNumber || params?.phoneNumber || "";
   const [verificationId, setVerificationId] = useState(
-    propVerificationId || params?.verificationId || ""
+    propVerificationId || params?.verificationId || "",
   );
 
   const [code, setCode] = useState(["", "", "", "", "", ""]);
@@ -100,7 +100,7 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
     try {
       const credential = PhoneAuthProvider.credential(
         verificationId,
-        verificationCode
+        verificationCode,
       );
       await signInWithCredential(auth, credential);
 
@@ -108,7 +108,7 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
       if (onSuccess) {
         onSuccess();
       } else {
-        router.push("./BusinessSelectionScreen");
+        router.push("/(Main)/Home");
       }
     } catch (error: any) {
       setLoading(false);
@@ -146,7 +146,7 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
       const phoneProvider = new PhoneAuthProvider(auth);
       const newVerificationId = await phoneProvider.verifyPhoneNumber(
         phoneNumber,
-        recaptchaVerifier.current as ApplicationVerifier
+        recaptchaVerifier.current as ApplicationVerifier,
       );
 
       setVerificationId(newVerificationId);
@@ -272,8 +272,8 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
                 {resendLoading
                   ? "Sending..."
                   : resendTimer > 0
-                  ? `Didn't get the code? Resend in ${resendTimer}s`
-                  : "Didn't get the code? Resend now"}
+                    ? `Didn't get the code? Resend in ${resendTimer}s`
+                    : "Didn't get the code? Resend now"}
               </Text>
             </TouchableOpacity>
 
@@ -293,14 +293,14 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
             onPress={handleGoBack}
             disabled={loading}
           >
-            <Ionicons name="arrow-back" size={20} color="#2046AE" />
+            <Ionicons name="arrow-back" size={20} color="#1155CC" />
             <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
         </View>
 
         {loading && (
           <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#2046AE" />
+            <ActivityIndicator size="large" color="#1155CC" />
             <Text style={styles.loadingText}>Verifying...</Text>
           </View>
         )}
@@ -310,7 +310,7 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#2046AE" },
+  container: { flex: 1, backgroundColor: "#1155CC" },
   topSection: { flex: 1 },
   bottomSection: {
     backgroundColor: "#FFFFFF",
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   codeInputFilled: { borderColor: "#10B981", backgroundColor: "#F0FDF4" },
   codeInputDisabled: { opacity: 0.6 },
   verifyButton: {
-    backgroundColor: "#2046AE",
+    backgroundColor: "#1155CC",
     paddingVertical: 12,
     borderRadius: 8,
     marginBottom: 24,
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: 16,
     fontFamily: "Poppins-Regular",
-    color: "#2046AE",
+    color: "#1155CC",
     marginLeft: 8,
     fontWeight: "500",
   },
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 18,
-    color: "#2046AE",
+    color: "#1155CC",
     fontWeight: "500",
     fontFamily: "Poppins-Regular",
   },

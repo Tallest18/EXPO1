@@ -109,7 +109,7 @@ const Checkout: React.FC = () => {
               };
             }
             return item;
-          })
+          }),
         );
 
         setCartItems(cartWithProducts);
@@ -226,7 +226,7 @@ const Checkout: React.FC = () => {
               router.push("/(Main)/Sell" as any);
             },
           },
-        ]
+        ],
       );
     } catch (error) {
       console.error("Error processing sale:", error);
@@ -524,7 +524,7 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   paymentOptionSelected: {
-    borderColor: "#007AFF",
+    borderColor: "#1155CC",
   },
   paymentOptionText: {
     fontSize: 15,
@@ -541,13 +541,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   radioButtonSelected: {
-    borderColor: "#007AFF",
+    borderColor: "#1155CC",
   },
   radioButtonInner: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#007AFF",
+    backgroundColor: "#1155CC",
   },
   footer: {
     backgroundColor: "#E7EEFA",
@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   doneButton: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "#1155CC",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
@@ -667,7 +667,7 @@ const styles = StyleSheet.create({
     paddingTop: 14,
   },
   saveDebtorButton: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "#1155CC",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",

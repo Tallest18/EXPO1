@@ -7,7 +7,7 @@ const MainLayout = () => {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: "black", // active = black
-        tabBarInactiveTintColor: "#3B82F6", // inactive = blue
+        tabBarInactiveTintColor: "#1155CC", // inactive = blue
         headerShown: false,
         tabBarStyle: {
           backgroundColor: "#FFFFFF",

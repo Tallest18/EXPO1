@@ -143,7 +143,7 @@ const ProductDetails: React.FC = () => {
     const now = new Date();
     const expiry = new Date(expiryDate);
     const daysUntilExpiry = Math.ceil(
-      (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
     );
     return daysUntilExpiry <= 30 && daysUntilExpiry > 0;
   };
@@ -154,7 +154,7 @@ const ProductDetails: React.FC = () => {
     const now = new Date();
     const expiry = new Date(expiryDate);
     return Math.ceil(
-      (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
     );
   };
 
@@ -184,8 +184,8 @@ const ProductDetails: React.FC = () => {
           </View>
 
           <Text style={styles.deleteModalMessage}>
-            Are you sure you want to delete "{product?.name}"? This action
-            cannot be undone.
+            Are you sure you want to delete &quot;{product?.name}&quot;? This
+            action cannot be undone.
           </Text>
 
           <View style={styles.deleteModalButtons}>
@@ -231,7 +231,7 @@ const ProductDetails: React.FC = () => {
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="#1155CC" />
           <Text style={styles.loadingText}>Loading product details...</Text>
         </View>
       </SafeAreaView>
@@ -450,7 +450,7 @@ const ProductDetails: React.FC = () => {
         {/* Action Buttons */}
         <View style={styles.actionSection}>
           <TouchableOpacity style={styles.editButton}>
-            <Feather name="edit-2" size={18} color="#007AFF" />
+            <Feather name="edit-2" size={18} color="#1155CC" />
             <Text style={styles.editButtonText}>Edit Product</Text>
           </TouchableOpacity>
 
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E7EEFA",
     borderBottomWidth: 1,
     borderBottomColor: "#E0E0E0",
-    paddingTop: 60,
+    paddingTop: 30,
   },
   backButton: {
     padding: 8,
@@ -734,7 +734,7 @@ const styles = StyleSheet.create({
   editButtonText: {
     fontSize: 16,
     fontFamily: "Poppins-Regular",
-    color: "#007AFF",
+    color: "#1155CC",
     fontWeight: "600",
   },
   deleteActionButton: {

@@ -169,7 +169,7 @@ const Home = () => {
     // Set up real-time listener for sales summary
     const salesQuery = query(
       collection(db, "sales"),
-      where("userId", "==", currentUser.uid)
+      where("userId", "==", currentUser.uid),
     );
     const unsubscribeSales = onSnapshot(salesQuery, (querySnapshot) => {
       let totalSales = 0;
@@ -178,26 +178,56 @@ const Home = () => {
 
       querySnapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
         const saleData = doc.data();
-        const sale = {
-          id: doc.id,
-          ...saleData,
-          amount: saleData.amount || 0,
-          profit: saleData.profit || 0,
-          quantity: saleData.quantity || 1,
-          name: saleData.name || "Unknown Product",
-          date: saleData.date || new Date().toISOString(),
-        } as SalesSummaryItem;
 
-        totalSales += sale.amount;
-        totalProfit += sale.profit;
-        salesSummary.push(sale);
+        // Process each sale's items to create individual summary entries
+        if (saleData.items && Array.isArray(saleData.items)) {
+          saleData.items.forEach((item: any) => {
+            const sale = {
+              id: doc.id + "_" + item.productId, // Unique ID for each item in the sale
+              image: item.image || item.imageUrl || "",
+              name: item.productName || item.name || "Unknown Product",
+              quantity: item.quantity || 1,
+              date: saleData.date || new Date().toISOString(),
+              amount: item.totalPrice || item.unitPrice * item.quantity || 0,
+              profit:
+                ((item.unitPrice || 0) - (item.costPrice || 0)) *
+                (item.quantity || 0),
+            } as SalesSummaryItem;
+
+            totalSales += sale.amount;
+            totalProfit += sale.profit;
+            salesSummary.push(sale);
+          });
+        } else {
+          // Fallback for old data structure
+          const sale = {
+            id: doc.id,
+            image: saleData.image || "",
+            name: saleData.productName || saleData.name || "Unknown Product",
+            quantity: saleData.quantity || 1,
+            date: saleData.date || new Date().toISOString(),
+            amount: saleData.totalAmount || saleData.amount || 0,
+            profit: saleData.profit || 0,
+          } as SalesSummaryItem;
+
+          totalSales += sale.amount;
+          totalProfit += sale.profit;
+          salesSummary.push(sale);
+        }
+      });
+
+      // Sort by date (most recent first)
+      salesSummary.sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        return dateB - dateA;
       });
 
       setUserData((prev) => ({
         ...prev,
         todaySales: totalSales,
         profit: totalProfit,
-        transactions: salesSummary.length,
+        transactions: querySnapshot.size, // Count actual number of sales transactions
         salesSummary,
       }));
     });
@@ -205,7 +235,7 @@ const Home = () => {
     // Set up real-time listener for inventory/stock
     const productsQuery = query(
       collection(db, "products"),
-      where("userId", "==", currentUser.uid)
+      where("userId", "==", currentUser.uid),
     );
     const unsubscribeProducts = onSnapshot(productsQuery, (productsSnap) => {
       let totalStock = 0;
@@ -227,7 +257,7 @@ const Home = () => {
     // Set up real-time listener for notifications
     const notificationsQuery = query(
       collection(db, "notifications"),
-      orderBy("dateAdded", "desc")
+      orderBy("dateAdded", "desc"),
     );
     const unsubscribeNotifications = onSnapshot(
       notificationsQuery,
@@ -243,7 +273,7 @@ const Home = () => {
       },
       (error) => {
         console.error("Firestore error:", error);
-      }
+      },
     );
 
     return () => {
@@ -351,8 +381,10 @@ const Home = () => {
 
       <View style={styles.row}>
         <View style={styles.infoBox}>
-          <Text style={styles.salesRate}>+6.5%</Text>
-          <Text style={styles.infoLabel}>Transactions</Text>
+          <View style={styles.transactionRow}>
+            <Text style={styles.infoLabel}>Transactions</Text>
+            <Text style={styles.salesRate}>+6.5%</Text>
+          </View>
           <Text style={styles.infoValue}>{userData.transactions}</Text>
         </View>
         <View style={styles.infoBox}>
@@ -363,7 +395,7 @@ const Home = () => {
 
       <View style={styles.row}>
         <TouchableOpacity
-          style={[styles.actionBox, { backgroundColor: "#001F54" }]}
+          style={[styles.actionBox, { backgroundColor: "#061E47" }]}
           onPress={() => setShowAddProduct(true)}
         >
           <Text style={styles.actionText}>
@@ -372,7 +404,7 @@ const Home = () => {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.actionBox, { backgroundColor: "#0056D2" }]}
+          style={[styles.actionBox, { backgroundColor: "#1155CC" }]}
           onPress={() => router.push("/(Routes)/QuickSellScreen")}
         >
           <Text style={styles.actionText}>
@@ -382,17 +414,30 @@ const Home = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Updated Sales Summary Section */}
+      {/* Updated Sales Summary Section - Matching Image */}
       <View style={styles.salesSummarySection}>
         <View style={styles.salesSummaryHeader}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Feather name="dollar-sign" size={24} color="#22C55E" />
-            <Text style={styles.salesSummaryHeaderTitle}>Sales Summary</Text>
+          <View style={styles.salesSummaryHeaderLeft}>
+            <View style={styles.dollarIconCircle}>
+              <Feather name="dollar-sign" size={20} color="#000" />
+            </View>
+            <View>
+              <Text style={styles.salesSummaryHeaderTitle}>Sales Summary</Text>
+              <Text style={styles.salesSummaryHeaderSubtitle}>
+                Items sold are captured here
+              </Text>
+            </View>
           </View>
           <TouchableOpacity
-            onPress={() => router.push("/(Routes)/TotalSummaryScreen")}
+            style={styles.arrowIconCircle}
+            onPress={() => {
+              router.push({
+                pathname: "/(Main)/Sell" as any,
+                params: { tab: "history" },
+              });
+            }}
           >
-            <Text style={styles.viewAllLink}>View all sales</Text>
+            <Feather name="arrow-up-right" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
 
@@ -409,30 +454,37 @@ const Home = () => {
                 })
               }
             >
-              <View style={styles.salesSummaryLeftSection}>
-                <View style={styles.salesSummaryIconBox}>
-                  <Feather name="shopping-bag" size={24} color="#22C55E" />
-                </View>
-                <View style={styles.salesSummaryContent}>
-                  <View style={styles.salesSummaryTitleRow}>
-                    <Text style={styles.salesSummaryTitle}>
-                      {item.name || "Unknown Product"} ×{item.quantity || 1}
-                    </Text>
-                    <Text style={styles.salesSummaryTime}>
-                      {formatSalesDate(item.date)}
-                    </Text>
+              {/* Product Image/Icon */}
+              <View style={styles.productImageContainer}>
+                {item.image ? (
+                  <Image
+                    source={{ uri: item.image }}
+                    style={styles.productThumbnail}
+                  />
+                ) : (
+                  <View style={styles.productPlaceholder}>
+                    <Feather name="package" size={20} color="#666" />
                   </View>
-                  <Text style={styles.salesSummaryMessage}>
-                    Amount: {formatCurrency(item.amount)} • Profit:{" "}
-                    {formatCurrency(item.profit)}
-                  </Text>
-                  <Text style={styles.salesSummaryActions}>
-                    Tap to view sale details | View product
-                  </Text>
-                </View>
+                )}
               </View>
-              {/* Green indicator dot for recent sales */}
-              <View style={styles.recentSaleDot} />
+
+              {/* Product Details */}
+              <View style={styles.salesSummaryContent}>
+                <Text style={styles.salesSummaryProductName}>
+                  {item.name} ×{item.quantity || 1}
+                </Text>
+                <Text style={styles.salesSummaryDate}>
+                  {formatSalesDate(item.date)}
+                </Text>
+              </View>
+
+              {/* Amount and Label */}
+              <View style={styles.salesSummaryRight}>
+                <Text style={styles.salesSummaryAmount}>
+                  {formatCurrency(item.amount)}
+                </Text>
+                <Text style={styles.salesSummaryLabel}>Cost</Text>
+              </View>
             </TouchableOpacity>
           )}
           ListEmptyComponent={
@@ -531,7 +583,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E7EEFA",
-    paddingTop: 20,
+    paddingTop: 0,
   },
   header: {
     flexDirection: "row",
@@ -553,13 +605,13 @@ const styles = StyleSheet.create({
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#eee" },
 
   salesBox: {
-    backgroundColor: "#0056D2",
+    backgroundColor: "#1155CC",
     borderRadius: 12,
     padding: 16,
     margin: 20,
   },
   salesTop: { flexDirection: "row", justifyContent: "space-between" },
-  salesLabel: { color: "#fff", fontSize: 14 },
+  salesLabel: { color: "#fff", fontSize: 14, fontFamily: "Poppins-Regular" },
   salesRate: {
     backgroundColor: "#E6F9EF",
     color: "#22C55E",
@@ -567,12 +619,14 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 12,
     fontSize: 12,
+    fontFamily: "Poppins-Regular",
   },
   salesAmount: {
     color: "white",
     fontSize: 28,
     fontWeight: "bold",
     marginTop: 4,
+    fontFamily: "Poppins-Bold",
   },
   profitRow: {
     marginTop: 12,
@@ -582,8 +636,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  profitLabel: { color: "#444" },
-  profitAmount: { fontWeight: "600" },
+  profitLabel: { color: "#444", fontFamily: "Poppins-Regular" },
+  profitAmount: { fontWeight: "600", fontFamily: "Poppins-Bold" },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -600,11 +654,20 @@ const styles = StyleSheet.create({
   },
   infoValue: {
     fontSize: 20,
-    marginTop: 20,
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
+    marginTop: 8,
   },
-  infoLabel: { color: "#777" },
+  infoLabel: {
+    color: "#777",
+    fontFamily: "Poppins-Regular",
+  },
+  transactionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
   actionBox: {
     flex: 1,
     borderRadius: 12,
@@ -619,7 +682,7 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins-Regular",
   },
 
-  // Updated Sales Summary Styles (matching notification design)
+  // Updated Sales Summary Styles - Matching Image
   salesSummarySection: {
     marginTop: 20,
     marginHorizontal: 20,
@@ -633,79 +696,103 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
+  salesSummaryHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  dollarIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   salesSummaryHeaderTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
+    color: "#000",
   },
-  viewAllLink: {
-    color: "#0056D2",
-    fontSize: 14,
+  salesSummaryHeaderSubtitle: {
+    fontSize: 11,
     fontFamily: "Poppins-Regular",
+    color: "#999",
+    marginTop: 2,
+  },
+  arrowIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#1C1C1C",
+    justifyContent: "center",
+    alignItems: "center",
   },
   salesSummaryCard: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    backgroundColor: "#F0F9FF",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
-  },
-  salesSummaryLeftSection: {
-    flexDirection: "row",
-    flex: 1,
     gap: 12,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
   },
-  salesSummaryIconBox: {
+  productImageContainer: {
+    width: 48,
+    height: 48,
+  },
+  productThumbnail: {
     width: 48,
     height: 48,
     borderRadius: 8,
-    backgroundColor: "#DCFCE7",
+    backgroundColor: "#F3F4F6",
+  },
+  productPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: "#F3F4F6",
     justifyContent: "center",
     alignItems: "center",
   },
   salesSummaryContent: {
     flex: 1,
   },
-  salesSummaryTitleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  salesSummaryProductName: {
+    fontSize: 14,
+    fontWeight: "500",
+    fontFamily: "Poppins-Regular",
+    color: "#000",
     marginBottom: 4,
   },
-  salesSummaryTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    fontFamily: "Poppins-Regular",
-    color: "#333",
-    flex: 1,
-  },
-  salesSummaryTime: {
+  salesSummaryDate: {
     fontSize: 11,
     color: "#999",
     fontFamily: "Poppins-Regular",
-    marginLeft: 8,
   },
-  salesSummaryMessage: {
-    fontSize: 13,
-    color: "#666",
+  salesSummaryRight: {
+    alignItems: "flex-end",
+  },
+  salesSummaryAmount: {
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Poppins-Bold",
+    color: "#000",
+    marginBottom: 2,
+  },
+  salesSummaryLabel: {
+    fontSize: 11,
+    color: "#999",
     fontFamily: "Poppins-Regular",
-    marginBottom: 4,
   },
-  salesSummaryActions: {
-    fontSize: 12,
+  viewAllLink: {
     color: "#0056D2",
+    fontSize: 14,
     fontFamily: "Poppins-Regular",
-    marginTop: 4,
-  },
-  recentSaleDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#22C55E",
-    marginTop: 8,
-    marginLeft: 8,
   },
 
   // Notification Styles (unchanged)
@@ -780,7 +867,7 @@ const styles = StyleSheet.create({
   },
   notifActions: {
     fontSize: 12,
-    color: "#0056D2",
+    color: "#1155CC",
     fontFamily: "Poppins-Regular",
     marginTop: 4,
   },

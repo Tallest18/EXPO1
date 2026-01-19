@@ -2,7 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
 import {
-  collection, // <-- CORRECTED: Modular SDK type
+  collection,
   DocumentData,
   onSnapshot,
   query,
@@ -13,6 +13,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   Image,
   SafeAreaView,
   ScrollView,
@@ -23,8 +24,15 @@ import {
   View,
 } from "react-native";
 import AddProductFlow from "../(Routes)/AddProductFlow";
-// Ensure you have the 'auth' and 'db' exports correctly configured in firebaseConfig
 import { auth, db } from "../config/firebaseConfig";
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+// Responsive sizing functions
+const scale = (size: number) => (SCREEN_WIDTH / 375) * size;
+const verticalScale = (size: number) => (SCREEN_HEIGHT / 667) * size;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
 // Types
 interface Product {
@@ -61,12 +69,6 @@ interface FilterCounts {
   expiring: number;
 }
 
-interface StockStatus {
-  text: string;
-  color: string;
-  bgColor: string;
-}
-
 interface FilterItem {
   key: string;
   label: string;
@@ -100,32 +102,27 @@ const Inventory: React.FC = () => {
     if (!currentUser) {
       console.log("ERROR: No authenticated user found");
       setLoading(false);
-      // Optionally redirect to login here
       return;
     }
 
     const productsQuery = query(
       collection(db, "products"),
-      where("userId", "==", currentUser.uid)
+      where("userId", "==", currentUser.uid),
     );
 
     const unsubscribe = onSnapshot(
       productsQuery,
       (snapshot) => {
         const productsData: Product[] = [];
-        snapshot.forEach(
-          // CORRECTED TYPE: Use modular SDK's QueryDocumentSnapshot
-          (doc: QueryDocumentSnapshot<DocumentData>) => {
-            const data = doc.data();
-            productsData.push({
-              id: doc.id,
-              ...data,
-            } as Product);
-          }
-        );
+        snapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
+          const data = doc.data();
+          productsData.push({
+            id: doc.id,
+            ...data,
+          } as Product);
+        });
 
         productsData.sort((a, b) => {
-          // Assuming dateAdded is an ISO string or comparable value
           const dateA = new Date(a.dateAdded).getTime();
           const dateB = new Date(b.dateAdded).getTime();
           return dateB - dateA;
@@ -140,10 +137,10 @@ const Inventory: React.FC = () => {
         Alert.alert(
           "Error Loading Products",
           `There was an issue loading your products: ${error.message}`,
-          [{ text: "OK" }]
+          [{ text: "OK" }],
         );
         setLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe();
@@ -151,7 +148,6 @@ const Inventory: React.FC = () => {
 
   const calculateFilterCounts = (productsData: Product[]): void => {
     const now = new Date();
-    // Check for expiration within the next 10 days
     const tenDaysFromNow = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
 
     const counts: FilterCounts = {
@@ -170,7 +166,6 @@ const Inventory: React.FC = () => {
 
       if (product.expiryDate) {
         const expiryDate = new Date(product.expiryDate);
-        // Expiring: Date is on or before 10 days from now AND is in the future
         if (expiryDate <= tenDaysFromNow && expiryDate > now) {
           counts.expiring++;
         }
@@ -202,12 +197,10 @@ const Inventory: React.FC = () => {
   useEffect(() => {
     let filtered = [...products];
 
-    // 1. Apply Search Filter first
     if (searchQuery.trim()) {
       filtered = performSearch(searchQuery);
     }
 
-    // 2. Apply Stock Filter
     if (activeFilter === "inStock") {
       filtered = filtered.filter((product) => product.unitsInStock > 0);
     } else if (activeFilter === "outOfStock") {
@@ -233,55 +226,29 @@ const Inventory: React.FC = () => {
   };
 
   const handleAddProduct = async (productData: Product): Promise<void> => {
-    // In a real application, this function would handle the product save
-    // to the local 'products' state and Firestore via an API call,
-    // and close the modal. Since the useEffect listener handles
-    // updating the state from Firestore, we only need a placeholder here
-    // until the actual AddProductFlow logic is implemented.
     Alert.alert("Success", "Product added to inventory!");
-  };
-
-  const getStockStatus = (product: Product): StockStatus => {
-    if (product.unitsInStock === 0) {
-      return { text: "Out of Stock", color: "#FF6B6B", bgColor: "#FFE5E5" };
-    } else if (product.unitsInStock <= product.lowStockThreshold) {
-      // Use lowStockThreshold
-      return { text: "Low Stock", color: "#FF8C42", bgColor: "#FFF2E5" };
-    } else {
-      return { text: "In Stock", color: "#4CAF50", bgColor: "#E8F5E8" };
-    }
-  };
-
-  const isExpiringSoon = (expiryDate: string): boolean => {
-    if (!expiryDate) return false;
-    const now = new Date();
-    const expiry = new Date(expiryDate);
-    const daysUntilExpiry = Math.ceil(
-      (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    return daysUntilExpiry <= 10 && daysUntilExpiry > 0;
   };
 
   const renderFilterTabs = (): React.ReactElement => {
     const filters: FilterItem[] = [
       {
         key: "all",
-        label: `All Products (${filterCounts.all})`,
+        label: "All Products",
         count: filterCounts.all,
       },
       {
         key: "inStock",
-        label: `In Stock (${filterCounts.inStock})`,
+        label: "In Stock",
         count: filterCounts.inStock,
       },
       {
         key: "outOfStock",
-        label: `Out of Stock (${filterCounts.outOfStock})`,
+        label: "Out of Stock",
         count: filterCounts.outOfStock,
       },
       {
         key: "expiring",
-        label: `Expiring (${filterCounts.expiring})`,
+        label: "Expiring",
         count: filterCounts.expiring,
       },
     ];
@@ -318,9 +285,6 @@ const Inventory: React.FC = () => {
   };
 
   const renderProductCard = (product: Product): React.ReactElement => {
-    const stockStatus = getStockStatus(product);
-    const expiringSoon = isExpiringSoon(product.expiryDate);
-
     return (
       <TouchableOpacity
         key={product.id}
@@ -332,67 +296,46 @@ const Inventory: React.FC = () => {
           });
         }}
       >
-        <Image
-          source={
-            product.image?.uri
-              ? { uri: product.image.uri }
-              : { uri: "https://via.placeholder.com/120" } // Increased size for better image quality
-          }
-          style={styles.productImage}
-        />
-
-        <View style={styles.productInfo}>
+        <View style={styles.cardContent}>
+          {/* Product Name */}
           <Text style={styles.productName}>{product.name}</Text>
 
-          {/* Expiring Soon Tag (Conditionally rendered) */}
-          {expiringSoon && (
-            <View
-              style={[
-                styles.stockTag,
-                { backgroundColor: "#FFF2E5", marginBottom: 5 },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.stockTagText,
-                  { color: "#F59E0B", fontWeight: "bold" },
-                ]}
-              >
-                Expiring Soon
-              </Text>
-            </View>
-          )}
+          {/* Image and Info Boxes Row */}
+          <View style={styles.imageAndInfoRow}>
+            <Image
+              source={
+                product.image?.uri
+                  ? { uri: product.image.uri }
+                  : { uri: "https://via.placeholder.com/100" }
+              }
+              style={styles.productImage}
+            />
 
-          <View style={styles.detailsRow}>
-            {/* Left Box (In Stock) */}
-            <View style={styles.detailBox}>
-              <Text style={styles.detailLabel}>In stock</Text>
-              <View style={styles.stockStatusRow}>
-                {stockStatus.text !== "In Stock" ? (
-                  <View
-                    
-                  >
-                  </View>
-                ) : null}
-                <Text style={styles.stockCount}>{product.unitsInStock}</Text>
+            <View style={styles.infoBoxesContainer}>
+              {/* Unit Price Box - Full Width */}
+              <View style={styles.unitPriceBox}>
+                <Text style={styles.boxLabel}>Unit Price</Text>
+                <Text style={styles.largePrice}>
+                  ₦{product.sellingPrice.toLocaleString()}
+                </Text>
+              </View>
+
+              {/* Stock and Cost Price Boxes - Side by Side */}
+              <View style={styles.bottomBoxesRow}>
+                <View style={styles.smallInfoBox}>
+                  <Text style={styles.boxLabel}>In Stock</Text>
+                  <Text style={styles.infoBoxValue}>
+                    {product.unitsInStock}
+                  </Text>
+                </View>
+                <View style={styles.smallInfoBox}>
+                  <Text style={styles.boxLabel}>Cost Price</Text>
+                  <Text style={styles.infoBoxValue}>
+                    ₦{product.costPrice.toLocaleString()}
+                  </Text>
+                </View>
               </View>
             </View>
-
-            {/* Right Box (Unit Price) */}
-            <View style={styles.detailBox}>
-              <Text style={styles.detailLabel}>Unit Price</Text>
-              <Text style={styles.price}>
-                ₦{product.sellingPrice.toLocaleString()}
-              </Text>
-            </View>
-          </View>
-
-          {/* Profit Section */}
-          <View style={styles.profitRow}>
-            <Text style={styles.profitLabel}>Profit/Unit</Text>
-            <Text style={styles.profitAmount}>
-              ₦{(product.sellingPrice - product.costPrice).toLocaleString()}
-            </Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -401,7 +344,7 @@ const Inventory: React.FC = () => {
 
   const renderEmptyState = (): React.ReactElement => (
     <View style={styles.emptyState}>
-      <Feather name="package" size={80} color="#E0E0E0" />
+      <Feather name="package" size={moderateScale(80)} color="#E0E0E0" />
       <Text style={styles.emptyTitle}>No Products Yet</Text>
       <Text style={styles.emptyDescription}>
         Start building your inventory by adding your first product
@@ -419,7 +362,7 @@ const Inventory: React.FC = () => {
 
   const renderSearchEmptyState = (): React.ReactElement => (
     <View style={styles.emptyState}>
-      <Feather name="search" size={80} color="#E0E0E0" />
+      <Feather name="search" size={moderateScale(80)} color="#E0E0E0" />
       <Text style={styles.emptyTitle}>No Products Found</Text>
       <Text style={styles.emptyDescription}>
         Try adjusting your search or filter criteria
@@ -434,7 +377,7 @@ const Inventory: React.FC = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="#1155CC" />
           <Text style={styles.loadingText}>Loading inventory...</Text>
         </View>
       </SafeAreaView>
@@ -451,14 +394,14 @@ const Inventory: React.FC = () => {
           onPress={() => setShowAddProduct(true)}
         >
           <Text style={styles.newProductButtonText}>New Product</Text>
-          <Feather name="plus" size={16} color="white" />
+          <Feather name="plus" size={moderateScale(16)} color="white" />
         </TouchableOpacity>
       </View>
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
-          <Feather name="search" size={16} color="#999" />
+          <Feather name="search" size={moderateScale(18)} color="#999" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search by name, or category"
@@ -470,26 +413,26 @@ const Inventory: React.FC = () => {
             autoCorrect={false}
           />
         </View>
-        {/* Filter button is a placeholder, as the actual filtering is done via tabs */}
         <TouchableOpacity style={styles.filterButton}>
-          <Feather name="sliders" size={20} color="#333" />
+          <Feather name="sliders" size={moderateScale(20)} color="#333" />
         </TouchableOpacity>
       </View>
 
       {/* Filter Tabs */}
       {products.length > 0 && renderFilterTabs()}
 
-      {/* Products List */}
+      {/* Products Grid */}
       <ScrollView
         style={styles.productsContainer}
         showsVerticalScrollIndicator={false}
       >
-        {products.length === 0 && !loading
-          ? renderEmptyState()
-          : filteredProducts.length === 0 && searchQuery.length > 0
-          ? renderSearchEmptyState()
-          : filteredProducts.map((product) => renderProductCard(product))}
-
+        <View style={styles.productsGrid}>
+          {products.length === 0 && !loading
+            ? renderEmptyState()
+            : filteredProducts.length === 0 && searchQuery.length > 0
+              ? renderSearchEmptyState()
+              : filteredProducts.map((product) => renderProductCard(product))}
+        </View>
         <View style={styles.bottomPadding} />
       </ScrollView>
 
@@ -507,7 +450,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E7EEFA",
-    paddingTop: 50,
   },
   loadingContainer: {
     flex: 1,
@@ -515,252 +457,229 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    marginTop: 10,
-    fontSize: 16,
+    marginTop: verticalScale(10),
+    fontSize: moderateScale(16),
     color: "#666",
+    fontFamily: "Poppins-Regular",
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingHorizontal: scale(20),
+    paddingVertical: verticalScale(16),
     backgroundColor: "#E7EEFA",
   },
   headerTitle: {
-    fontSize: 34,
+    fontSize: moderateScale(28),
+    fontWeight: "700",
     color: "#000",
     fontFamily: "Poppins-Bold",
   },
   newProductButton: {
-    backgroundColor: "#007AFF",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: "#1155CC",
+    borderRadius: moderateScale(8),
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(10),
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: scale(6),
   },
   newProductButtonText: {
     color: "white",
-    fontSize: 14,
-    fontFamily: "Poppins-Regular",
+    fontSize: moderateScale(14),
     fontWeight: "600",
+    fontFamily: "Poppins-Bold",
   },
   searchContainer: {
     flexDirection: "row",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: scale(20),
+    paddingBottom: verticalScale(12),
     backgroundColor: "#E7EEFA",
     alignItems: "center",
-    gap: 12,
+    gap: scale(10),
   },
   searchInputContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
+    borderRadius: moderateScale(10),
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(10),
+    gap: scale(8),
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
   },
   searchInput: {
     flex: 1,
-    fontSize: 18,
+    fontSize: moderateScale(15),
     fontFamily: "Poppins-Regular",
     color: "#000",
   },
   filterButton: {
-    backgroundColor: "#F8F9FA",
-    borderRadius: 12,
-    padding: 15,
+    backgroundColor: "#FFFFFF",
+    borderRadius: moderateScale(10),
+    padding: scale(12),
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
   },
   filtersContainer: {
     backgroundColor: "#E7EEFA",
-    paddingVertical: 10,
+    paddingVertical: verticalScale(8),
+    paddingBottom: verticalScale(12),
   },
   filtersContentContainer: {
-    paddingHorizontal: 20,
-    alignItems: "flex-start",
+    paddingHorizontal: scale(20),
+    gap: scale(8),
   },
   filterTab: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 10,
-    marginRight: 10,
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(8),
+    borderRadius: moderateScale(10),
+    marginRight: scale(8),
+    backgroundColor: "#FFFFFF",
   },
   activeFilterTab: {
-    backgroundColor: "#F8F9FA",
-    borderColor: "#B5CAEF",
-    borderWidth: 1,
+    backgroundColor: "#1155CC",
   },
   filterText: {
-    fontSize: 18,
-    fontFamily: "Poppins-Regular",
+    fontSize: moderateScale(14),
     fontWeight: "500",
-    color: "#000",
+    color: "#1C1C1C",
+    fontFamily: "Poppins-Regular",
   },
   activeFilterText: {
-    color: "#000",
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontFamily: "Poppins-Bold",
   },
   productsContainer: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 10,
+    backgroundColor: "#E7EEFA",
+  },
+  productsGrid: {
+    paddingHorizontal: scale(20),
+    paddingTop: verticalScale(8),
   },
   productCard: {
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 6,
-    flexDirection: "row",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    backgroundColor: "#FFFFFF",
+    borderRadius: moderateScale(12),
+    marginBottom: verticalScale(16),
+    overflow: "hidden",
   },
-  productImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 8,
-    backgroundColor: "#F0F0F0",
-    marginRight: 36,
-  },
-  productInfo: {
-    flex: 1,
+  cardContent: {
+    padding: scale(16),
   },
   productName: {
-    fontSize: 24,
-    fontFamily: "Poppins-Bold",
+    fontSize: moderateScale(20),
     fontWeight: "600",
     color: "#000",
-    marginBottom: 8,
+    fontFamily: "Poppins-Bold",
+    marginBottom: verticalScale(12),
   },
-  detailsRow: {
+  imageAndInfoRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-    gap: 8,
+    alignItems: "flex-start",
+    gap: scale(12),
   },
-  detailBox: {
+  productImage: {
+    width: scale(100),
+    height: scale(100),
+    borderRadius: moderateScale(8),
+    backgroundColor: "#F0F0F0",
+  },
+  infoBoxesContainer: {
     flex: 1,
-    padding: 10,
+    gap: verticalScale(8),
+  },
+  unitPriceBox: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: moderateScale(8),
+    padding: scale(8),
     borderWidth: 1,
     borderColor: "#B5CAEF",
-    borderRadius: 8,
   },
-  detailLabel: {
-    fontSize: 12,
-    color: "#666",
-    borderRadius: 8,
-    marginBottom: 4,
+  boxLabel: {
+    fontSize: moderateScale(11),
+    color: "#D2D2D2",
+    marginBottom: verticalScale(4),
     fontFamily: "Poppins-Regular",
   },
-  stockStatusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  stockTag: {
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginRight: 4,
-  },
-  stockTagText: {
-    fontSize: 12,
-    fontWeight: "600",
-    fontFamily: "Poppins-Regular",
-  },
-  stockCount: {
-    fontSize: 30,
-    marginTop: 10,
+  largePrice: {
+    fontSize: moderateScale(24),
     fontWeight: "700",
     color: "#000",
     fontFamily: "Poppins-Bold",
   },
-  price: {
-    fontSize: 30,
-    marginTop: 10,
-    fontWeight: "700",
-    color: "#000",
-    fontFamily: "Poppins-Bold",
-  },
-  profitRow: {
+  bottomBoxesRow: {
     flexDirection: "row",
-    padding: 12,
-     borderWidth: 1,
+    gap: scale(4),
+  },
+  smallInfoBox: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: moderateScale(8),
+    padding: scale(12),
+    borderWidth: 1,
     borderColor: "#B5CAEF",
-    borderRadius: 6,
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 4,
   },
-  profitLabel: {
-    fontSize: 14,
-    color: "#666",
-    fontFamily: "Poppins-Regular",
-  },
-  profitAmount: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1C1C1C",
-    fontFamily: "Poppins-Regular",
+  infoBoxValue: {
+    fontSize: moderateScale(18),
+    fontWeight: "700",
+    color: "#000",
+    fontFamily: "Poppins-Bold",
   },
   emptyState: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 60,
+    paddingVertical: verticalScale(80),
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: "600",
     color: "#666",
-    marginTop: 16,
-    marginBottom: 8,
-    fontFamily: "Poppins-Regular",
+    marginTop: verticalScale(16),
+    marginBottom: verticalScale(8),
+    fontFamily: "Poppins-Bold",
   },
   emptyDescription: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: "#999",
     textAlign: "center",
-    marginBottom: 24,
-    paddingHorizontal: 40,
+    marginBottom: verticalScale(24),
+    paddingHorizontal: scale(40),
     fontFamily: "Poppins-Regular",
   },
   addFirstProductButton: {
-    backgroundColor: "#007AFF",
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    backgroundColor: "#1155CC",
+    borderRadius: moderateScale(12),
+    paddingHorizontal: scale(24),
+    paddingVertical: verticalScale(12),
   },
   addFirstProductButtonText: {
-    color: "#FFF",
-    fontSize: 16,
+    color: "#FFFFFF",
+    fontSize: moderateScale(16),
     fontWeight: "600",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "Poppins-Bold",
   },
   clearSearchButton: {
     backgroundColor: "#F8F9FA",
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    borderRadius: moderateScale(12),
+    paddingHorizontal: scale(24),
+    paddingVertical: verticalScale(12),
     borderWidth: 1,
-    borderColor: "#B5CAEF",
+    borderColor: "#E0E0E0",
   },
   clearSearchText: {
     color: "#666",
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "500",
     fontFamily: "Poppins-Regular",
   },
   bottomPadding: {
-    height: 20,
+    height: verticalScale(20),
   },
 });
 

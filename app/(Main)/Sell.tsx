@@ -1,15 +1,13 @@
 import { Feather } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   collection,
-  deleteDoc,
-  doc,
   DocumentData,
   onSnapshot,
   query,
   QueryDocumentSnapshot,
-  where,
+  where
 } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
@@ -78,6 +76,7 @@ type TabType = "all" | "history";
 
 const Sell: React.FC = () => {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>("all");
@@ -91,6 +90,13 @@ const Sell: React.FC = () => {
     "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
     "Poppins-Light": require("../../assets/fonts/Poppins-Light.ttf"),
   });
+
+  // Check if we should navigate to history tab from params
+  useEffect(() => {
+    if (params.tab === "history") {
+      setActiveTab("history");
+    }
+  }, [params]);
 
   useEffect(() => {
     const currentUser = auth.currentUser;
@@ -195,7 +201,7 @@ const Sell: React.FC = () => {
     setSearchQuery(text);
   };
 
-  const addToCart = (productId: string): void => {
+  const handleCartIconPress = (productId: string): void => {
     const product = products.find((p) => p.id === productId);
     if (!product) return;
 
@@ -204,30 +210,63 @@ const Sell: React.FC = () => {
       return;
     }
 
+    // Add product to cart immediately with quantity 1
     setCart((prevCart) => {
       const existingItem = prevCart.find(
         (item) => item.productId === productId
       );
       if (existingItem) {
-        // Check if we can increment
-        if (existingItem.quantity >= product.unitsInStock) {
-          Alert.alert(
-            "Stock Limit",
-            `Only ${product.unitsInStock} units available in stock`
-          );
-          return prevCart;
-        }
-        // Increment quantity
-        return prevCart.map((item) =>
-          item.productId === productId
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
+        // Already in cart, do nothing (quantity selector already visible)
+        return prevCart;
       } else {
-        // Add new item
+        // Add new item with quantity 1
         return [...prevCart, { productId, quantity: 1 }];
       }
     });
+  };
+
+  const incrementQuantity = (productId: string): void => {
+    const product = products.find((p) => p.id === productId);
+    if (!product) return;
+
+    const cartItem = cart.find((item) => item.productId === productId);
+    const currentQty = cartItem ? cartItem.quantity : 0;
+
+    if (currentQty >= product.unitsInStock) {
+      Alert.alert(
+        "Stock Limit",
+        `Only ${product.unitsInStock} units available in stock`
+      );
+      return;
+    }
+
+    setCart((prevCart) =>
+      prevCart.map((item) =>
+        item.productId === productId
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      )
+    );
+  };
+
+  const decrementQuantity = (productId: string): void => {
+    const cartItem = cart.find((item) => item.productId === productId);
+    if (!cartItem) return;
+
+    if (cartItem.quantity > 1) {
+      setCart((prevCart) =>
+        prevCart.map((item) =>
+          item.productId === productId
+            ? { ...item, quantity: item.quantity - 1 }
+            : item
+        )
+      );
+    } else {
+      // Remove from cart if quantity would be 0
+      setCart((prevCart) =>
+        prevCart.filter((item) => item.productId !== productId)
+      );
+    }
   };
 
   const getTotalCartItems = (): number => {
@@ -239,9 +278,15 @@ const Sell: React.FC = () => {
       Alert.alert("Empty Cart", "Your cart is empty. Add some products first!");
       return;
     }
+    
+    console.log("Navigating to cart with items:", cart);
+    
     router.push({
       pathname: "/(Routes)/Cart" as any,
-      params: { cartData: JSON.stringify(cart) },
+      params: { 
+        cartData: JSON.stringify(cart),
+        timestamp: Date.now().toString() // Force refresh
+      },
     });
   };
 
@@ -249,6 +294,9 @@ const Sell: React.FC = () => {
     if (!product || !product.id) return null;
 
     const isOutOfStock = product.unitsInStock <= 0;
+    const cartItem = cart.find((item) => item.productId === product.id);
+    const isInCart = !!cartItem;
+    const quantity = cartItem ? cartItem.quantity : 0;
 
     return (
       <View key={product.id} style={styles.productCard}>
@@ -264,25 +312,46 @@ const Sell: React.FC = () => {
           <Text style={styles.productName} numberOfLines={2}>
             {product.name || "Unnamed Product"}
           </Text>
-          <View style={styles.priceRow}>
-            <Text style={styles.productPrice}>
-              ₦{(product.sellingPrice || 0).toLocaleString()}
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.addToCartButton,
-                isOutOfStock && styles.addToCartButtonDisabled,
-              ]}
-              onPress={() => addToCart(product.id)}
-              disabled={isOutOfStock}
-            >
-              <Feather
-                name="shopping-cart"
-                size={20}
-                color={isOutOfStock ? "#999" : "white"}
-              />
-            </TouchableOpacity>
-          </View>
+          
+          {!isInCart ? (
+            <View style={styles.priceRow}>
+              <Text style={styles.productPrice}>
+                ₦{(product.sellingPrice || 0).toLocaleString()}
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.addToCartButton,
+                  isOutOfStock && styles.addToCartButtonDisabled,
+                ]}
+                onPress={() => handleCartIconPress(product.id)}
+                disabled={isOutOfStock}
+              >
+                <Feather
+                  name="shopping-cart"
+                  size={20}
+                  color={isOutOfStock ? "#999" : "white"}
+                />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.quantityRow}>
+              <TouchableOpacity
+                style={styles.quantityButton}
+                onPress={() => decrementQuantity(product.id)}
+              >
+                <Feather name="minus" size={18} color="#007AFF" />
+              </TouchableOpacity>
+              
+              <Text style={styles.quantityText}>{quantity}</Text>
+              
+              <TouchableOpacity
+                style={styles.quantityButton}
+                onPress={() => incrementQuantity(product.id)}
+              >
+                <Feather name="plus" size={18} color="#007AFF" />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
     );
@@ -328,32 +397,6 @@ const Sell: React.FC = () => {
       0
     );
 
-    const handleDeleteSale = () => {
-      Alert.alert(
-        "Delete Sale",
-        "Are you sure you want to delete this sale? This action cannot be undone.",
-        [
-          {
-            text: "Cancel",
-            style: "cancel",
-          },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: async () => {
-              try {
-                await deleteDoc(doc(db, "sales", sale.id));
-                Alert.alert("Success", "Sale deleted successfully");
-              } catch (error) {
-                console.error("Error deleting sale:", error);
-                Alert.alert("Error", "Failed to delete sale");
-              }
-            },
-          },
-        ]
-      );
-    };
-
     return (
       <View key={sale.id} style={styles.saleCard}>
         <View style={styles.saleCardContent}>
@@ -375,12 +418,6 @@ const Sell: React.FC = () => {
             <Text style={styles.saleAmount}>
               ₦{sale.totalAmount.toLocaleString()}
             </Text>
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={handleDeleteSale}
-            >
-              <Feather name="trash-2" size={18} color="#FF3B30" />
-            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -505,6 +542,7 @@ const Sell: React.FC = () => {
       <ScrollView
         style={styles.productsContainer}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
       >
         {activeTab === "all" ? (
           filteredProducts.length === 0 ? (
@@ -518,10 +556,11 @@ const Sell: React.FC = () => {
           renderSalesHistory()
         )}
 
+        {/* Bottom padding to ensure content doesn't get hidden behind the fixed button */}
         <View style={styles.bottomPadding} />
       </ScrollView>
 
-      {/* View Cart Button */}
+      {/* View Cart Button - Always visible when cart has items */}
       {getTotalCartItems() > 0 && (
         <View style={styles.viewCartContainer}>
           <TouchableOpacity style={styles.viewCartButton} onPress={viewCart}>
@@ -540,7 +579,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E7EEFA",
-    paddingTop: 50,
+    paddingTop: 0,
   },
   loadingContainer: {
     flex: 1,
@@ -673,6 +712,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
   },
+  scrollContent: {
+    paddingBottom: 100, // Add padding for the fixed button
+  },
   productsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -731,6 +773,31 @@ const styles = StyleSheet.create({
   addToCartButtonDisabled: {
     backgroundColor: "#E0E0E0",
   },
+  quantityRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#EBEFFC",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 50,
+    gap: 16,
+  },
+  quantityButton: {
+    width: 32,
+    height: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+  },
+  quantityText: {
+    fontSize: 18,
+    fontFamily: "Poppins-Bold",
+    color: "#000",
+    minWidth: 24,
+    textAlign: "center",
+  },
   emptyState: {
     flex: 1,
     justifyContent: "center",
@@ -753,6 +820,10 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins-Regular",
   },
   viewCartContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
     padding: 20,
     backgroundColor: "#E7EEFA",
     borderTopWidth: 1,
@@ -848,9 +919,6 @@ const styles = StyleSheet.create({
   saleRightSection: {
     alignItems: "flex-end",
     gap: 4,
-  },
-  deleteButton: {
-    padding: 4,
   },
 });
 
