@@ -74,7 +74,7 @@ const QuickSellScreen = () => {
       try {
         const productsQuery = query(
           collection(db, "products"),
-          where("userId", "==", currentUser.uid)
+          where("userId", "==", currentUser.uid),
         );
         const snapshot = await getDocs(productsQuery);
         const fetchedProducts: Product[] = [];
@@ -100,7 +100,7 @@ const QuickSellScreen = () => {
       setShowProductList(false);
     } else {
       const filtered = products.filter((product) =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase())
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()),
       );
       setFilteredProducts(filtered);
       setShowProductList(true);
@@ -121,8 +121,8 @@ const QuickSellScreen = () => {
                 quantity: item.quantity + 1,
                 totalPrice: (item.quantity + 1) * product.sellingPrice,
               }
-            : item
-        )
+            : item,
+        ),
       );
     } else {
       // Add new item
@@ -163,8 +163,8 @@ const QuickSellScreen = () => {
               quantity: newQuantity,
               totalPrice: newQuantity * product.sellingPrice,
             }
-          : item
-      )
+          : item,
+      ),
     );
   };
 
@@ -181,7 +181,7 @@ const QuickSellScreen = () => {
   const calculateProfit = () => {
     return cartItems.reduce(
       (sum, item) => sum + (item.sellingPrice - item.costPrice) * item.quantity,
-      0
+      0,
     );
   };
 
@@ -247,7 +247,7 @@ const QuickSellScreen = () => {
           item.id,
           item.name,
           newStock,
-          productData.lowStockThreshold
+          productData.lowStockThreshold,
         );
 
         // Check if this product is high-selling
@@ -264,14 +264,14 @@ const QuickSellScreen = () => {
       Alert.alert(
         "Success! 🎉",
         `Sale completed!\nTotal: ₦${totalAmount.toFixed(
-          0
+          0,
         )}\nProfit: ₦${totalProfit.toFixed(0)}`,
         [
           {
             text: "OK",
             onPress: () => router.back(),
           },
-        ]
+        ],
       );
     } catch (error) {
       console.error("Error completing sale:", error);
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E7EEFA",
-    paddingTop: 40,
+    paddingTop: 10,
   },
   header: {
     flexDirection: "row",
@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#0056D2",
+    color: "#1155CC",
     fontFamily: "Poppins-Regular",
   },
   cartContainer: {
@@ -683,11 +683,11 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#0056D2",
+    color: "#1155CC",
     fontFamily: "Poppins-Bold",
   },
   completeButton: {
-    backgroundColor: "#0056D2",
+    backgroundColor: "#1155CC",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

@@ -4,27 +4,27 @@ import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Image,
-  Modal,
-  PermissionsAndroid,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Image,
+    Modal,
+    PermissionsAndroid,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import {
-  Asset,
-  ImagePickerResponse,
-  launchCamera,
-  launchImageLibrary,
-  MediaType,
+    Asset,
+    ImagePickerResponse,
+    launchCamera,
+    launchImageLibrary,
+    MediaType,
 } from "react-native-image-picker";
 import { auth, db, storage } from "../config/firebaseConfig"; // Adjust path as necessary
 
@@ -308,12 +308,12 @@ const EditProduct: React.FC = () => {
           buttonNeutral: "Ask Me Later",
           buttonNegative: "Cancel",
           buttonPositive: "OK",
-        }
+        },
       );
       if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
         Alert.alert(
           "Permission Denied",
-          "You need to grant camera permission to use this feature."
+          "You need to grant camera permission to use this feature.",
         );
         return;
       }
@@ -338,7 +338,7 @@ const EditProduct: React.FC = () => {
         console.log("Image picker error: ", response.errorCode);
         Alert.alert(
           "Error",
-          response.errorMessage || "An unknown error occurred."
+          response.errorMessage || "An unknown error occurred.",
         );
       } else if (response.assets && response.assets.length > 0) {
         const asset: Asset = response.assets[0];
@@ -354,7 +354,7 @@ const EditProduct: React.FC = () => {
       console.log("Caught an unexpected error:", error);
       Alert.alert(
         "Unexpected Error",
-        "An unexpected error occurred while picking an image."
+        "An unexpected error occurred while picking an image.",
       );
     }
   };
@@ -376,7 +376,7 @@ const EditProduct: React.FC = () => {
           text: "Cancel",
           style: "cancel",
         },
-      ]
+      ],
     );
   };
 
@@ -440,7 +440,7 @@ const EditProduct: React.FC = () => {
       console.error("Error updating product:", error);
       Alert.alert(
         "Error",
-        "Failed to update product. Please check your connection and try again."
+        "Failed to update product. Please check your connection and try again.",
       );
     } finally {
       setUpdating(false);
@@ -1001,7 +1001,6 @@ const EditProduct: React.FC = () => {
 
 // Styles
 const styles = StyleSheet.create({
-  // ... (Paste all your existing styles here from AddProductFlow.tsx)
   container: {
     flex: 1,
     backgroundColor: "#F5F7FA",

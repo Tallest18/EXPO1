@@ -7,7 +7,7 @@ import {
   onSnapshot,
   query,
   QueryDocumentSnapshot,
-  where
+  where,
 } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
@@ -108,7 +108,7 @@ const Sell: React.FC = () => {
 
     const productsQuery = query(
       collection(db, "products"),
-      where("userId", "==", currentUser.uid)
+      where("userId", "==", currentUser.uid),
     );
 
     const unsubscribe = onSnapshot(
@@ -139,16 +139,16 @@ const Sell: React.FC = () => {
         Alert.alert(
           "Error Loading Products",
           `There was an issue loading your products: ${error.message}`,
-          [{ text: "OK" }]
+          [{ text: "OK" }],
         );
         setLoading(false);
-      }
+      },
     );
 
     // Fetch sales history
     const salesQuery = query(
       collection(db, "sales"),
-      where("userId", "==", currentUser.uid)
+      where("userId", "==", currentUser.uid),
     );
 
     const unsubscribeSales = onSnapshot(
@@ -174,7 +174,7 @@ const Sell: React.FC = () => {
       },
       (error) => {
         console.error("Error loading sales:", error);
-      }
+      },
     );
 
     return () => {
@@ -213,7 +213,7 @@ const Sell: React.FC = () => {
     // Add product to cart immediately with quantity 1
     setCart((prevCart) => {
       const existingItem = prevCart.find(
-        (item) => item.productId === productId
+        (item) => item.productId === productId,
       );
       if (existingItem) {
         // Already in cart, do nothing (quantity selector already visible)
@@ -235,7 +235,7 @@ const Sell: React.FC = () => {
     if (currentQty >= product.unitsInStock) {
       Alert.alert(
         "Stock Limit",
-        `Only ${product.unitsInStock} units available in stock`
+        `Only ${product.unitsInStock} units available in stock`,
       );
       return;
     }
@@ -244,8 +244,8 @@ const Sell: React.FC = () => {
       prevCart.map((item) =>
         item.productId === productId
           ? { ...item, quantity: item.quantity + 1 }
-          : item
-      )
+          : item,
+      ),
     );
   };
 
@@ -258,13 +258,13 @@ const Sell: React.FC = () => {
         prevCart.map((item) =>
           item.productId === productId
             ? { ...item, quantity: item.quantity - 1 }
-            : item
-        )
+            : item,
+        ),
       );
     } else {
       // Remove from cart if quantity would be 0
       setCart((prevCart) =>
-        prevCart.filter((item) => item.productId !== productId)
+        prevCart.filter((item) => item.productId !== productId),
       );
     }
   };
@@ -278,14 +278,14 @@ const Sell: React.FC = () => {
       Alert.alert("Empty Cart", "Your cart is empty. Add some products first!");
       return;
     }
-    
+
     console.log("Navigating to cart with items:", cart);
-    
+
     router.push({
       pathname: "/(Routes)/Cart" as any,
-      params: { 
+      params: {
         cartData: JSON.stringify(cart),
-        timestamp: Date.now().toString() // Force refresh
+        timestamp: Date.now().toString(), // Force refresh
       },
     });
   };
@@ -312,7 +312,7 @@ const Sell: React.FC = () => {
           <Text style={styles.productName} numberOfLines={2}>
             {product.name || "Unnamed Product"}
           </Text>
-          
+
           {!isInCart ? (
             <View style={styles.priceRow}>
               <Text style={styles.productPrice}>
@@ -341,9 +341,9 @@ const Sell: React.FC = () => {
               >
                 <Feather name="minus" size={18} color="#007AFF" />
               </TouchableOpacity>
-              
+
               <Text style={styles.quantityText}>{quantity}</Text>
-              
+
               <TouchableOpacity
                 style={styles.quantityButton}
                 onPress={() => incrementQuantity(product.id)}
@@ -394,7 +394,7 @@ const Sell: React.FC = () => {
     const firstItem = sale.items[0];
     const totalQuantity = sale.items.reduce(
       (sum, item) => sum + item.quantity,
-      0
+      0,
     );
 
     return (

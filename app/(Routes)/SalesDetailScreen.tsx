@@ -53,11 +53,23 @@ const SalesDetailScreen = () => {
 
         // If we have a sale ID, try to fetch the latest data from Firestore
         if (saleData.id) {
-          const saleDoc = await getDoc(doc(db, "sales", saleData.id));
-          if (saleDoc.exists()) {
-            setSale({ id: saleDoc.id, ...saleDoc.data() } as SaleDetail);
-          } else {
-            // If document doesn't exist in Firestore, use the passed data
+          try {
+            const saleDoc = await getDoc(doc(db, "sales", saleData.id));
+            if (saleDoc.exists()) {
+              setSale({ id: saleDoc.id, ...saleDoc.data() } as SaleDetail);
+            } else {
+              // If document doesn't exist in Firestore, use the passed data
+              console.log(
+                "Sale document not found in Firestore, using passed data",
+              );
+              setSale(saleData);
+            }
+          } catch (firestoreError) {
+            // If Firestore fetch fails (e.g., permission denied), fall back to passed data
+            console.log(
+              "Firestore fetch failed, using passed data:",
+              firestoreError,
+            );
             setSale(saleData);
           }
         } else {
@@ -94,13 +106,16 @@ const SalesDetailScreen = () => {
               router.back();
             } catch (error) {
               console.error("Error deleting sale:", error);
-              Alert.alert("Error", "Failed to delete sale record");
+              Alert.alert(
+                "Error",
+                "Failed to delete sale record. You may not have permission to delete this item.",
+              );
             } finally {
               setDeleting(false);
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -194,7 +209,7 @@ const SalesDetailScreen = () => {
         {/* Product Info Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Feather name="package" size={20} color="#0056D2" />
+            <Feather name="package" size={20} color="#1155CC" />
             <Text style={styles.cardTitle}>Product Information</Text>
           </View>
 
@@ -329,7 +344,7 @@ const SalesDetailScreen = () => {
               Alert.alert("Share", "Share sale details functionality");
             }}
           >
-            <Feather name="share-2" size={20} color="#0056D2" />
+            <Feather name="share-2" size={20} color="#1155CC" />
             <Text style={[styles.actionButtonText, styles.shareButtonText]}>
               Share Details
             </Text>
@@ -406,7 +421,7 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins-Regular",
   },
   retryButton: {
-    backgroundColor: "#0056D2",
+    backgroundColor: "#1155CC",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -496,7 +511,7 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   amountText: {
-    color: "#0056D2",
+    color: "#1155CC",
     fontSize: 18,
   },
   profitText: {
@@ -534,11 +549,11 @@ const styles = StyleSheet.create({
   },
   shareButton: {
     backgroundColor: "#fff",
-    borderColor: "#0056D2",
+    borderColor: "#1155CC",
   },
   repeatButton: {
-    backgroundColor: "#0056D2",
-    borderColor: "#0056D2",
+    backgroundColor: "#1155CC",
+    borderColor: "#1155CC",
   },
   actionButtonText: {
     fontSize: 14,
@@ -547,7 +562,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   shareButtonText: {
-    color: "#0056D2",
+    color: "#1155CC",
   },
   repeatButtonText: {
     color: "#fff",

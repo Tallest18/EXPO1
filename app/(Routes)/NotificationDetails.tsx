@@ -65,7 +65,7 @@ const NotificationDetails = () => {
         setLoading(true);
         try {
           const productDoc = await getDoc(
-            doc(db, "products", parsedNotification.productId)
+            doc(db, "products", parsedNotification.productId),
           );
           if (productDoc.exists()) {
             setProductData({
@@ -283,7 +283,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E7EEFA",
-    paddingTop: 40,
   },
   header: {
     flexDirection: "row",
@@ -314,7 +313,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   mainCard: {
-    backgroundColor: "#0056D2",
+    backgroundColor: "#1155CC",
     borderRadius: 16,
     padding: 20,
     marginTop: 20,
@@ -368,7 +367,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#001F54",
   },
   viewProductButton: {
-    backgroundColor: "#0056D2",
+    backgroundColor: "#1155CC",
   },
   actionButtonText: {
     color: "#fff",

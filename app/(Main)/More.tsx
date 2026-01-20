@@ -46,22 +46,19 @@ const More = () => {
     try {
       // Fetch user document from Firestore
       const userDoc = await getDoc(doc(db, "users", userId));
-      
+
       if (userDoc.exists()) {
         const userData = userDoc.data();
         console.log("User data from Firestore:", userData);
-        
+
         setUserName(
-          userData.name || 
-          userData.businessName || 
-          userData.displayName || 
-          "Guest User"
+          userData.name ||
+            userData.businessName ||
+            userData.displayName ||
+            "Guest User",
         );
         setUserPhone(
-          userData.phone || 
-          userData.phoneNumber || 
-          userData.mobile || 
-          ""
+          userData.phone || userData.phoneNumber || userData.mobile || "",
         );
       } else {
         console.log("No user document found in Firestore");
@@ -111,29 +108,25 @@ const More = () => {
   ];
 
   const handleLogout = async () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await signOut(auth);
+            router.replace("/(Anboarding)/Onboarding1");
+          } catch (error) {
+            console.error("Error during logout:", error);
+            Alert.alert("Error", "Failed to logout. Please try again.");
+          }
         },
-        {
-          text: "Logout",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await signOut(auth);
-              router.replace("/(Anboarding)/Onboarding1");
-            } catch (error) {
-              console.error("Error during logout:", error);
-              Alert.alert("Error", "Failed to logout. Please try again.");
-            }
-          },
-        },
-      ]
-    );
+      },
+    ]);
   };
 
   const renderOption = (option: Option) => (
@@ -168,7 +161,7 @@ const More = () => {
         </View>
 
         {/* User Profile Card */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.profileCard}
           onPress={() => router.push("/(Routes)/Profile")}
         >
@@ -177,9 +170,7 @@ const More = () => {
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{userName}</Text>
-            {userPhone && (
-              <Text style={styles.profilePhone}>{userPhone}</Text>
-            )}
+            {userPhone && <Text style={styles.profilePhone}>{userPhone}</Text>}
           </View>
         </TouchableOpacity>
 
@@ -226,7 +217,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#F5F7FA",
+    backgroundColor: "#E7EEFA",
   },
   header: {
     paddingHorizontal: 20,
