@@ -17,7 +17,7 @@
       "fallbackToCacheTimeout": 0
     },
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "INVENTRA2.W",
@@ -30,7 +30,8 @@
         "resizeMode": "contain",
         "backgroundColor": "#ffffff",
         "hideAsync": true
-      }
+      },
+      "newArchEnabled": false
     },
     "android": {
       "adaptiveIcon": {
@@ -49,7 +50,8 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "newArchEnabled": false
     },
     "web": {
       "output": "static",
@@ -84,12 +86,14 @@
         "expo-build-properties",
         {
           "ios": {
-            "useFrameworks": "static"
+            "useFrameworks": "static",
+            "newArchEnabled": false
           },
           "android": {
             "enableProguardInReleaseBuilds": true,
             "extraProguardRules": "-keep class com.google.android.gms.** { *; } \n-keep class com.google.firebase.** { *; }",
-            "enableMinifyInReleaseBuilds": true
+            "enableMinifyInReleaseBuilds": true,
+            "newArchEnabled": false
           }
         }
       ],
