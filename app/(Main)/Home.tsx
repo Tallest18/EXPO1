@@ -29,7 +29,13 @@ import {
 import AddProductFlow from "../(Routes)/AddProductFlow";
 import { auth, db } from "../config/firebaseConfig";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
+
+// Responsive sizing functions
+const scale = (size: number) => (width / 375) * size;
+const verticalScale = (size: number) => (height / 812) * size;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
 // Updated Notification type to match the data structure from the backend
 interface Notification {
@@ -499,7 +505,9 @@ const Home = () => {
   const renderFooter = () => (
     <View style={styles.notificationSection}>
       <View style={styles.notificationHeader}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <View
+          style={{ flexDirection: "row", alignItems: "center", gap: scale(8) }}
+        >
           <Ionicons name="notifications" size={24} color="#FACC15" />
           <Text style={styles.notificationHeaderTitle}>Notifications</Text>
         </View>
@@ -567,7 +575,7 @@ const Home = () => {
         renderItem={null}
         ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: verticalScale(40) }}
       />
 
       <AddProductFlow
@@ -583,56 +591,73 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E7EEFA",
-    paddingTop: 0,
+    paddingTop: verticalScale(0),
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    marginTop: 20,
+    paddingHorizontal: scale(20),
+    marginTop: verticalScale(20),
   },
-  hello: { fontSize: 20, color: "#555", fontFamily: "Poppins-Regular" },
-  username: { fontSize: 22, fontWeight: "600", fontFamily: "Poppins-Regular" },
+  hello: {
+    fontSize: moderateScale(20),
+    color: "#555",
+    fontFamily: "Poppins-Regular",
+  },
+  username: {
+    fontSize: moderateScale(22),
+    fontWeight: "600",
+    fontFamily: "Poppins-Regular",
+  },
   headerIcons: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: scale(12),
     backgroundColor: "white",
-    padding: 8,
-    borderRadius: 50,
+    padding: scale(8),
+    borderRadius: moderateScale(50),
   },
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#eee" },
+  avatar: {
+    width: scale(40),
+    height: verticalScale(40),
+    borderRadius: moderateScale(20),
+    backgroundColor: "#eee",
+  },
 
   salesBox: {
     backgroundColor: "#1155CC",
-    borderRadius: 12,
-    padding: 16,
-    margin: 20,
+    borderRadius: moderateScale(12),
+    padding: scale(16),
+    margin: scale(20),
   },
   salesTop: { flexDirection: "row", justifyContent: "space-between" },
-  salesLabel: { color: "#fff", fontSize: 14, fontFamily: "Poppins-Regular" },
+  salesLabel: {
+    color: "#fff",
+    fontSize: moderateScale(14),
+    fontFamily: "Poppins-Regular",
+  },
   salesRate: {
     backgroundColor: "#E6F9EF",
     color: "#22C55E",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    fontSize: 12,
+    paddingHorizontal: scale(8),
+    paddingVertical: verticalScale(2),
+    borderRadius: moderateScale(12),
+    fontSize: moderateScale(12),
     fontFamily: "Poppins-Regular",
   },
   salesAmount: {
     color: "white",
-    fontSize: 28,
+    fontSize: moderateScale(28),
     fontWeight: "bold",
-    marginTop: 4,
+    marginTop: verticalScale(4),
     fontFamily: "Poppins-Bold",
   },
   profitRow: {
-    marginTop: 12,
+    marginTop: verticalScale(12),
     backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 8,
+    padding: scale(12),
+    borderRadius: moderateScale(8),
     flexDirection: "row",
     justifyContent: "space-between",
   },
@@ -641,22 +666,21 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginHorizontal: 20,
-    marginBottom: 12,
+    marginHorizontal: scale(20),
+    marginBottom: verticalScale(12),
   },
   infoBox: {
     flex: 1,
     backgroundColor: "white",
-    borderRadius: 12,
-    padding: 10,
-    marginHorizontal: 4,
-    elevation: 2,
+    borderRadius: moderateScale(12),
+    padding: scale(10),
+    marginHorizontal: scale(4),
   },
   infoValue: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
-    marginTop: 8,
+    marginTop: verticalScale(8),
   },
   infoLabel: {
     color: "#777",
@@ -666,13 +690,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
   },
   actionBox: {
     flex: 1,
-    borderRadius: 12,
-    padding: 20,
-    marginHorizontal: 4,
+    borderRadius: moderateScale(12),
+    padding: scale(20),
+    marginHorizontal: scale(4),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -684,48 +708,48 @@ const styles = StyleSheet.create({
 
   // Updated Sales Summary Styles - Matching Image
   salesSummarySection: {
-    marginTop: 20,
-    marginHorizontal: 20,
+    marginTop: verticalScale(20),
+    marginHorizontal: scale(20),
     backgroundColor: "white",
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: moderateScale(12),
+    padding: scale(16),
   },
   salesSummaryHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: verticalScale(16),
   },
   salesSummaryHeaderLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: scale(12),
     flex: 1,
   },
   dollarIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: scale(40),
+    height: verticalScale(40),
+    borderRadius: moderateScale(20),
     backgroundColor: "#F3F4F6",
     justifyContent: "center",
     alignItems: "center",
   },
   salesSummaryHeaderTitle: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
     color: "#000",
   },
   salesSummaryHeaderSubtitle: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     fontFamily: "Poppins-Regular",
     color: "#999",
-    marginTop: 2,
+    marginTop: verticalScale(2),
   },
   arrowIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: scale(40),
+    height: verticalScale(40),
+    borderRadius: moderateScale(20),
     backgroundColor: "#1C1C1C",
     justifyContent: "center",
     alignItems: "center",
@@ -734,27 +758,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    gap: 12,
+    padding: scale(12),
+    borderRadius: moderateScale(8),
+    marginBottom: verticalScale(12),
+    gap: scale(12),
     borderWidth: 1,
     borderColor: "#F3F4F6",
   },
   productImageContainer: {
-    width: 48,
-    height: 48,
+    width: scale(48),
+    height: verticalScale(48),
   },
   productThumbnail: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
+    width: scale(48),
+    height: verticalScale(48),
+    borderRadius: moderateScale(8),
     backgroundColor: "#F3F4F6",
   },
   productPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
+    width: scale(48),
+    height: verticalScale(48),
+    borderRadius: moderateScale(8),
     backgroundColor: "#F3F4F6",
     justifyContent: "center",
     alignItems: "center",
@@ -763,14 +787,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   salesSummaryProductName: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: "500",
     fontFamily: "Poppins-Regular",
     color: "#000",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
   },
   salesSummaryDate: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     color: "#999",
     fontFamily: "Poppins-Regular",
   },
@@ -778,40 +802,40 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   salesSummaryAmount: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
     color: "#000",
-    marginBottom: 2,
+    marginBottom: verticalScale(2),
   },
   salesSummaryLabel: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     color: "#999",
     fontFamily: "Poppins-Regular",
   },
   viewAllLink: {
     color: "#0056D2",
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontFamily: "Poppins-Regular",
   },
 
   // Notification Styles (unchanged)
   notificationSection: {
-    marginTop: 20,
-    marginHorizontal: 20,
+    marginTop: verticalScale(20),
+    marginHorizontal: scale(20),
     backgroundColor: "white",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 40,
+    borderRadius: moderateScale(12),
+    padding: scale(16),
+    marginBottom: verticalScale(40),
   },
   notificationHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: verticalScale(16),
   },
   notificationHeaderTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
   },
@@ -820,19 +844,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     backgroundColor: "#F8F9FA",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
+    padding: scale(12),
+    borderRadius: moderateScale(8),
+    marginBottom: verticalScale(12),
   },
   notifLeftSection: {
     flexDirection: "row",
     flex: 1,
-    gap: 12,
+    gap: scale(12),
   },
   notifIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
+    width: scale(48),
+    height: verticalScale(48),
+    borderRadius: moderateScale(8),
     backgroundColor: "#E3F2FD",
     justifyContent: "center",
     alignItems: "center",
@@ -844,45 +868,45 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
   },
   notifTitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
     color: "#333",
     flex: 1,
   },
   notifTime: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     color: "#999",
     fontFamily: "Poppins-Regular",
     marginLeft: 8,
   },
   notifMessage: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: "#666",
     fontFamily: "Poppins-Regular",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
   },
   notifActions: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: "#1155CC",
     fontFamily: "Poppins-Regular",
-    marginTop: 4,
+    marginTop: verticalScale(4),
   },
   unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: scale(8),
+    height: verticalScale(8),
+    borderRadius: moderateScale(4),
     backgroundColor: "#FACC15",
-    marginTop: 8,
+    marginTop: verticalScale(8),
     marginLeft: 8,
   },
   emptyText: {
     textAlign: "center",
     color: "#777",
-    marginTop: 10,
+    marginTop: verticalScale(10),
     fontFamily: "Poppins-Regular",
   },
 });

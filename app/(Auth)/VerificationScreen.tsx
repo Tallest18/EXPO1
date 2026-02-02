@@ -13,6 +13,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
@@ -25,6 +26,14 @@ import {
 import type { AppStackParamList } from "../../src/navigation/types";
 // ✅ import config along with auth
 import { auth, config } from "../config/firebaseConfig";
+
+const { width, height } = Dimensions.get("window");
+
+// Responsive sizing functions
+const scale = (size: number) => (width / 375) * size;
+const verticalScale = (size: number) => (height / 812) * size;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
 export interface VerificationExtraProps {
   onSuccess?: () => void;
@@ -316,45 +325,48 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingTop: 8,
+    paddingTop: verticalScale(8),
     minHeight: "60%",
   },
   handleBar: {
-    width: 40,
-    height: 4,
+    width: scale(40),
+    height: verticalScale(4),
     backgroundColor: "#E5E7EB",
-    borderRadius: 2,
+    borderRadius: moderateScale(2),
     alignSelf: "center",
-    marginBottom: 32,
+    marginBottom: verticalScale(32),
   },
-  formContainer: { paddingHorizontal: 24, paddingBottom: 40 },
+  formContainer: {
+    paddingHorizontal: scale(24),
+    paddingBottom: verticalScale(40),
+  },
   title: {
-    fontSize: 22,
+    fontSize: moderateScale(22),
     color: "#111827",
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
     fontFamily: "Poppins-Regular",
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     color: "#6B7280",
-    marginBottom: 32,
+    marginBottom: verticalScale(32),
     lineHeight: 24,
     fontFamily: "Poppins-Regular",
   },
   codeContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 24,
-    gap: 8,
+    marginBottom: verticalScale(24),
+    gap: scale(8),
   },
   codeInput: {
-    width: 50,
-    height: 50,
+    width: scale(50),
+    height: verticalScale(50),
     borderWidth: 2,
     borderColor: "#D1D5DB",
-    borderRadius: 8,
+    borderRadius: moderateScale(8),
     textAlign: "center",
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: "600",
     color: "#111827",
     backgroundColor: "#FFFFFF",
@@ -364,28 +376,31 @@ const styles = StyleSheet.create({
   codeInputDisabled: { opacity: 0.6 },
   verifyButton: {
     backgroundColor: "#1155CC",
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginBottom: 24,
+    paddingVertical: verticalScale(12),
+    borderRadius: moderateScale(8),
+    marginBottom: verticalScale(24),
     alignItems: "center",
   },
   verifyText: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     color: "#FFFFFF",
     fontFamily: "Poppins-Regular",
   },
-  actionsContainer: { marginBottom: 32 },
-  resendContainer: { paddingVertical: 8, marginBottom: 8 },
+  actionsContainer: { marginBottom: verticalScale(32) },
+  resendContainer: {
+    paddingVertical: verticalScale(8),
+    marginBottom: verticalScale(8),
+  },
   resendText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: "#6B7280",
     textAlign: "left",
     fontFamily: "Poppins-Regular",
   },
-  clearButton: { paddingVertical: 4 },
+  clearButton: { paddingVertical: verticalScale(4) },
   clearText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: "#EF4444",
     textAlign: "left",
     fontFamily: "Poppins-Regular",
@@ -395,10 +410,10 @@ const styles = StyleSheet.create({
   backButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: verticalScale(8),
   },
   backText: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontFamily: "Poppins-Regular",
     color: "#1155CC",
     marginLeft: 8,
@@ -406,17 +421,17 @@ const styles = StyleSheet.create({
   },
   loadingOverlay: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    top: verticalScale(0),
+    left: scale(0),
+    right: scale(0),
+    bottom: verticalScale(0),
     backgroundColor: "rgba(255, 255, 255, 0.9)",
     justifyContent: "center",
     alignItems: "center",
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 18,
+    marginTop: verticalScale(12),
+    fontSize: moderateScale(18),
     color: "#1155CC",
     fontWeight: "500",
     fontFamily: "Poppins-Regular",

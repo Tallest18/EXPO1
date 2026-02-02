@@ -13,6 +13,7 @@ import {
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   FlatList,
   Image,
   SafeAreaView,
@@ -23,6 +24,14 @@ import {
   View,
 } from "react-native";
 import { auth, db } from "../config/firebaseConfig";
+
+const { width, height } = Dimensions.get("window");
+
+// Responsive sizing functions
+const scale = (size: number) => (width / 375) * size;
+const verticalScale = (size: number) => (height / 812) * size;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
 interface SalesSummaryItem {
   id: string;
@@ -53,7 +62,7 @@ const TotalSummaryScreen = () => {
     const salesQuery = query(
       collection(db, "sales"),
       where("userId", "==", currentUser.uid),
-      orderBy("date", "desc")
+      orderBy("date", "desc"),
     );
 
     const unsubscribe = onSnapshot(salesQuery, (querySnapshot) => {
@@ -240,23 +249,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: scale(20),
+    paddingVertical: verticalScale(16),
     backgroundColor: "#E7EEFA",
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
   },
   backButton: {
-    padding: 4,
+    padding: scale(4),
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
     color: "#333",
   },
   placeholder: {
-    width: 24,
+    width: scale(24),
   },
   loadingContainer: {
     flex: 1,
@@ -264,46 +273,41 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 16,
+    marginTop: verticalScale(12),
+    fontSize: moderateScale(16),
     color: "#666",
     fontFamily: "Poppins-Regular",
   },
   summaryContainer: {
     flexDirection: "row",
-    paddingHorizontal: 20,
-    marginVertical: 20,
+    paddingHorizontal: scale(20),
+    marginVertical: verticalScale(20),
   },
   summaryCard: {
     flex: 1,
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 4,
+    borderRadius: moderateScale(12),
+    padding: scale(16),
+    marginHorizontal: scale(4),
     alignItems: "center",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: scale(40),
+    height: verticalScale(40),
+    borderRadius: moderateScale(20),
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
   },
   summaryValue: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
     color: "#333",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
   },
   summaryLabel: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: "#666",
     fontFamily: "Poppins-Regular",
   },
@@ -311,41 +315,36 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    paddingHorizontal: scale(20),
+    marginBottom: verticalScale(16),
   },
   listHeaderTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
     color: "#333",
   },
   listHeaderCount: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: "#666",
     fontFamily: "Poppins-Regular",
   },
   listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingHorizontal: scale(20),
+    paddingBottom: verticalScale(20),
   },
   saleItem: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    borderRadius: moderateScale(12),
+    padding: scale(16),
+    marginBottom: verticalScale(12),
   },
   image: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
+    width: scale(48),
+    height: verticalScale(48),
+    borderRadius: moderateScale(8),
     backgroundColor: "#f0f0f0",
   },
   itemInfo: {
@@ -353,14 +352,14 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   name: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
     color: "#333",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
   },
   date: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: "#666",
     fontFamily: "Poppins-Regular",
   },
@@ -368,48 +367,48 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   amount: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
     color: "#0056D2",
-    marginBottom: 2,
+    marginBottom: verticalScale(2),
   },
   profit: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: "#22C55E",
     fontFamily: "Poppins-Regular",
   },
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 60,
-    paddingHorizontal: 40,
+    paddingVertical: verticalScale(60),
+    paddingHorizontal: scale(40),
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: "600",
     color: "#666",
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: verticalScale(16),
+    marginBottom: verticalScale(8),
     fontFamily: "Poppins-Bold",
   },
   emptySubtext: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: "#999",
     textAlign: "center",
     fontFamily: "Poppins-Regular",
     lineHeight: 20,
-    marginBottom: 24,
+    marginBottom: verticalScale(24),
   },
   quickSellButton: {
     backgroundColor: "#0056D2",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingHorizontal: scale(24),
+    paddingVertical: verticalScale(12),
+    borderRadius: moderateScale(8),
   },
   quickSellText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
   },

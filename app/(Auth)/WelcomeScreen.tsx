@@ -7,6 +7,7 @@ import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -20,6 +21,14 @@ import {
 
 // ✅ Import both auth and config from firebaseConfig
 import { auth, config } from "../config/firebaseConfig";
+
+const { width, height } = Dimensions.get("window");
+
+// Responsive sizing functions
+const scale = (size: number) => (width / 375) * size;
+const verticalScale = (size: number) => (height / 812) * size;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
 interface WelcomeScreenProps {
   onNavigateToVerification?: (
@@ -195,22 +204,22 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 40,
+    paddingHorizontal: scale(40),
   },
   greeting: {
-    fontSize: 68,
+    fontSize: moderateScale(68),
     fontFamily: "Poppins-Bold",
     color: "#FFFFFF",
-    marginBottom: 0,
+    marginBottom: verticalScale(0),
   },
   subtitle: {
-    fontSize: 30,
+    fontSize: moderateScale(30),
     color: "#FFFFFF",
-    marginBottom: 0,
+    marginBottom: verticalScale(0),
     fontFamily: "Poppins-Regular",
   },
   description: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontFamily: "Poppins-Regular",
     color: "#E3F2FD",
     textAlign: "center",
@@ -222,54 +231,54 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingTop: 8,
+    paddingTop: verticalScale(8),
   },
   handleBar: {
-    width: 80,
-    height: 4,
+    width: scale(80),
+    height: verticalScale(4),
     backgroundColor: "#E5E7EB",
-    borderRadius: 2,
+    borderRadius: moderateScale(2),
     alignSelf: "center",
-    marginBottom: 32,
+    marginBottom: verticalScale(32),
   },
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingHorizontal: scale(24),
+    paddingBottom: verticalScale(40),
     flexGrow: 1,
     justifyContent: "center",
   },
   input: {
     borderWidth: 1.5,
     borderColor: "#D1D5DB",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    fontSize: 18,
+    borderRadius: moderateScale(12),
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(16),
+    fontSize: moderateScale(18),
     fontFamily: "Poppins-Regular",
     color: "#111827",
-    marginBottom: 16,
+    marginBottom: verticalScale(16),
     backgroundColor: "#FFFFFF",
   },
   inputDisabled: { opacity: 0.6 },
   infoText: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontFamily: "Poppins-Regular",
     color: "#6B7280",
     textAlign: "left",
-    marginBottom: 32,
+    marginBottom: verticalScale(32),
     lineHeight: 20,
   },
   continueButton: {
     backgroundColor: "#1155CC",
-    borderRadius: 25,
-    paddingVertical: 16,
+    borderRadius: moderateScale(25),
+    paddingVertical: verticalScale(16),
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: verticalScale(16),
   },
   disabledButton: { opacity: 0.6 },
   continueButtonText: {
     color: "#FFFFFF",
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontFamily: "Poppins-Bold",
   },
 });

@@ -6,6 +6,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   Image,
   SafeAreaView,
   ScrollView,
@@ -15,6 +16,14 @@ import {
   View,
 } from "react-native";
 import { db } from "../config/firebaseConfig";
+
+const { width, height } = Dimensions.get("window");
+
+// Responsive sizing functions
+const scale = (size: number) => (width / 375) * size;
+const verticalScale = (size: number) => (height / 812) * size;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
 // Types
 interface Product {
@@ -75,7 +84,10 @@ const Cart: React.FC = () => {
           cartItems = JSON.parse(params.cartData as string);
           console.log("Cart items received:", cartItems);
           console.log("Number of unique items:", cartItems.length);
-          console.log("Total quantity:", cartItems.reduce((sum, item) => sum + item.quantity, 0));
+          console.log(
+            "Total quantity:",
+            cartItems.reduce((sum, item) => sum + item.quantity, 0),
+          );
         } catch (parseError) {
           console.error("Error parsing cart data:", parseError);
           Alert.alert("Error", "Failed to load cart data");
@@ -96,9 +108,11 @@ const Cart: React.FC = () => {
       const cartWithProducts = await Promise.all(
         cartItems.map(async (item) => {
           try {
-            console.log(`Loading product ${item.productId} with quantity ${item.quantity}`);
+            console.log(
+              `Loading product ${item.productId} with quantity ${item.quantity}`,
+            );
             const productDoc = await getDoc(
-              doc(db, "products", item.productId)
+              doc(db, "products", item.productId),
             );
             if (productDoc.exists()) {
               const productData = productDoc.data();
@@ -115,7 +129,7 @@ const Cart: React.FC = () => {
             console.error("Error loading product:", error);
             return item;
           }
-        })
+        }),
       );
 
       console.log("Cart with products loaded:", cartWithProducts);
@@ -136,7 +150,7 @@ const Cart: React.FC = () => {
     }
 
     const updatedCart = cart.map((item) =>
-      item.productId === productId ? { ...item, quantity: newQuantity } : item
+      item.productId === productId ? { ...item, quantity: newQuantity } : item,
     );
     setCart(updatedCart);
   };
@@ -147,7 +161,7 @@ const Cart: React.FC = () => {
       if (item.quantity >= item.product.unitsInStock) {
         Alert.alert(
           "Stock Limit",
-          `Only ${item.product.unitsInStock} units available in stock`
+          `Only ${item.product.unitsInStock} units available in stock`,
         );
         return;
       }
@@ -200,7 +214,7 @@ const Cart: React.FC = () => {
 
   const renderCartItem = (
     item: CartItem,
-    index: number
+    index: number,
   ): React.ReactElement | null => {
     if (!item.product) {
       console.warn("Cart item missing product data:", item);
@@ -228,7 +242,12 @@ const Cart: React.FC = () => {
             <TouchableOpacity
               onPress={() => removeFromCart(item.productId)}
               style={styles.removeButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              hitSlop={{
+                top: verticalScale(10),
+                bottom: verticalScale(10),
+                left: scale(10),
+                right: scale(10),
+              }}
             >
               <Feather name="x" size={18} color="#666" />
             </TouchableOpacity>
@@ -260,9 +279,7 @@ const Cart: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.itemTotal}>
-              ₦{itemTotal.toLocaleString()}
-            </Text>
+            <Text style={styles.itemTotal}>₦{itemTotal.toLocaleString()}</Text>
           </View>
         </View>
       </View>
@@ -349,7 +366,7 @@ const Cart: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 30,
+    paddingTop: verticalScale(30),
     backgroundColor: "#D6E4F5",
   },
   loadingContainer: {
@@ -358,8 +375,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    marginTop: 10,
-    fontSize: 16,
+    marginTop: verticalScale(10),
+    fontSize: moderateScale(16),
     color: "#666",
     fontFamily: "Poppins-Regular",
   },
@@ -367,28 +384,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 15,
+    paddingHorizontal: scale(20),
+    paddingTop: verticalScale(20),
+    paddingBottom: verticalScale(15),
     backgroundColor: "#D6E4F5",
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontFamily: "Poppins-Bold",
     color: "#000",
     flex: 1,
     textAlign: "center",
   },
   backButton: {
-    padding: 8,
+    padding: scale(8),
     backgroundColor: "#fff",
-    borderRadius: 8,
+    borderRadius: moderateScale(8),
   },
   headerRight: {
-    padding: 8,
+    padding: scale(8),
   },
   itemCount: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontFamily: "Poppins-Regular",
     color: "#666",
   },
@@ -396,29 +413,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cartContentContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 20,
+    paddingHorizontal: scale(20),
+    paddingTop: verticalScale(10),
+    paddingBottom: verticalScale(20),
   },
   cartItem: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
+    borderRadius: moderateScale(12),
+    padding: scale(14),
+    marginBottom: verticalScale(12),
     flexDirection: "row",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
     borderWidth: 1,
     borderColor: "#E0E0E0",
     borderStyle: "dashed",
   },
   productImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
+    width: scale(60),
+    height: verticalScale(60),
+    borderRadius: moderateScale(8),
     backgroundColor: "#F5F5F5",
     marginRight: 12,
   },
@@ -430,31 +442,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
   },
   productName: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontFamily: "Poppins-Bold",
     color: "#000",
     flex: 1,
     marginRight: 8,
   },
   removeButton: {
-    padding: 2,
+    padding: scale(2),
   },
   priceQuantityRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
+    gap: scale(8),
+    marginBottom: verticalScale(8),
   },
   productPrice: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontFamily: "Poppins-Bold",
     color: "#000",
   },
   quantityLabel: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontFamily: "Poppins-Regular",
     color: "#666",
   },
@@ -469,63 +481,63 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   quantityButton: {
-    width: 28,
-    height: 28,
+    width: scale(28),
+    height: verticalScale(28),
     backgroundColor: "#F0F0F0",
-    borderRadius: 6,
+    borderRadius: moderateScale(6),
     justifyContent: "center",
     alignItems: "center",
   },
   quantityButtonText: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontFamily: "Poppins-Regular",
     color: "#000",
     lineHeight: 20,
   },
   quantityText: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontFamily: "Poppins-Bold",
     color: "#000",
-    marginHorizontal: 16,
+    marginHorizontal: scale(16),
     minWidth: 20,
     textAlign: "center",
   },
   itemTotal: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontFamily: "Poppins-Bold",
     color: "#007AFF",
   },
   footer: {
     backgroundColor: "#D6E4F5",
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 20,
+    paddingHorizontal: scale(20),
+    paddingTop: verticalScale(16),
+    paddingBottom: verticalScale(20),
   },
   totalContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: verticalScale(16),
   },
   totalLabel: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontFamily: "Poppins-Bold",
     color: "#000",
   },
   totalAmount: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontFamily: "Poppins-Bold",
     color: "#000",
   },
   checkoutButton: {
     backgroundColor: "#2563EB",
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderRadius: moderateScale(10),
+    paddingVertical: verticalScale(14),
     alignItems: "center",
   },
   checkoutButtonText: {
     color: "white",
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
   },
@@ -533,32 +545,32 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 40,
+    paddingHorizontal: scale(40),
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: "600",
     color: "#666",
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: verticalScale(16),
+    marginBottom: verticalScale(8),
     fontFamily: "Poppins-Regular",
   },
   emptyDescription: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: "#999",
     textAlign: "center",
-    marginBottom: 24,
+    marginBottom: verticalScale(24),
     fontFamily: "Poppins-Regular",
   },
   shopButton: {
     backgroundColor: "#2563EB",
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    borderRadius: moderateScale(12),
+    paddingHorizontal: scale(24),
+    paddingVertical: verticalScale(12),
   },
   shopButtonText: {
     color: "#FFF",
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
   },

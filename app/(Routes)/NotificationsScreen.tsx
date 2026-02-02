@@ -13,6 +13,7 @@ import {
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   FlatList,
   SafeAreaView,
   StyleSheet,
@@ -21,6 +22,14 @@ import {
   View,
 } from "react-native";
 import { auth, db } from "../config/firebaseConfig";
+
+const { width, height } = Dimensions.get("window");
+
+// Responsive sizing functions
+const scale = (size: number) => (width / 375) * size;
+const verticalScale = (size: number) => (height / 812) * size;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
 interface Notification {
   id: string;
@@ -100,7 +109,7 @@ const NotificationsScreen = () => {
   useEffect(() => {
     // Check if user is authenticated
     const user = auth.currentUser;
-    
+
     if (!user) {
       console.log("No authenticated user");
       setError("Please log in to view notifications");
@@ -114,7 +123,7 @@ const NotificationsScreen = () => {
       const notificationsCollection = collection(db, "notifications");
       const notificationsQuery = query(
         notificationsCollection,
-        orderBy("dateAdded", "desc")
+        orderBy("dateAdded", "desc"),
       );
 
       const unsubscribe = onSnapshot(
@@ -137,7 +146,7 @@ const NotificationsScreen = () => {
           console.error("Firestore error:", error);
           setError("Failed to load notifications. Please try again.");
           setLoading(false);
-        }
+        },
       );
 
       return () => {
@@ -393,8 +402,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 16,
+    marginTop: verticalScale(12),
+    fontSize: moderateScale(16),
     color: "#666",
     fontFamily: "Poppins-Regular",
   },
@@ -402,8 +411,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: scale(20),
+    paddingVertical: verticalScale(16),
     backgroundColor: "#E7EEFA",
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
@@ -411,49 +420,44 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: scale(12),
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
     color: "#333",
   },
   listContentContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingHorizontal: scale(20),
+    paddingBottom: verticalScale(20),
   },
   section: {
-    marginBottom: 20,
+    marginBottom: verticalScale(20),
   },
   sectionHeader: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: "#666",
     fontFamily: "Poppins-Bold",
-    marginBottom: 12,
-    marginTop: 8,
+    marginBottom: verticalScale(12),
+    marginTop: verticalScale(8),
   },
   notificationItem: {
     flexDirection: "row",
     alignItems: "flex-start",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
+    padding: scale(16),
+    borderRadius: moderateScale(12),
+    marginBottom: verticalScale(8),
     backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
     position: "relative",
   },
   iconContainer: {
     marginRight: 12,
   },
   iconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
+    width: scale(48),
+    height: verticalScale(48),
+    borderRadius: moderateScale(8),
     justifyContent: "center",
     alignItems: "center",
   },
@@ -464,24 +468,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
   },
   notificationTitle: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     color: "#333",
     fontFamily: "Poppins-Regular",
     flex: 1,
   },
   notificationMessage: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: "#666",
     fontFamily: "Poppins-Regular",
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
     lineHeight: 20,
   },
   notificationTime: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: "#999",
     fontFamily: "Poppins-Regular",
     marginLeft: 8,
@@ -489,62 +493,62 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 4,
+    marginTop: verticalScale(4),
   },
   actionText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: "#0056D2",
     fontFamily: "Poppins-Regular",
   },
   actionSeparator: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: "#0056D2",
-    marginHorizontal: 4,
+    marginHorizontal: scale(4),
   },
   unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: scale(8),
+    height: verticalScale(8),
+    borderRadius: moderateScale(4),
     backgroundColor: "#FACC15",
     position: "absolute",
-    top: 16,
-    right: 16,
+    top: verticalScale(16),
+    right: scale(16),
   },
   feather: {
     backgroundColor: "white",
-    padding: 10,
+    padding: scale(10),
   },
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 60,
-    paddingHorizontal: 40,
+    paddingVertical: verticalScale(60),
+    paddingHorizontal: scale(40),
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: "600",
     color: "#666",
-    marginTop: 16,
+    marginTop: verticalScale(16),
     fontFamily: "Poppins-Bold",
   },
   emptySubText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: "#999",
     textAlign: "center",
-    marginTop: 8,
+    marginTop: verticalScale(8),
     fontFamily: "Poppins-Regular",
     lineHeight: 20,
   },
   retryButton: {
-    marginTop: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
+    marginTop: verticalScale(20),
+    paddingVertical: verticalScale(12),
+    paddingHorizontal: scale(32),
     backgroundColor: "#0056D2",
-    borderRadius: 8,
+    borderRadius: moderateScale(8),
   },
   retryButtonText: {
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
   },

@@ -20,6 +20,14 @@ import { LineChart } from "react-native-chart-kit";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { auth, db } from "../config/firebaseConfig";
 
+const { width, height } = Dimensions.get("window");
+
+// Responsive sizing functions
+const scale = (size: number) => (width / 375) * size;
+const verticalScale = (size: number) => (height / 812) * size;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
+
 interface FinancialSummary {
   totalProfit: number;
   totalRevenue: number;
@@ -67,8 +75,10 @@ const Finance = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState<"Today" | "Week" | "Month">("Week");
-  
+  const [selectedPeriod, setSelectedPeriod] = useState<
+    "Today" | "Week" | "Month"
+  >("Week");
+
   const [financialSummary, setFinancialSummary] = useState<FinancialSummary>({
     totalProfit: 0,
     totalRevenue: 0,
@@ -80,20 +90,29 @@ const Finance = () => {
     profit: 0,
     sales: 0,
     orders: 0,
-    date: new Date().toLocaleDateString("en-US", { 
-      month: "short", 
-      day: "numeric", 
-      year: "numeric" 
+    date: new Date().toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     }),
   });
 
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
-  const [slowMovingStock, setSlowMovingStock] = useState<SlowMovingProduct[]>([]);
-  const [stockRecommendations, setStockRecommendations] = useState<StockRecommendation[]>([]);
-  const [seasonalInsights, setSeasonalInsights] = useState<SeasonalInsight[]>([]);
-  
+  const [slowMovingStock, setSlowMovingStock] = useState<SlowMovingProduct[]>(
+    [],
+  );
+  const [stockRecommendations, setStockRecommendations] = useState<
+    StockRecommendation[]
+  >([]);
+  const [seasonalInsights, setSeasonalInsights] = useState<SeasonalInsight[]>(
+    [],
+  );
+
   const [monthlyReport, setMonthlyReport] = useState({
-    month: new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+    month: new Date().toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    }),
     totalSales: 0,
     totalCost: 0,
     totalProfit: 0,
@@ -158,27 +177,26 @@ const Finance = () => {
 
       // Fetch sales data
       const salesRef = collection(db, "sales");
-      const salesQuery = query(
-        salesRef, 
-        where("userId", "==", user.uid)
-      );
+      const salesQuery = query(salesRef, where("userId", "==", user.uid));
       const salesSnapshot = await getDocs(salesQuery);
 
       let totalRevenue = 0;
       let totalSales = 0;
       let todayRevenue = 0;
       let todayOrders = 0;
-      
-      const productSales: { 
-        [key: string]: { 
-          quantity: number; 
-          revenue: number; 
+
+      const productSales: {
+        [key: string]: {
+          quantity: number;
+          revenue: number;
           imageUrl: string;
           cost: number;
-        } 
+        };
       } = {};
-      
-      const dailySalesData: { [key: string]: { sales: number; profit: number } } = {
+
+      const dailySalesData: {
+        [key: string]: { sales: number; profit: number };
+      } = {
         Mon: { sales: 0, profit: 0 },
         Tue: { sales: 0, profit: 0 },
         Wed: { sales: 0, profit: 0 },
@@ -196,11 +214,16 @@ const Finance = () => {
 
       salesSnapshot.forEach((doc) => {
         const sale = doc.data();
-        const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
+        const saleDate = sale.date?.toDate
+          ? sale.date.toDate()
+          : new Date(sale.date);
         const amount = sale.totalAmount || 0;
 
         // Track monthly sales (for all time)
-        const monthKey = saleDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+        const monthKey = saleDate.toLocaleDateString("en-US", {
+          month: "long",
+          year: "numeric",
+        });
         monthlySales[monthKey] = (monthlySales[monthKey] || 0) + amount;
 
         // Filter by selected period
@@ -216,9 +239,11 @@ const Finance = () => {
 
           // Track weekly chart data
           if (selectedPeriod === "Week") {
-            const dayName = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][saleDate.getDay()];
+            const dayName = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
+              saleDate.getDay()
+            ];
             dailySalesData[dayName].sales += amount;
-            dailySalesData[dayName].profit += (amount * 0.3);
+            dailySalesData[dayName].profit += amount * 0.3;
           }
 
           // Track product sales
@@ -228,13 +253,13 @@ const Finance = () => {
               const itemCost = item.costPrice || item.cost || 0;
               const itemPrice = item.price || item.sellingPrice || 0;
               const itemQuantity = item.quantity || 0;
-              
+
               if (!productSales[productName]) {
-                productSales[productName] = { 
-                  quantity: 0, 
-                  revenue: 0, 
+                productSales[productName] = {
+                  quantity: 0,
+                  revenue: 0,
                   imageUrl: item.imageUrl || item.image || "",
-                  cost: 0
+                  cost: 0,
                 };
               }
               productSales[productName].quantity += itemQuantity;
@@ -247,17 +272,16 @@ const Finance = () => {
 
       // Fetch expenses
       const expensesRef = collection(db, "expenses");
-      const expensesQuery = query(
-        expensesRef, 
-        where("userId", "==", user.uid)
-      );
+      const expensesQuery = query(expensesRef, where("userId", "==", user.uid));
       const expensesSnapshot = await getDocs(expensesQuery);
 
       let totalExpenses = 0;
       expensesSnapshot.forEach((doc) => {
         const expense = doc.data();
-        const expenseDate = expense.date?.toDate ? expense.date.toDate() : new Date(expense.date);
-        
+        const expenseDate = expense.date?.toDate
+          ? expense.date.toDate()
+          : new Date(expense.date);
+
         if (expenseDate >= startDate && expenseDate <= endDate) {
           totalExpenses += expense.amount || 0;
         }
@@ -283,7 +307,7 @@ const Finance = () => {
       const inventoryRef = collection(db, "inventory");
       const inventoryQuery = query(
         inventoryRef,
-        where("userId", "==", user.uid)
+        where("userId", "==", user.uid),
       );
       const inventorySnapshot = await getDocs(inventoryQuery);
 
@@ -296,18 +320,24 @@ const Finance = () => {
       inventorySnapshot.forEach((doc) => {
         const item = doc.data();
         allInventoryItems.push(item);
-        
-        // Check if item has lastRestocked or createdAt field
-        const lastRestocked = item.lastRestocked?.toDate 
-          ? item.lastRestocked.toDate() 
-          : item.createdAt?.toDate 
-            ? item.createdAt.toDate() 
-            : new Date(item.dateAdded || item.createdDate || Date.now() - (60 * 24 * 60 * 60 * 1000)); // Default to 60 days ago if no date
 
-        const daysInStock = Math.floor((Date.now() - lastRestocked.getTime()) / (1000 * 60 * 60 * 24));
-        
+        // Check if item has lastRestocked or createdAt field
+        const lastRestocked = item.lastRestocked?.toDate
+          ? item.lastRestocked.toDate()
+          : item.createdAt?.toDate
+            ? item.createdAt.toDate()
+            : new Date(
+                item.dateAdded ||
+                  item.createdDate ||
+                  Date.now() - 60 * 24 * 60 * 60 * 1000,
+              ); // Default to 60 days ago if no date
+
+        const daysInStock = Math.floor(
+          (Date.now() - lastRestocked.getTime()) / (1000 * 60 * 60 * 24),
+        );
+
         console.log(`Item: ${item.name}, Days in stock: ${daysInStock}`);
-        
+
         // Items that haven't sold well (more than 20 days old)
         if (daysInStock > 20) {
           slowMovingArray.push({
@@ -325,12 +355,12 @@ const Finance = () => {
 
       // Generate stock recommendations
       const recommendations: StockRecommendation[] = [];
-      
+
       // Check for low stock items (at least 3 recommendations)
       allInventoryItems.forEach((item) => {
         const quantity = item.quantity || item.stock || 0;
         const minStock = item.minStock || item.reorderLevel || 10;
-        
+
         if (quantity < minStock && recommendations.length < 2) {
           recommendations.push({
             type: "warning",
@@ -364,7 +394,7 @@ const Finance = () => {
 
       // Generate seasonal insights from real data
       const insights: SeasonalInsight[] = [];
-      
+
       // Sort months by sales to find peak and good performing months
       const sortedMonths = Object.entries(monthlySales)
         .sort((a, b) => b[1] - a[1])
@@ -377,7 +407,8 @@ const Finance = () => {
           month: monthName,
           label: "Peak Season",
           performance: "+33%",
-          description: "Festive period drives higher sales across all categories",
+          description:
+            "Festive period drives higher sales across all categories",
         });
       }
 
@@ -404,10 +435,10 @@ const Finance = () => {
         profit: todayProfit,
         sales: totalSales,
         orders: todayOrders,
-        date: new Date().toLocaleDateString("en-US", { 
-          month: "short", 
-          day: "numeric", 
-          year: "numeric" 
+        date: new Date().toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
         }),
       });
 
@@ -417,7 +448,10 @@ const Finance = () => {
       setSeasonalInsights(insights);
 
       setMonthlyReport({
-        month: new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+        month: new Date().toLocaleDateString("en-US", {
+          month: "long",
+          year: "numeric",
+        }),
         totalSales: totalRevenue,
         totalCost: totalExpenses,
         totalProfit: totalProfit,
@@ -455,7 +489,6 @@ const Finance = () => {
           },
         ],
       });
-
     } catch (error) {
       console.error("Error fetching financial data:", error);
       Alert.alert("Error", "Failed to fetch financial data");
@@ -466,10 +499,10 @@ const Finance = () => {
 
   const generatePDFReport = async () => {
     if (pdfLoading) return;
-    
+
     try {
       setPdfLoading(true);
-      
+
       const html = `
         <!DOCTYPE html>
         <html>
@@ -569,10 +602,10 @@ const Finance = () => {
           <div class="header">
             <h1>Monthly Financial Report</h1>
             <p>${monthlyReport.month}</p>
-            <p>Generated on ${new Date().toLocaleDateString("en-US", { 
-              year: "numeric", 
-              month: "long", 
-              day: "numeric" 
+            <p>Generated on ${new Date().toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
             })}</p>
           </div>
 
@@ -623,19 +656,25 @@ const Finance = () => {
                 </tr>
               </thead>
               <tbody>
-                ${topProducts.map(product => `
+                ${topProducts
+                  .map(
+                    (product) => `
                   <tr>
                     <td>${product.name}</td>
                     <td>${product.quantity}</td>
                     <td>${formatCurrency(product.revenue)}</td>
                     <td>${formatCurrency(product.profit)}</td>
                   </tr>
-                `).join('')}
+                `,
+                  )
+                  .join("")}
               </tbody>
             </table>
           </div>
 
-          ${slowMovingStock.length > 0 ? `
+          ${
+            slowMovingStock.length > 0
+              ? `
           <div class="section">
             <div class="section-title">Slow Moving Stock</div>
             <table class="products-table">
@@ -647,29 +686,43 @@ const Finance = () => {
                 </tr>
               </thead>
               <tbody>
-                ${slowMovingStock.map(item => `
+                ${slowMovingStock
+                  .map(
+                    (item) => `
                   <tr>
                     <td>${item.name}</td>
                     <td>${item.daysInStock} days</td>
                     <td>${item.quantity} units</td>
                   </tr>
-                `).join('')}
+                `,
+                  )
+                  .join("")}
               </tbody>
             </table>
           </div>
-          ` : ''}
+          `
+              : ""
+          }
 
-          ${stockRecommendations.length > 0 ? `
+          ${
+            stockRecommendations.length > 0
+              ? `
           <div class="section">
             <div class="section-title">Stock Recommendations</div>
-            ${stockRecommendations.map(rec => `
+            ${stockRecommendations
+              .map(
+                (rec) => `
               <div style="background: #F9FAFB; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #2046AE;">
                 <strong>${rec.message}</strong><br>
                 <span style="color: #6B7280; font-size: 14px;">${rec.detail}</span>
               </div>
-            `).join('')}
+            `,
+              )
+              .join("")}
           </div>
-          ` : ''}
+          `
+              : ""
+          }
 
           <div class="footer">
             <p>This report was automatically generated by your Financial Central system.</p>
@@ -680,8 +733,8 @@ const Finance = () => {
       `;
 
       const { uri } = await Print.printToFileAsync({ html });
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       const isAvailable = await Sharing.isAvailableAsync();
       if (isAvailable) {
         await Sharing.shareAsync(uri, {
@@ -734,36 +787,65 @@ const Finance = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Financial Central</Text>
-          <Text style={styles.headerSubtitle}>See how your business is performing</Text>
+          <Text style={styles.headerSubtitle}>
+            See how your business is performing
+          </Text>
         </View>
 
         {/* Period Selector */}
         <View style={styles.periodSelector}>
           <TouchableOpacity
-            style={[styles.periodButton, selectedPeriod === "Today" && styles.periodButtonActive]}
+            style={[
+              styles.periodButton,
+              selectedPeriod === "Today" && styles.periodButtonActive,
+            ]}
             onPress={() => setSelectedPeriod("Today")}
           >
-            <Text style={[styles.periodText, selectedPeriod === "Today" && styles.periodTextActive]}>
+            <Text
+              style={[
+                styles.periodText,
+                selectedPeriod === "Today" && styles.periodTextActive,
+              ]}
+            >
               Today
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.periodButton, selectedPeriod === "Week" && styles.periodButtonActive]}
+            style={[
+              styles.periodButton,
+              selectedPeriod === "Week" && styles.periodButtonActive,
+            ]}
             onPress={() => setSelectedPeriod("Week")}
           >
-            <Text style={[styles.periodText, selectedPeriod === "Week" && styles.periodTextActive]}>
+            <Text
+              style={[
+                styles.periodText,
+                selectedPeriod === "Week" && styles.periodTextActive,
+              ]}
+            >
               Week
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.periodButton, selectedPeriod === "Month" && styles.periodButtonActive]}
+            style={[
+              styles.periodButton,
+              selectedPeriod === "Month" && styles.periodButtonActive,
+            ]}
             onPress={() => setSelectedPeriod("Month")}
           >
-            <Text style={[styles.periodText, selectedPeriod === "Month" && styles.periodTextActive]}>
+            <Text
+              style={[
+                styles.periodText,
+                selectedPeriod === "Month" && styles.periodTextActive,
+              ]}
+            >
               Month
             </Text>
           </TouchableOpacity>
@@ -778,15 +860,35 @@ const Finance = () => {
                 {formatCurrency(financialSummary.totalProfit)}
               </Text>
               <View style={styles.changeIndicator}>
-                <Ionicons 
-                  name={financialSummary.totalProfit >= 0 ? "trending-up" : "trending-down"} 
-                  size={14} 
-                  color={financialSummary.totalProfit >= 0 ? "#10B981" : "#EF4444"} 
+                <Ionicons
+                  name={
+                    financialSummary.totalProfit >= 0
+                      ? "trending-up"
+                      : "trending-down"
+                  }
+                  size={14}
+                  color={
+                    financialSummary.totalProfit >= 0 ? "#10B981" : "#EF4444"
+                  }
                 />
-                <Text style={[styles.changeText, { 
-                  color: financialSummary.totalProfit >= 0 ? "#10B981" : "#EF4444" 
-                }]}>
-                  {financialSummary.totalProfit >= 0 ? "+" : ""}{((financialSummary.totalProfit / (financialSummary.totalRevenue || 1)) * 100).toFixed(0)}%
+                <Text
+                  style={[
+                    styles.changeText,
+                    {
+                      color:
+                        financialSummary.totalProfit >= 0
+                          ? "#10B981"
+                          : "#EF4444",
+                    },
+                  ]}
+                >
+                  {financialSummary.totalProfit >= 0 ? "+" : ""}
+                  {(
+                    (financialSummary.totalProfit /
+                      (financialSummary.totalRevenue || 1)) *
+                    100
+                  ).toFixed(0)}
+                  %
                 </Text>
               </View>
             </View>
@@ -798,7 +900,9 @@ const Finance = () => {
               </Text>
               <View style={styles.changeIndicator}>
                 <Ionicons name="trending-down" size={14} color="#EF4444" />
-                <Text style={[styles.changeText, { color: "#EF4444" }]}>-5%</Text>
+                <Text style={[styles.changeText, { color: "#EF4444" }]}>
+                  -5%
+                </Text>
               </View>
             </View>
 
@@ -819,7 +923,10 @@ const Finance = () => {
         <View style={styles.section}>
           <View style={styles.dailySummaryHeader}>
             <Text style={styles.sectionTitle}>Daily Summary</Text>
-            <TouchableOpacity style={styles.dateSelector} onPress={handleDatePress}>
+            <TouchableOpacity
+              style={styles.dateSelector}
+              onPress={handleDatePress}
+            >
               <Ionicons name="calendar-outline" size={16} color="#6B7280" />
               <Text style={styles.dateText}>{dailySummary.date}</Text>
               <Ionicons name="chevron-forward" size={16} color="#6B7280" />
@@ -844,11 +951,15 @@ const Finance = () => {
             <View style={styles.dailySummaryRow}>
               <View style={styles.dailySummaryItem3}>
                 <Text style={styles.dailySummaryLabel}>Transactions</Text>
-                <Text style={styles.dailySummaryValue}>{dailySummary.sales}</Text>
+                <Text style={styles.dailySummaryValue}>
+                  {dailySummary.sales}
+                </Text>
               </View>
               <View style={styles.dailySummaryItem3}>
                 <Text style={styles.dailySummaryLabel}>Items Sold</Text>
-                <Text style={styles.dailySummaryValue}>{dailySummary.orders}</Text>
+                <Text style={styles.dailySummaryValue}>
+                  {dailySummary.orders}
+                </Text>
               </View>
             </View>
           </View>
@@ -863,8 +974,8 @@ const Finance = () => {
                 <View key={index} style={styles.productCard}>
                   <View style={styles.productIcon}>
                     {product.imageUrl ? (
-                      <Image 
-                        source={{ uri: product.imageUrl }} 
+                      <Image
+                        source={{ uri: product.imageUrl }}
                         style={styles.productImage}
                         resizeMode="cover"
                       />
@@ -874,7 +985,9 @@ const Finance = () => {
                   </View>
                   <View style={styles.productInfo}>
                     <Text style={styles.productName}>{product.name}</Text>
-                    <Text style={styles.productQuantity}>Sold: {product.quantity} units</Text>
+                    <Text style={styles.productQuantity}>
+                      Sold: {product.quantity} units
+                    </Text>
                   </View>
                   <View style={styles.productRevenue}>
                     <Text style={styles.productRevenueText}>
@@ -898,22 +1011,30 @@ const Finance = () => {
                   <View style={styles.slowStockLeft}>
                     <View style={styles.slowStockIcon}>
                       {item.imageUrl ? (
-                        <Image 
-                          source={{ uri: item.imageUrl }} 
+                        <Image
+                          source={{ uri: item.imageUrl }}
                           style={styles.slowStockImage}
                           resizeMode="cover"
                         />
                       ) : (
-                        <Ionicons name="time-outline" size={20} color="#F59E0B" />
+                        <Ionicons
+                          name="time-outline"
+                          size={20}
+                          color="#F59E0B"
+                        />
                       )}
                     </View>
                     <View>
                       <Text style={styles.slowStockName}>{item.name}</Text>
-                      <Text style={styles.slowStockDetail}>{item.quantity} units left</Text>
+                      <Text style={styles.slowStockDetail}>
+                        {item.quantity} units left
+                      </Text>
                     </View>
                   </View>
                   <View style={styles.slowStockBadge}>
-                    <Text style={styles.slowStockDays}>{item.daysInStock} days</Text>
+                    <Text style={styles.slowStockDays}>
+                      {item.daysInStock} days
+                    </Text>
                   </View>
                 </View>
               ))}
@@ -927,16 +1048,17 @@ const Finance = () => {
             <Text style={styles.sectionTitle}>Stock Recommendations</Text>
             <View style={styles.recommendationsContainer}>
               {stockRecommendations.map((rec, index) => (
-                <View
-                  key={index}
-                  style={styles.recommendationCard}
-                >
+                <View key={index} style={styles.recommendationCard}>
                   <View style={styles.recommendationIcon}>
                     <Text style={styles.recommendationEmoji}>{rec.icon}</Text>
                   </View>
                   <View style={styles.recommendationContent}>
-                    <Text style={styles.recommendationMessage}>{rec.message}</Text>
-                    <Text style={styles.recommendationDetail}>{rec.detail}</Text>
+                    <Text style={styles.recommendationMessage}>
+                      {rec.message}
+                    </Text>
+                    <Text style={styles.recommendationDetail}>
+                      {rec.detail}
+                    </Text>
                   </View>
                 </View>
               ))}
@@ -950,11 +1072,15 @@ const Finance = () => {
           <View style={styles.chartCard}>
             <View style={styles.chartLegend}>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: "#2046AE" }]} />
+                <View
+                  style={[styles.legendDot, { backgroundColor: "#2046AE" }]}
+                />
                 <Text style={styles.legendText}>Sales</Text>
               </View>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: "#FBBF24" }]} />
+                <View
+                  style={[styles.legendDot, { backgroundColor: "#FBBF24" }]}
+                />
                 <Text style={styles.legendText}>Profit</Text>
               </View>
             </View>
@@ -970,7 +1096,7 @@ const Finance = () => {
                 color: (opacity = 1) => `rgba(32, 70, 174, ${opacity})`,
                 labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
                 style: {
-                  borderRadius: 16,
+                  borderRadius: moderateScale(16),
                 },
                 propsForDots: {
                   r: "5",
@@ -998,11 +1124,15 @@ const Finance = () => {
                   <View style={styles.insightHeader}>
                     <Text style={styles.insightMonth}>{insight.month}</Text>
                     <View style={styles.performanceBadge}>
-                      <Text style={styles.performanceText}>{insight.performance}</Text>
+                      <Text style={styles.performanceText}>
+                        {insight.performance}
+                      </Text>
                     </View>
                   </View>
                   <Text style={styles.insightLabel}>{insight.label}</Text>
-                  <Text style={styles.insightDescription}>{insight.description}</Text>
+                  <Text style={styles.insightDescription}>
+                    {insight.description}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -1014,7 +1144,9 @@ const Finance = () => {
           <Text style={styles.sectionTitle}>Monthly Report</Text>
           <View style={styles.monthlyReportCard}>
             <View style={styles.monthlyReportHeader}>
-              <Text style={styles.monthlyReportMonth}>{monthlyReport.month}</Text>
+              <Text style={styles.monthlyReportMonth}>
+                {monthlyReport.month}
+              </Text>
               <View style={styles.readyBadge}>
                 <Text style={styles.readyBadgeText}>Ready</Text>
               </View>
@@ -1042,8 +1174,8 @@ const Finance = () => {
                 </Text>
               </View>
             </View>
-            <TouchableOpacity 
-              style={styles.downloadButton} 
+            <TouchableOpacity
+              style={styles.downloadButton}
               onPress={generatePDFReport}
               disabled={pdfLoading}
             >
@@ -1052,14 +1184,16 @@ const Finance = () => {
               ) : (
                 <>
                   <Ionicons name="download-outline" size={20} color="#FFFFFF" />
-                  <Text style={styles.downloadButtonText}>Download Report (PDF)</Text>
+                  <Text style={styles.downloadButtonText}>
+                    Download Report (PDF)
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
           </View>
         </View>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: verticalScale(40) }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -1069,7 +1203,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E7EEFA",
-    paddingTop: 10,
+    paddingTop: verticalScale(10),
   },
   centered: {
     justifyContent: "center",
@@ -1079,32 +1213,32 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 16,
+    paddingHorizontal: scale(20),
+    paddingTop: verticalScale(10),
+    paddingBottom: verticalScale(16),
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: moderateScale(24),
     fontWeight: "700",
     color: "#1F2937",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
     fontFamily: "Poppins-Bold",
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: "#6B7280",
     fontFamily: "Poppins-Regular",
   },
   periodSelector: {
     flexDirection: "row",
-    paddingHorizontal: 20,
-    marginBottom: 20,
-    gap: 10,
+    paddingHorizontal: scale(20),
+    marginBottom: verticalScale(20),
+    gap: scale(10),
   },
   periodButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 20,
+    paddingVertical: verticalScale(8),
+    paddingHorizontal: scale(20),
+    borderRadius: moderateScale(20),
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E5E7EB",
@@ -1114,7 +1248,7 @@ const styles = StyleSheet.create({
     borderColor: "#2046AE",
   },
   periodText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: "600",
     color: "#6B7280",
     fontFamily: "Poppins-SemiBold",
@@ -1124,18 +1258,18 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins-SemiBold",
   },
   summaryContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingHorizontal: scale(20),
+    marginBottom: verticalScale(20),
   },
   summaryRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: scale(12),
   },
   summaryCard: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: moderateScale(16),
+    padding: scale(16),
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
@@ -1152,155 +1286,155 @@ const styles = StyleSheet.create({
     borderColor: "#FFBA00",
   },
   summaryLabel: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: "#1F2937",
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
     fontFamily: "Poppins-Regular",
   },
   summaryLabelDark: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: "#374151",
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
     fontFamily: "Poppins-Regular",
   },
   summaryValue: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: "700",
     color: "#1F2937",
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
     fontFamily: "Poppins-Bold",
   },
   summaryValueDark: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: "700",
     color: "#1F2937",
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
     fontFamily: "Poppins-Bold",
   },
   changeIndicator: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: scale(4),
   },
   changeText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: "#10B981",
     fontFamily: "Poppins-SemiBold",
   },
   section: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
+    paddingHorizontal: scale(20),
+    marginBottom: verticalScale(24),
     backgroundColor: "#fff",
-    margin: 15,
-    padding: 8,
-    borderRadius: 12,
+    margin: scale(15),
+    padding: scale(8),
+    borderRadius: moderateScale(12),
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: "700",
     color: "#1F2937",
-    marginBottom: 12,
+    marginBottom: verticalScale(12),
     fontFamily: "Poppins-Bold",
   },
   dailySummaryHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: verticalScale(12),
   },
   dateSelector: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: scale(6),
     backgroundColor: "#FFFFFF",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(6),
+    borderRadius: moderateScale(8),
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
   dateText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: "#6B7280",
     fontFamily: "Poppins-SemiBold",
   },
   dailySummaryCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 5,
-    gap: 16,
+    borderRadius: moderateScale(16),
+    padding: scale(5),
+    gap: scale(16),
   },
   dailySummaryRow: {
     flexDirection: "row",
-    gap: 20,
+    gap: scale(20),
   },
   dailySummaryItem: {
     flex: 1,
     backgroundColor: "#1155CC0D",
-    padding: 10,
-    borderRadius: 10,
+    padding: scale(10),
+    borderRadius: moderateScale(10),
   },
   dailySummaryItem2: {
     flex: 1,
     backgroundColor: "#FFBA001A",
-    padding: 10,
-    borderRadius: 10,
+    padding: scale(10),
+    borderRadius: moderateScale(10),
   },
   dailySummaryItem3: {
     flex: 1,
     backgroundColor: "#ECECF0",
-    padding: 10,
-    borderRadius: 10,
+    padding: scale(10),
+    borderRadius: moderateScale(10),
   },
   dailySummaryLabel: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: "#6B7280",
-    marginBottom: 6,
+    marginBottom: verticalScale(6),
     fontFamily: "Poppins-Regular",
   },
   dailySummaryValue: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: "700",
     color: "#1F2937",
     fontFamily: "Poppins-Bold",
   },
   productsContainer: {
-    gap: 12,
+    gap: scale(12),
   },
   productCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FBFBFB",
-    borderRadius: 12,
-    padding: 10,
-    gap: 12,
+    borderRadius: moderateScale(12),
+    padding: scale(10),
+    gap: scale(12),
   },
   productIcon: {
-    width: 48,
-    height: 48,
+    width: scale(48),
+    height: verticalScale(48),
     backgroundColor: "#FFBA0033",
-    borderRadius: 24,
+    borderRadius: moderateScale(24),
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
   productImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: scale(48),
+    height: verticalScale(48),
+    borderRadius: moderateScale(24),
   },
   productInfo: {
     flex: 1,
   },
   productName: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: "600",
     color: "#1F2937",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
     fontFamily: "Poppins-SemiBold",
   },
   productQuantity: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: "#6B7280",
     fontFamily: "Poppins-Regular",
   },
@@ -1308,223 +1442,223 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   productRevenueText: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "700",
     color: "#1F2937",
     fontFamily: "Poppins-Bold",
   },
   productRevenueLabel: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: "#6B7280",
     fontFamily: "Poppins-Regular",
   },
   slowStockContainer: {
-    gap: 12,
+    gap: scale(12),
   },
   slowStockCard: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#FFFBEB",
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: moderateScale(12),
+    padding: scale(16),
     borderWidth: 1,
     borderColor: "#FEF3C7",
   },
   slowStockLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: scale(12),
     flex: 1,
   },
   slowStockIcon: {
-    width: 40,
-    height: 40,
+    width: scale(40),
+    height: verticalScale(40),
     backgroundColor: "#FEF3C7",
-    borderRadius: 20,
+    borderRadius: moderateScale(20),
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
   slowStockImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: scale(40),
+    height: verticalScale(40),
+    borderRadius: moderateScale(20),
   },
   slowStockName: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: "600",
     color: "#1F2937",
-    marginBottom: 2,
+    marginBottom: verticalScale(2),
     fontFamily: "Poppins-SemiBold",
   },
   slowStockDetail: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: "#6B7280",
     fontFamily: "Poppins-Regular",
   },
   slowStockBadge: {
     backgroundColor: "#FEF3C7",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(6),
+    borderRadius: moderateScale(12),
   },
   slowStockDays: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: "600",
     color: "#F59E0B",
     fontFamily: "Poppins-SemiBold",
   },
   recommendationsContainer: {
-    gap: 12,
+    gap: scale(12),
   },
   recommendationCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: moderateScale(12),
     borderLeftWidth: 4,
     borderWidth: 1,
     borderColor: "#1155CC",
-    padding: 16,
-    gap: 12,
+    padding: scale(16),
+    gap: scale(12),
   },
   recommendationIcon: {
-    width: 40,
-    height: 40,
+    width: scale(40),
+    height: verticalScale(40),
     alignItems: "center",
     justifyContent: "center",
   },
   recommendationEmoji: {
-    fontSize: 24,
+    fontSize: moderateScale(24),
   },
   recommendationContent: {
     flex: 1,
   },
   recommendationMessage: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: "600",
     color: "#1F2937",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
     fontFamily: "Poppins-SemiBold",
   },
   recommendationDetail: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: "#6B7280",
     fontFamily: "Poppins-Regular",
   },
   chartCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: moderateScale(16),
+    padding: scale(16),
     alignItems: "center",
   },
   chartLegend: {
     flexDirection: "row",
-    gap: 20,
-    marginBottom: 16,
+    gap: scale(20),
+    marginBottom: verticalScale(16),
     alignSelf: "flex-start",
   },
   legendItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: scale(8),
   },
   legendDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: scale(12),
+    height: verticalScale(12),
+    borderRadius: moderateScale(6),
   },
   legendText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: "#6B7280",
     fontFamily: "Poppins-Regular",
   },
   chart: {
-    borderRadius: 16,
+    borderRadius: moderateScale(16),
   },
   insightsContainer: {
-    gap: 12,
+    gap: scale(12),
   },
   insightCard: {
     backgroundColor: "#FBFBFB",
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: moderateScale(12),
+    padding: scale(16),
   },
   insightHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
   },
   insightMonth: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "700",
     color: "#1F2937",
     fontFamily: "Poppins-Bold",
   },
   performanceBadge: {
     backgroundColor: "#D1FAE5",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(4),
+    borderRadius: moderateScale(12),
   },
   performanceText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: "600",
     color: "#10B981",
     fontFamily: "Poppins-SemiBold",
   },
   insightLabel: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: "#6B7280",
-    marginBottom: 6,
+    marginBottom: verticalScale(6),
     fontFamily: "Poppins-Regular",
   },
   insightDescription: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: "#9CA3AF",
     lineHeight: 18,
     fontFamily: "Poppins-Regular",
   },
   monthlyReportCard: {
     backgroundColor: "#FBFBFB",
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: moderateScale(16),
+    padding: scale(20),
   },
   monthlyReportHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
   },
   monthlyReportMonth: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "700",
     color: "#1F2937",
     fontFamily: "Poppins-Bold",
   },
   readyBadge: {
     backgroundColor: "#D1FAE5",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(4),
+    borderRadius: moderateScale(12),
   },
   readyBadgeText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: "600",
     color: "#10B981",
     fontFamily: "Poppins-SemiBold",
   },
   monthlyReportSubtitle: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: "#6B7280",
-    marginBottom: 16,
+    marginBottom: verticalScale(16),
     fontFamily: "Poppins-Regular",
   },
   monthlyReportStats: {
-    gap: 12,
-    marginBottom: 20,
+    gap: scale(12),
+    marginBottom: verticalScale(20),
   },
   monthlyReportStat: {
     flexDirection: "row",
@@ -1532,12 +1666,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   monthlyReportStatLabel: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: "#6B7280",
     fontFamily: "Poppins-Regular",
   },
   monthlyReportStatValue: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: "700",
     color: "#1F2937",
     fontFamily: "Poppins-Bold",
@@ -1547,12 +1681,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#2046AE",
-    paddingVertical: 14,
-    borderRadius: 50,
-    gap: 8,
+    paddingVertical: verticalScale(14),
+    borderRadius: moderateScale(50),
+    gap: scale(8),
   },
   downloadButtonText: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: "600",
     color: "#FFFFFF",
     fontFamily: "Poppins-SemiBold",

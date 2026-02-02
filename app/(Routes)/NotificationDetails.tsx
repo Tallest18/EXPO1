@@ -4,6 +4,7 @@ import { doc, getDoc, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   Image,
   SafeAreaView,
   ScrollView,
@@ -13,6 +14,14 @@ import {
   View,
 } from "react-native";
 import { db } from "../config/firebaseConfig";
+
+const { width, height } = Dimensions.get("window");
+
+// Responsive sizing functions
+const scale = (size: number) => (width / 375) * size;
+const verticalScale = (size: number) => (height / 812) * size;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
 // Notification type
 interface Notification {
@@ -288,45 +297,40 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: scale(20),
+    paddingVertical: verticalScale(16),
     backgroundColor: "#E7EEFA",
   },
   headerTitle: {
-    fontSize: 26,
+    fontSize: moderateScale(26),
     fontWeight: "bold",
     color: "#111827",
     fontFamily: "Poppins-Bold",
   },
   backButton: {
     backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    padding: scale(12),
+    borderRadius: moderateScale(12),
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: scale(20),
   },
   mainCard: {
     backgroundColor: "#1155CC",
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 20,
+    borderRadius: moderateScale(16),
+    padding: scale(20),
+    marginTop: verticalScale(20),
   },
   productHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: scale(16),
   },
   productImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
+    width: scale(60),
+    height: verticalScale(60),
+    borderRadius: moderateScale(12),
     backgroundColor: "#fff",
   },
   placeholderImage: {
@@ -338,30 +342,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   notificationType: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: "rgba(255,255,255,0.8)",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
     fontFamily: "Poppins-Regular",
   },
   productName: {
-    fontSize: 22,
+    fontSize: moderateScale(22),
     fontWeight: "600",
     color: "#fff",
     fontFamily: "Poppins-Bold",
   },
   actionButtons: {
     flexDirection: "row",
-    gap: 12,
-    marginTop: 20,
+    gap: scale(12),
+    marginTop: verticalScale(20),
   },
   actionButton: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 18,
-    borderRadius: 12,
-    gap: 8,
+    paddingVertical: verticalScale(18),
+    borderRadius: moderateScale(12),
+    gap: scale(8),
   },
   restockButton: {
     backgroundColor: "#001F54",
@@ -371,39 +375,39 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
   },
   detailsSection: {
-    marginTop: 20,
+    marginTop: verticalScale(20),
   },
   detailsTitle: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     color: "#111827",
-    marginBottom: 12,
+    marginBottom: verticalScale(12),
     fontFamily: "Poppins-Bold",
   },
   detailsCard: {
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: moderateScale(12),
+    padding: scale(20),
   },
   detailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 14,
+    paddingVertical: verticalScale(14),
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
   detailLabel: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     color: "#9CA3AF",
     fontFamily: "Poppins-Regular",
   },
   detailValue: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     color: "#111827",
     fontWeight: "500",
     fontFamily: "Poppins-Regular",
@@ -416,32 +420,32 @@ const styles = StyleSheet.create({
   },
   tipCard: {
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    marginTop: 20,
-    marginBottom: 40,
+    borderRadius: moderateScale(12),
+    padding: scale(20),
+    marginTop: verticalScale(20),
+    marginBottom: verticalScale(40),
     borderLeftWidth: 5,
     borderLeftColor: "#FACC15",
   },
   tipTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: "600",
     color: "#111827",
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
     fontFamily: "Poppins-Bold",
   },
   tipMessage: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     color: "#6B7280",
     lineHeight: 22,
     fontFamily: "Poppins-Regular",
   },
   loadingOverlay: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    top: verticalScale(0),
+    left: scale(0),
+    right: scale(0),
+    bottom: verticalScale(0),
     backgroundColor: "rgba(0,0,0,0.3)",
     justifyContent: "center",
     alignItems: "center",

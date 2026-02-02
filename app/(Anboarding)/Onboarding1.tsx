@@ -4,6 +4,12 @@ import { Dimensions, Image, StyleSheet, Text, View } from "react-native";
 
 const { width, height } = Dimensions.get("window");
 
+// Responsive sizing functions
+const scale = (size: number) => (width / 375) * size;
+const verticalScale = (size: number) => (height / 812) * size;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
+
 const Onboarding1 = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -51,14 +57,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#1155CC",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 40,
+    paddingVertical: verticalScale(40),
   },
   centerContent: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     width: "100%",
-    paddingHorizontal: 20,
+    paddingHorizontal: scale(20),
   },
   title: {
     fontSize: height * 0.08, // Responsive font size
@@ -75,32 +81,32 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins-Regular",
     textAlign: "center",
     width: "100%",
-    marginTop: 10,
+    marginTop: verticalScale(10),
     includeFontPadding: false,
   },
   logoContainer: {
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: verticalScale(20),
     width: "100%",
-    paddingHorizontal: 20,
+    paddingHorizontal: scale(20),
   },
   fromText: {
     color: "#fff",
-    fontSize: 16,
-    marginBottom: 2,
+    fontSize: moderateScale(16),
+    marginBottom: verticalScale(2),
     fontFamily: "Poppins-Regular",
   },
   logoRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
     width: "100%",
     justifyContent: "center",
   },
   logoIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: scale(32),
+    height: verticalScale(32),
+    borderRadius: moderateScale(16),
     backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
@@ -108,7 +114,7 @@ const styles = StyleSheet.create({
   },
   logoText: {
     color: "#fff",
-    fontSize: 24,
+    fontSize: moderateScale(24),
     fontFamily: "Poppins-Bold",
     letterSpacing: 1,
     flexShrink: 1,
@@ -116,7 +122,7 @@ const styles = StyleSheet.create({
   },
   systemsText: {
     color: "#fff",
-    fontSize: 14,
+    fontSize: moderateScale(14),
     letterSpacing: 4,
     fontWeight: "300",
     fontFamily: "Poppins-Regular",
@@ -124,8 +130,8 @@ const styles = StyleSheet.create({
     marginLeft: 28,
   },
   image: {
-    height: 28,
-    width: 28,
+    height: verticalScale(28),
+    width: scale(28),
   },
 });
 

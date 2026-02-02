@@ -7,6 +7,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,6 +15,14 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+const { width, height } = Dimensions.get("window");
+
+// Responsive sizing functions
+const scale = (size: number) => (width / 375) * size;
+const verticalScale = (size: number) => (height / 812) * size;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
 // Define a type for the options to ensure type safety for icon names
 type Option = {
@@ -208,7 +217,7 @@ const More = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    paddingTop: 0,
+    paddingTop: verticalScale(0),
     backgroundColor: "#E7EEFA",
   },
   centered: {
@@ -220,19 +229,19 @@ const styles = StyleSheet.create({
     backgroundColor: "#E7EEFA",
   },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 30,
-    paddingBottom: 20,
+    paddingHorizontal: scale(20),
+    paddingTop: verticalScale(30),
+    paddingBottom: verticalScale(20),
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: moderateScale(28),
     fontWeight: "700",
     color: "#1a1a1a",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
     fontFamily: "Poppins-Bold",
   },
   headerSubtitle: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     color: "#8E8E93",
     fontFamily: "Poppins-Regular",
   },
@@ -240,15 +249,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#2046AE",
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 20,
-    marginBottom: 24,
+    borderRadius: moderateScale(12),
+    padding: scale(16),
+    marginHorizontal: scale(20),
+    marginBottom: verticalScale(24),
   },
   profileIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: scale(48),
+    height: verticalScale(48),
+    borderRadius: moderateScale(24),
     backgroundColor: "rgba(255, 255, 255, 0.2)",
     alignItems: "center",
     justifyContent: "center",
@@ -258,26 +267,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileName: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     color: "#fff",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
     fontFamily: "Poppins-SemiBold",
   },
   profilePhone: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: "rgba(255, 255, 255, 0.8)",
     fontFamily: "Poppins-Regular",
   },
   section: {
-    marginBottom: 24,
+    marginBottom: verticalScale(24),
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: "600",
     color: "#8E8E93",
-    paddingHorizontal: 20,
-    marginBottom: 8,
+    paddingHorizontal: scale(20),
+    marginBottom: verticalScale(8),
     letterSpacing: 0.5,
     fontFamily: "Poppins-SemiBold",
   },
@@ -285,22 +294,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: verticalScale(16),
+    paddingHorizontal: scale(20),
     borderBottomWidth: 1,
     borderBottomColor: "#F0F0F0",
     marginLeft: 20,
     marginRight: 20,
-    borderRadius: 12,
+    borderRadius: moderateScale(12),
   },
   iconContainer: {
-    width: 24,
+    width: scale(24),
     alignItems: "center",
   },
   optionText: {
     flex: 1,
     marginLeft: 16,
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: "#1a1a1a",
     fontFamily: "Poppins-Regular",
   },
@@ -309,15 +318,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#fff",
-    borderRadius: 50,
+    borderRadius: moderateScale(50),
     borderWidth: 1,
     borderColor: "#E74C3C",
-    paddingVertical: 14,
-    marginHorizontal: 20,
-    marginBottom: 24,
+    paddingVertical: verticalScale(14),
+    marginHorizontal: scale(20),
+    marginBottom: verticalScale(24),
   },
   logoutText: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     color: "#E74C3C",
     marginLeft: 8,
@@ -325,24 +334,24 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: "center",
-    paddingVertical: 24,
-    paddingBottom: 40,
+    paddingVertical: verticalScale(24),
+    paddingBottom: verticalScale(40),
   },
   footerBrand: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: "700",
     color: "#2046AE",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
     fontFamily: "Poppins-Bold",
   },
   footerTagline: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: "#8E8E93",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
     fontFamily: "Poppins-Regular",
   },
   footerCredit: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: "#8E8E93",
     fontFamily: "Poppins-Regular",
   },

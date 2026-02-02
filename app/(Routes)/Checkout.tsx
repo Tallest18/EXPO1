@@ -14,6 +14,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   Modal,
   SafeAreaView,
   ScrollView,
@@ -24,6 +25,14 @@ import {
   View,
 } from "react-native";
 import { auth, db } from "../config/firebaseConfig";
+
+const { width, height } = Dimensions.get("window");
+
+// Responsive sizing functions
+const scale = (size: number) => (width / 375) * size;
+const verticalScale = (size: number) => (height / 812) * size;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
 // Types
 interface Product {
@@ -475,8 +484,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    marginTop: 10,
-    fontSize: 16,
+    marginTop: verticalScale(10),
+    fontSize: moderateScale(16),
     color: "#666",
     fontFamily: "Poppins-Regular",
   },
@@ -484,39 +493,39 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
+    paddingHorizontal: scale(20),
+    paddingTop: verticalScale(20),
+    paddingBottom: verticalScale(10),
     backgroundColor: "#E7EEFA",
   },
   backButton: {
-    padding: 4,
+    padding: scale(4),
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: moderateScale(24),
     fontFamily: "Poppins-Bold",
     color: "#000",
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: scale(20),
   },
   section: {
-    marginTop: 16,
+    marginTop: verticalScale(16),
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontFamily: "Poppins-Regular",
     color: "#666",
-    marginBottom: 12,
+    marginBottom: verticalScale(12),
   },
   paymentOptionsContainer: {
-    gap: 8,
+    gap: scale(8),
   },
   paymentOption: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: moderateScale(12),
+    padding: scale(16),
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -527,14 +536,14 @@ const styles = StyleSheet.create({
     borderColor: "#1155CC",
   },
   paymentOptionText: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontFamily: "Poppins-Regular",
     color: "#000",
   },
   radioButton: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: scale(22),
+    height: verticalScale(22),
+    borderRadius: moderateScale(11),
     borderWidth: 2,
     borderColor: "#D0D0D0",
     justifyContent: "center",
@@ -544,31 +553,31 @@ const styles = StyleSheet.create({
     borderColor: "#1155CC",
   },
   radioButtonInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: scale(10),
+    height: verticalScale(10),
+    borderRadius: moderateScale(5),
     backgroundColor: "#1155CC",
   },
   footer: {
     backgroundColor: "#E7EEFA",
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 20,
+    paddingHorizontal: scale(20),
+    paddingTop: verticalScale(16),
+    paddingBottom: verticalScale(20),
   },
   doneButton: {
     backgroundColor: "#1155CC",
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: moderateScale(12),
+    paddingVertical: verticalScale(16),
     alignItems: "center",
   },
   doneButtonText: {
     color: "white",
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
   },
   bottomPadding: {
-    height: 40,
+    height: verticalScale(40),
   },
   // Modal Styles
   modalOverlay: {
@@ -580,102 +589,102 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 30,
+    paddingHorizontal: scale(20),
+    paddingTop: verticalScale(20),
+    paddingBottom: verticalScale(30),
     maxHeight: "90%",
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: verticalScale(20),
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontFamily: "Poppins-Bold",
     color: "#000",
   },
   closeButton: {
-    padding: 4,
+    padding: scale(4),
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: verticalScale(20),
   },
   inputLabel: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontFamily: "Poppins-Regular",
     color: "#000",
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
   },
   required: {
     color: "#FF3B30",
   },
   labelSubtext: {
     color: "#999",
-    fontSize: 13,
+    fontSize: moderateScale(13),
   },
   input: {
     backgroundColor: "#F5F7FA",
-    borderRadius: 8,
-    padding: 14,
-    fontSize: 15,
+    borderRadius: moderateScale(8),
+    padding: scale(14),
+    fontSize: moderateScale(15),
     fontFamily: "Poppins-Regular",
     color: "#000",
   },
   amountInputContainer: {
     backgroundColor: "#F5F7FA",
-    borderRadius: 8,
-    padding: 14,
+    borderRadius: moderateScale(8),
+    padding: scale(14),
     flexDirection: "row",
     alignItems: "center",
   },
   currencySymbol: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontFamily: "Poppins-Bold",
     color: "#000",
     marginRight: 8,
   },
   amountInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontFamily: "Poppins-Regular",
     color: "#000",
-    padding: 0,
+    padding: scale(0),
   },
   quickAmountsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    marginTop: 12,
+    gap: scale(8),
+    marginTop: verticalScale(12),
   },
   quickAmountButton: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#D0D0D0",
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    borderRadius: moderateScale(8),
+    paddingVertical: verticalScale(8),
+    paddingHorizontal: scale(16),
   },
   quickAmountText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontFamily: "Poppins-Regular",
     color: "#000",
   },
   textArea: {
     minHeight: 100,
-    paddingTop: 14,
+    paddingTop: verticalScale(14),
   },
   saveDebtorButton: {
     backgroundColor: "#1155CC",
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: moderateScale(12),
+    paddingVertical: verticalScale(16),
     alignItems: "center",
-    marginTop: 10,
+    marginTop: verticalScale(10),
   },
   saveDebtorButtonText: {
     color: "white",
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
   },

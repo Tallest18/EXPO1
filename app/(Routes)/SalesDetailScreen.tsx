@@ -5,6 +5,7 @@ import { deleteDoc, doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  Dimensions,
   Image,
   SafeAreaView,
   ScrollView,
@@ -15,6 +16,14 @@ import {
   View,
 } from "react-native";
 import { db } from "../config/firebaseConfig";
+
+const { width, height } = Dimensions.get("window");
+
+// Responsive sizing functions
+const scale = (size: number) => (width / 375) * size;
+const verticalScale = (size: number) => (height / 812) * size;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
 interface SaleDetail {
   id: string;
@@ -382,25 +391,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: scale(20),
+    paddingVertical: verticalScale(16),
     backgroundColor: "#E7EEFA",
   },
   backButton: {
-    padding: 4,
+    padding: scale(4),
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
     color: "#333",
   },
   placeholder: {
-    width: 24,
+    width: scale(24),
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: scale(20),
   },
   loadingContainer: {
     flex: 1,
@@ -411,48 +420,40 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    padding: scale(20),
   },
   errorText: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: "#666",
-    marginTop: 12,
-    marginBottom: 20,
+    marginTop: verticalScale(12),
+    marginBottom: verticalScale(20),
     fontFamily: "Poppins-Regular",
   },
   retryButton: {
     backgroundColor: "#1155CC",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingHorizontal: scale(24),
+    paddingVertical: verticalScale(12),
+    borderRadius: moderateScale(8),
   },
   retryButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
   },
   card: {
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    borderRadius: moderateScale(12),
+    padding: scale(16),
+    marginBottom: verticalScale(16),
   },
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: verticalScale(16),
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
     marginLeft: 8,
@@ -463,9 +464,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   productImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
+    width: scale(60),
+    height: verticalScale(60),
+    borderRadius: moderateScale(8),
     backgroundColor: "#f0f0f0",
   },
   productDetails: {
@@ -473,60 +474,60 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   productName: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
     color: "#333",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
   },
   productQuantity: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: "#666",
     fontFamily: "Poppins-Regular",
-    marginBottom: 2,
+    marginBottom: verticalScale(2),
   },
   productId: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: "#999",
     fontFamily: "Poppins-Regular",
   },
   detailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: verticalScale(12),
   },
   detailItem: {
     flex: 1,
   },
   detailLabel: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: "#666",
     fontFamily: "Poppins-Regular",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
   },
   detailValue: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
     color: "#333",
   },
   amountText: {
     color: "#1155CC",
-    fontSize: 18,
+    fontSize: moderateScale(18),
   },
   profitText: {
     color: "#22C55E",
-    fontSize: 18,
+    fontSize: moderateScale(18),
   },
   notesContainer: {
     backgroundColor: "#F8F9FA",
-    padding: 12,
-    borderRadius: 8,
+    padding: scale(12),
+    borderRadius: moderateScale(8),
     borderLeftWidth: 4,
     borderLeftColor: "#6366F1",
   },
   notesText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: "#666",
     fontFamily: "Poppins-Regular",
     lineHeight: 20,
@@ -534,17 +535,17 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 20,
-    gap: 12,
+    marginBottom: verticalScale(20),
+    gap: scale(12),
   },
   actionButton: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: verticalScale(12),
+    paddingHorizontal: scale(16),
+    borderRadius: moderateScale(8),
     borderWidth: 1,
   },
   shareButton: {
@@ -556,7 +557,7 @@ const styles = StyleSheet.create({
     borderColor: "#1155CC",
   },
   actionButtonText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
     marginLeft: 8,
@@ -569,10 +570,10 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: "center",
-    paddingVertical: 16,
+    paddingVertical: verticalScale(16),
   },
   saleId: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: "#999",
     fontFamily: "Poppins-Regular",
   },
