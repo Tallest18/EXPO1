@@ -27,11 +27,42 @@ import { auth, db } from "../config/firebaseConfig";
 
 const { width, height } = Dimensions.get("window");
 
-// Responsive sizing functions
-const scale = (size: number) => (width / 375) * size;
-const verticalScale = (size: number) => (height / 812) * size;
-const moderateScale = (size: number, factor = 0.5) =>
-  size + (scale(size) - size) * factor;
+// Device detection
+const isSmallDevice = width < 375;
+const isMediumDevice = width >= 375 && width < 414;
+const isTablet = width >= 768;
+
+// Enhanced responsive sizing
+const scale = (size: number) => {
+  const baseWidth = 375;
+  const ratio = width / baseWidth;
+
+  if (isTablet) {
+    return size * Math.min(ratio, 1.5);
+  }
+  return size * ratio;
+};
+
+const verticalScale = (size: number) => {
+  const baseHeight = 812;
+  const ratio = height / baseHeight;
+
+  if (isTablet) {
+    return size * Math.min(ratio, 1.5);
+  }
+  return size * ratio;
+};
+
+const moderateScale = (size: number, factor = 0.5) => {
+  return size + (scale(size) - size) * factor;
+};
+
+// Responsive font sizes
+const getFontSize = (base: number) => {
+  if (isSmallDevice) return base * 0.9;
+  if (isTablet) return base * 1.2;
+  return base;
+};
 
 // Types
 interface Product {
@@ -324,7 +355,11 @@ const Sell: React.FC = () => {
 
           {!isInCart ? (
             <View style={styles.priceRow}>
-              <Text style={styles.productPrice}>
+              <Text
+                style={styles.productPrice}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
                 ₦{(product.sellingPrice || 0).toLocaleString()}
               </Text>
               <TouchableOpacity
@@ -334,10 +369,11 @@ const Sell: React.FC = () => {
                 ]}
                 onPress={() => handleCartIconPress(product.id)}
                 disabled={isOutOfStock}
+                activeOpacity={0.8}
               >
                 <Feather
                   name="shopping-cart"
-                  size={20}
+                  size={moderateScale(20)}
                   color={isOutOfStock ? "#999" : "white"}
                 />
               </TouchableOpacity>
@@ -347,8 +383,13 @@ const Sell: React.FC = () => {
               <TouchableOpacity
                 style={styles.quantityButton}
                 onPress={() => decrementQuantity(product.id)}
+                activeOpacity={0.7}
               >
-                <Feather name="minus" size={18} color="#007AFF" />
+                <Feather
+                  name="minus"
+                  size={moderateScale(18)}
+                  color="#007AFF"
+                />
               </TouchableOpacity>
 
               <Text style={styles.quantityText}>{quantity}</Text>
@@ -356,8 +397,9 @@ const Sell: React.FC = () => {
               <TouchableOpacity
                 style={styles.quantityButton}
                 onPress={() => incrementQuantity(product.id)}
+                activeOpacity={0.7}
               >
-                <Feather name="plus" size={18} color="#007AFF" />
+                <Feather name="plus" size={moderateScale(18)} color="#007AFF" />
               </TouchableOpacity>
             </View>
           )}
@@ -368,7 +410,7 @@ const Sell: React.FC = () => {
 
   const renderEmptyState = (): React.ReactElement => (
     <View style={styles.emptyState}>
-      <Feather name="package" size={80} color="#E0E0E0" />
+      <Feather name="package" size={moderateScale(80)} color="#E0E0E0" />
       <Text style={styles.emptyTitle}>No Products Available</Text>
       <Text style={styles.emptyDescription}>
         Add products to your inventory to start selling
@@ -414,17 +456,21 @@ const Sell: React.FC = () => {
               <View style={styles.productIcon} />
             </View>
             <View style={styles.saleDetails}>
-              <Text style={styles.saleProductName}>
+              <Text style={styles.saleProductName} numberOfLines={1}>
                 {firstItem ? firstItem.productName : "Sale"}
               </Text>
-              <Text style={styles.saleQuantity}>
+              <Text style={styles.saleQuantity} numberOfLines={1}>
                 Qty: {totalQuantity}, {sale.items.length} item
                 {sale.items.length > 1 ? "s" : ""} • {sale.paymentMethod}
               </Text>
             </View>
           </View>
           <View style={styles.saleRightSection}>
-            <Text style={styles.saleAmount}>
+            <Text
+              style={styles.saleAmount}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
               ₦{sale.totalAmount.toLocaleString()}
             </Text>
           </View>
@@ -437,7 +483,7 @@ const Sell: React.FC = () => {
     if (sales.length === 0) {
       return (
         <View style={styles.emptyState}>
-          <Feather name="clock" size={80} color="#E0E0E0" />
+          <Feather name="clock" size={moderateScale(80)} color="#E0E0E0" />
           <Text style={styles.emptyTitle}>No Sales History</Text>
           <Text style={styles.emptyDescription}>
             Your sales history will appear here
@@ -478,8 +524,16 @@ const Sell: React.FC = () => {
         <Text style={styles.headerTitle}>Sell</Text>
         <View style={styles.cartContainer}>
           <Text style={styles.cartfont}>Cart</Text>
-          <TouchableOpacity style={styles.cartButton} onPress={viewCart}>
-            <Feather name="shopping-cart" size={24} color="#007AFF" />
+          <TouchableOpacity
+            style={styles.cartButton}
+            onPress={viewCart}
+            activeOpacity={0.7}
+          >
+            <Feather
+              name="shopping-cart"
+              size={moderateScale(24)}
+              color="#007AFF"
+            />
             {getTotalCartItems() > 0 && (
               <View style={styles.cartBadge}>
                 <Text style={styles.cartBadgeText}>{getTotalCartItems()}</Text>
@@ -492,7 +546,7 @@ const Sell: React.FC = () => {
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
-          <Feather name="search" size={16} color="#999" />
+          <Feather name="search" size={moderateScale(16)} color="#999" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search products"
@@ -504,9 +558,8 @@ const Sell: React.FC = () => {
             autoCorrect={false}
           />
         </View>
-        {/* Filter button is a placeholder, as the actual filtering is done via tabs */}
-        <TouchableOpacity style={styles.filterButton}>
-          <Feather name="sliders" size={20} color="#333" />
+        <TouchableOpacity style={styles.filterButton} activeOpacity={0.7}>
+          <Feather name="sliders" size={moderateScale(20)} color="#333" />
         </TouchableOpacity>
       </View>
 
@@ -515,6 +568,7 @@ const Sell: React.FC = () => {
         <TouchableOpacity
           style={[styles.tab, activeTab === "all" && styles.activeTab]}
           onPress={() => setActiveTab("all")}
+          activeOpacity={0.7}
         >
           <Text
             style={[
@@ -528,6 +582,7 @@ const Sell: React.FC = () => {
         <TouchableOpacity
           style={[styles.tab, activeTab === "history" && styles.activeTab]}
           onPress={() => setActiveTab("history")}
+          activeOpacity={0.7}
         >
           <Text
             style={[
@@ -572,8 +627,16 @@ const Sell: React.FC = () => {
       {/* View Cart Button - Always visible when cart has items */}
       {getTotalCartItems() > 0 && (
         <View style={styles.viewCartContainer}>
-          <TouchableOpacity style={styles.viewCartButton} onPress={viewCart}>
-            <Feather name="shopping-cart" size={20} color="white" />
+          <TouchableOpacity
+            style={styles.viewCartButton}
+            onPress={viewCart}
+            activeOpacity={0.8}
+          >
+            <Feather
+              name="shopping-cart"
+              size={moderateScale(20)}
+              color="white"
+            />
             <Text style={styles.viewCartButtonText}>
               Click to view cart ({getTotalCartItems()})
             </Text>
@@ -588,16 +651,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E7EEFA",
-    paddingTop: verticalScale(0),
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#E7EEFA",
   },
   loadingText: {
     marginTop: verticalScale(10),
-    fontSize: moderateScale(16),
+    fontSize: getFontSize(moderateScale(16)),
     color: "#666",
     fontFamily: "Poppins-Regular",
   },
@@ -610,7 +673,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E7EEFA",
   },
   headerTitle: {
-    fontSize: moderateScale(34),
+    fontSize: getFontSize(moderateScale(34)),
     color: "#000",
     fontFamily: "Poppins-Bold",
   },
@@ -624,7 +687,7 @@ const styles = StyleSheet.create({
     right: scale(0),
     backgroundColor: "#FF3B30",
     borderRadius: moderateScale(10),
-    minWidth: 20,
+    minWidth: scale(20),
     height: verticalScale(20),
     justifyContent: "center",
     alignItems: "center",
@@ -632,7 +695,7 @@ const styles = StyleSheet.create({
   },
   cartBadgeText: {
     color: "white",
-    fontSize: moderateScale(12),
+    fontSize: getFontSize(moderateScale(12)),
     fontWeight: "bold",
     fontFamily: "Poppins-Bold",
   },
@@ -648,7 +711,7 @@ const styles = StyleSheet.create({
     gap: scale(5),
   },
   cartfont: {
-    fontSize: moderateScale(16),
+    fontSize: getFontSize(moderateScale(16)),
     fontFamily: "Poppins-Regular",
   },
   searchContainer: {
@@ -666,14 +729,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: moderateScale(12),
     paddingHorizontal: scale(16),
-    paddingVertical: verticalScale(8),
+    paddingVertical: verticalScale(isSmallDevice ? 6 : 8),
     gap: scale(8),
   },
   searchInput: {
     flex: 1,
-    fontSize: moderateScale(18),
+    fontSize: getFontSize(moderateScale(18)),
     fontFamily: "Poppins-Regular",
     color: "#000",
+    minHeight: verticalScale(20),
   },
   filterButton: {
     backgroundColor: "#F8F9FA",
@@ -699,7 +763,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   tabText: {
-    fontSize: moderateScale(16),
+    fontSize: getFontSize(moderateScale(16)),
     fontFamily: "Poppins-Regular",
     color: "#666",
   },
@@ -713,7 +777,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E7EEFA",
   },
   sectionTitle: {
-    fontSize: moderateScale(16),
+    fontSize: getFontSize(moderateScale(16)),
     fontFamily: "Poppins-Regular",
     color: "#666",
   },
@@ -722,7 +786,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(20),
   },
   scrollContent: {
-    paddingBottom: verticalScale(100), // Add padding for the fixed button
+    flexGrow: 1,
+    paddingBottom: verticalScale(100),
   },
   productsGrid: {
     flexDirection: "row",
@@ -731,11 +796,16 @@ const styles = StyleSheet.create({
     paddingTop: verticalScale(10),
   },
   productCard: {
-    width: "48%",
+    width: isTablet ? "48%" : "48%",
     backgroundColor: "#FFFFFF",
     borderRadius: moderateScale(12),
     padding: scale(12),
     marginBottom: verticalScale(16),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   productImage: {
     width: "100%",
@@ -748,10 +818,10 @@ const styles = StyleSheet.create({
     gap: scale(8),
   },
   productName: {
-    fontSize: moderateScale(16),
+    fontSize: getFontSize(moderateScale(16)),
     fontFamily: "Poppins-Bold",
     color: "#000",
-    minHeight: 40,
+    minHeight: verticalScale(40),
   },
   priceRow: {
     flexDirection: "row",
@@ -762,9 +832,10 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(50),
   },
   productPrice: {
-    fontSize: moderateScale(18),
+    fontSize: getFontSize(moderateScale(18)),
     fontFamily: "Poppins-Bold",
     color: "#000",
+    flex: 1,
   },
   addToCartButton: {
     backgroundColor: "#007AFF",
@@ -796,10 +867,10 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(16),
   },
   quantityText: {
-    fontSize: moderateScale(18),
+    fontSize: getFontSize(moderateScale(18)),
     fontFamily: "Poppins-Bold",
     color: "#000",
-    minWidth: 24,
+    minWidth: scale(24),
     textAlign: "center",
   },
   emptyState: {
@@ -807,9 +878,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: verticalScale(60),
+    paddingHorizontal: scale(20),
   },
   emptyTitle: {
-    fontSize: moderateScale(20),
+    fontSize: getFontSize(moderateScale(20)),
     fontWeight: "600",
     color: "#666",
     marginTop: verticalScale(16),
@@ -817,17 +889,18 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins-Regular",
   },
   emptyDescription: {
-    fontSize: moderateScale(14),
+    fontSize: getFontSize(moderateScale(14)),
     color: "#999",
     textAlign: "center",
-    paddingHorizontal: scale(40),
+    paddingHorizontal: scale(isSmallDevice ? 20 : 40),
     fontFamily: "Poppins-Regular",
+    lineHeight: getFontSize(moderateScale(20)),
   },
   viewCartContainer: {
     position: "absolute",
-    bottom: verticalScale(0),
-    left: scale(0),
-    right: scale(0),
+    bottom: 0,
+    left: 0,
+    right: 0,
     padding: scale(20),
     backgroundColor: "#E7EEFA",
     borderTopWidth: 1,
@@ -841,10 +914,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: scale(8),
+    shadowColor: "#007AFF",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   viewCartButtonText: {
     color: "white",
-    fontSize: moderateScale(16),
+    fontSize: getFontSize(moderateScale(16)),
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
   },
@@ -859,7 +937,7 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(20),
   },
   dateHeader: {
-    fontSize: moderateScale(12),
+    fontSize: getFontSize(moderateScale(12)),
     fontFamily: "Poppins-Regular",
     color: "#666",
     marginBottom: verticalScale(10),
@@ -869,6 +947,11 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(12),
     padding: scale(14),
     marginBottom: verticalScale(10),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   saleCardContent: {
     flexDirection: "row",
@@ -879,6 +962,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    marginRight: scale(8),
   },
   productIconContainer: {
     width: scale(40),
@@ -887,7 +971,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F5F7FA",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: scale(12),
   },
   productIcon: {
     width: scale(24),
@@ -899,18 +983,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   saleProductName: {
-    fontSize: moderateScale(15),
+    fontSize: getFontSize(moderateScale(15)),
     fontFamily: "Poppins-Regular",
     color: "#000",
     marginBottom: verticalScale(2),
   },
   saleQuantity: {
-    fontSize: moderateScale(12),
+    fontSize: getFontSize(moderateScale(12)),
     fontFamily: "Poppins-Regular",
     color: "#999",
   },
   saleAmount: {
-    fontSize: moderateScale(16),
+    fontSize: getFontSize(moderateScale(16)),
     fontFamily: "Poppins-Bold",
     color: "#000",
     marginBottom: verticalScale(4),
@@ -918,6 +1002,7 @@ const styles = StyleSheet.create({
   saleRightSection: {
     alignItems: "flex-end",
     gap: scale(4),
+    minWidth: scale(80),
   },
 });
 

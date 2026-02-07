@@ -16,6 +16,7 @@ import {
 } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Dimensions,
   FlatList,
@@ -31,11 +32,42 @@ import { auth, db } from "../config/firebaseConfig";
 
 const { width, height } = Dimensions.get("window");
 
-// Responsive sizing functions
-const scale = (size: number) => (width / 375) * size;
-const verticalScale = (size: number) => (height / 812) * size;
-const moderateScale = (size: number, factor = 0.5) =>
-  size + (scale(size) - size) * factor;
+// Device detection
+const isSmallDevice = width < 375;
+const isMediumDevice = width >= 375 && width < 414;
+const isTablet = width >= 768;
+
+// Enhanced responsive sizing
+const scale = (size: number) => {
+  const baseWidth = 375;
+  const ratio = width / baseWidth;
+
+  if (isTablet) {
+    return size * Math.min(ratio, 1.5);
+  }
+  return size * ratio;
+};
+
+const verticalScale = (size: number) => {
+  const baseHeight = 812;
+  const ratio = height / baseHeight;
+
+  if (isTablet) {
+    return size * Math.min(ratio, 1.5);
+  }
+  return size * ratio;
+};
+
+const moderateScale = (size: number, factor = 0.5) => {
+  return size + (scale(size) - size) * factor;
+};
+
+// Responsive font sizes
+const getFontSize = (base: number) => {
+  if (isSmallDevice) return base * 0.9;
+  if (isTablet) return base * 1.2;
+  return base;
+};
 
 // Updated Notification type to match the data structure from the backend
 interface Notification {
@@ -294,17 +326,37 @@ const Home = () => {
     switch (type) {
       case "low_stock":
       case "out_of_stock":
-        return <Feather name="package" size={24} color="#0056D2" />;
+        return (
+          <Feather name="package" size={moderateScale(24)} color="#0056D2" />
+        );
       case "high_selling":
-        return <Feather name="trending-up" size={24} color="#0056D2" />;
+        return (
+          <Feather
+            name="trending-up"
+            size={moderateScale(24)}
+            color="#0056D2"
+          />
+        );
       case "expiry":
-        return <Feather name="calendar" size={24} color="#0056D2" />;
+        return (
+          <Feather name="calendar" size={moderateScale(24)} color="#0056D2" />
+        );
       case "daily_summary":
       case "weekly_summary":
-        return <Feather name="bar-chart-2" size={24} color="#0056D2" />;
+        return (
+          <Feather
+            name="bar-chart-2"
+            size={moderateScale(24)}
+            color="#0056D2"
+          />
+        );
       default:
         return (
-          <Ionicons name="notifications-outline" size={24} color="#0056D2" />
+          <Ionicons
+            name="notifications-outline"
+            size={moderateScale(24)}
+            color="#0056D2"
+          />
         );
     }
   };
@@ -329,25 +381,47 @@ const Home = () => {
     return `₦${(value || 0).toFixed(2)}`;
   };
 
+  if (!fontsLoaded) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#1155CC" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const renderHeader = () => (
     <>
       <View style={styles.header}>
         <View>
           <Text style={styles.hello}>Hello,</Text>
-          <Text style={styles.username}>{userData.name}</Text>
+          <Text style={styles.username} numberOfLines={1}>
+            {userData.name}
+          </Text>
         </View>
 
         <View style={styles.headerIcons}>
           <TouchableOpacity
             onPress={() => router.push("/(Routes)/NotificationsScreen")}
+            activeOpacity={0.7}
           >
-            <Ionicons name="notifications-outline" size={24} color="black" />
+            <Ionicons
+              name="notifications-outline"
+              size={moderateScale(24)}
+              color="black"
+            />
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={() => router.push("/(Routes)/MessagesScreen")}
+            activeOpacity={0.7}
           >
-            <Feather name="message-square" size={24} color="black" />
+            <Feather
+              name="message-square"
+              size={moderateScale(24)}
+              color="black"
+            />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -356,6 +430,7 @@ const Home = () => {
                 router.push("/(Routes)/Profile");
               }
             }}
+            activeOpacity={0.7}
           >
             <Image
               source={{
@@ -373,13 +448,13 @@ const Home = () => {
           <Text style={styles.salesLabel}>Today Sales</Text>
           <Text style={styles.salesRate}>+6.5%</Text>
         </View>
-        <Text style={styles.salesAmount}>
+        <Text style={styles.salesAmount} numberOfLines={1} adjustsFontSizeToFit>
           {formatCurrency(userData.todaySales)}
         </Text>
 
         <View style={styles.profitRow}>
           <Text style={styles.profitLabel}>Profit</Text>
-          <Text style={styles.profitAmount}>
+          <Text style={styles.profitAmount} numberOfLines={1}>
             {formatCurrency(userData.profit)}
           </Text>
         </View>
@@ -395,7 +470,9 @@ const Home = () => {
         </View>
         <View style={styles.infoBox}>
           <Text style={styles.infoLabel}>Stock Left</Text>
-          <Text style={styles.infoValue}>{userData.stockLeft} Items</Text>
+          <Text style={styles.infoValue} numberOfLines={1} adjustsFontSizeToFit>
+            {userData.stockLeft} Items
+          </Text>
         </View>
       </View>
 
@@ -403,19 +480,29 @@ const Home = () => {
         <TouchableOpacity
           style={[styles.actionBox, { backgroundColor: "#061E47" }]}
           onPress={() => setShowAddProduct(true)}
+          activeOpacity={0.8}
         >
           <Text style={styles.actionText}>
-            New Product {/* Plus Icon */}
-            <Ionicons name="add-circle-outline" size={30} color="#fff" />
+            New Product{" "}
+            <Ionicons
+              name="add-circle-outline"
+              size={moderateScale(30)}
+              color="#fff"
+            />
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.actionBox, { backgroundColor: "#1155CC" }]}
           onPress={() => router.push("/(Routes)/QuickSellScreen")}
+          activeOpacity={0.8}
         >
           <Text style={styles.actionText}>
             Quick Sell
-            <Ionicons name="cart-outline" size={30} color="#fff" />
+            <Ionicons
+              name="cart-outline"
+              size={moderateScale(30)}
+              color="#fff"
+            />
           </Text>
         </TouchableOpacity>
       </View>
@@ -425,9 +512,13 @@ const Home = () => {
         <View style={styles.salesSummaryHeader}>
           <View style={styles.salesSummaryHeaderLeft}>
             <View style={styles.dollarIconCircle}>
-              <Feather name="dollar-sign" size={20} color="#000" />
+              <Feather
+                name="dollar-sign"
+                size={moderateScale(20)}
+                color="#000"
+              />
             </View>
-            <View>
+            <View style={styles.salesSummaryHeaderTextContainer}>
               <Text style={styles.salesSummaryHeaderTitle}>Sales Summary</Text>
               <Text style={styles.salesSummaryHeaderSubtitle}>
                 Items sold are captured here
@@ -442,8 +533,13 @@ const Home = () => {
                 params: { tab: "history" },
               });
             }}
+            activeOpacity={0.7}
           >
-            <Feather name="arrow-up-right" size={20} color="#fff" />
+            <Feather
+              name="arrow-up-right"
+              size={moderateScale(20)}
+              color="#fff"
+            />
           </TouchableOpacity>
         </View>
 
@@ -459,6 +555,7 @@ const Home = () => {
                   params: { sale: JSON.stringify(item) },
                 })
               }
+              activeOpacity={0.7}
             >
               {/* Product Image/Icon */}
               <View style={styles.productImageContainer}>
@@ -469,14 +566,18 @@ const Home = () => {
                   />
                 ) : (
                   <View style={styles.productPlaceholder}>
-                    <Feather name="package" size={20} color="#666" />
+                    <Feather
+                      name="package"
+                      size={moderateScale(20)}
+                      color="#666"
+                    />
                   </View>
                 )}
               </View>
 
               {/* Product Details */}
               <View style={styles.salesSummaryContent}>
-                <Text style={styles.salesSummaryProductName}>
+                <Text style={styles.salesSummaryProductName} numberOfLines={1}>
                   {item.name} ×{item.quantity || 1}
                 </Text>
                 <Text style={styles.salesSummaryDate}>
@@ -486,7 +587,11 @@ const Home = () => {
 
               {/* Amount and Label */}
               <View style={styles.salesSummaryRight}>
-                <Text style={styles.salesSummaryAmount}>
+                <Text
+                  style={styles.salesSummaryAmount}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   {formatCurrency(item.amount)}
                 </Text>
                 <Text style={styles.salesSummaryLabel}>Cost</Text>
@@ -508,11 +613,16 @@ const Home = () => {
         <View
           style={{ flexDirection: "row", alignItems: "center", gap: scale(8) }}
         >
-          <Ionicons name="notifications" size={24} color="#FACC15" />
+          <Ionicons
+            name="notifications"
+            size={moderateScale(24)}
+            color="#FACC15"
+          />
           <Text style={styles.notificationHeaderTitle}>Notifications</Text>
         </View>
         <TouchableOpacity
           onPress={() => router.push("/(Routes)/NotificationsScreen")}
+          activeOpacity={0.7}
         >
           <Text style={styles.viewAllLink}>View all notification</Text>
         </TouchableOpacity>
@@ -530,6 +640,7 @@ const Home = () => {
                 params: { notification: JSON.stringify(item) },
               })
             }
+            activeOpacity={0.7}
           >
             <View style={styles.notifLeftSection}>
               <View style={styles.notifIconBox}>
@@ -537,14 +648,18 @@ const Home = () => {
               </View>
               <View style={styles.notifContent}>
                 <View style={styles.notifTitleRow}>
-                  <Text style={styles.notifTitle}>{item.title}</Text>
+                  <Text style={styles.notifTitle} numberOfLines={1}>
+                    {item.title}
+                  </Text>
                   <Text style={styles.notifTime}>{item.time}</Text>
                 </View>
-                <Text style={styles.notifMessage}>{item.message}</Text>
+                <Text style={styles.notifMessage} numberOfLines={2}>
+                  {item.message}
+                </Text>
                 {/* Action links based on notification type */}
                 {(item.type === "low_stock" ||
                   item.type === "out_of_stock") && (
-                  <Text style={styles.notifActions}>
+                  <Text style={styles.notifActions} numberOfLines={1}>
                     Tap to restock | View product page
                   </Text>
                 )}
@@ -576,6 +691,7 @@ const Home = () => {
         ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
         contentContainerStyle={{ paddingBottom: verticalScale(40) }}
+        showsVerticalScrollIndicator={false}
       />
 
       <AddProductFlow
@@ -591,7 +707,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E7EEFA",
-    paddingTop: verticalScale(0),
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#E7EEFA",
   },
   header: {
     flexDirection: "row",
@@ -601,14 +722,15 @@ const styles = StyleSheet.create({
     marginTop: verticalScale(20),
   },
   hello: {
-    fontSize: moderateScale(20),
+    fontSize: getFontSize(moderateScale(20)),
     color: "#555",
     fontFamily: "Poppins-Regular",
   },
   username: {
-    fontSize: moderateScale(22),
+    fontSize: getFontSize(moderateScale(22)),
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
+    maxWidth: scale(isTablet ? 300 : 200),
   },
   headerIcons: {
     flexDirection: "row",
@@ -620,21 +742,29 @@ const styles = StyleSheet.create({
   },
   avatar: {
     width: scale(40),
-    height: verticalScale(40),
+    height: scale(40),
     borderRadius: moderateScale(20),
     backgroundColor: "#eee",
   },
-
   salesBox: {
     backgroundColor: "#1155CC",
     borderRadius: moderateScale(12),
     padding: scale(16),
     margin: scale(20),
+    shadowColor: "#1155CC",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  salesTop: { flexDirection: "row", justifyContent: "space-between" },
+  salesTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   salesLabel: {
     color: "#fff",
-    fontSize: moderateScale(14),
+    fontSize: getFontSize(moderateScale(14)),
     fontFamily: "Poppins-Regular",
   },
   salesRate: {
@@ -643,12 +773,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(8),
     paddingVertical: verticalScale(2),
     borderRadius: moderateScale(12),
-    fontSize: moderateScale(12),
+    fontSize: getFontSize(moderateScale(12)),
     fontFamily: "Poppins-Regular",
   },
   salesAmount: {
     color: "white",
-    fontSize: moderateScale(28),
+    fontSize: getFontSize(moderateScale(28)),
     fontWeight: "bold",
     marginTop: verticalScale(4),
     fontFamily: "Poppins-Bold",
@@ -660,24 +790,40 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(8),
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
   },
-  profitLabel: { color: "#444", fontFamily: "Poppins-Regular" },
-  profitAmount: { fontWeight: "600", fontFamily: "Poppins-Bold" },
+  profitLabel: {
+    color: "#444",
+    fontFamily: "Poppins-Regular",
+    fontSize: getFontSize(moderateScale(14)),
+  },
+  profitAmount: {
+    fontWeight: "600",
+    fontFamily: "Poppins-Bold",
+    fontSize: getFontSize(moderateScale(14)),
+    flex: 1,
+    textAlign: "right",
+  },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginHorizontal: scale(20),
     marginBottom: verticalScale(12),
+    gap: scale(8),
   },
   infoBox: {
     flex: 1,
     backgroundColor: "white",
     borderRadius: moderateScale(12),
     padding: scale(10),
-    marginHorizontal: scale(4),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   infoValue: {
-    fontSize: moderateScale(20),
+    fontSize: getFontSize(moderateScale(20)),
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
     marginTop: verticalScale(8),
@@ -685,6 +831,7 @@ const styles = StyleSheet.create({
   infoLabel: {
     color: "#777",
     fontFamily: "Poppins-Regular",
+    fontSize: getFontSize(moderateScale(13)),
   },
   transactionRow: {
     flexDirection: "row",
@@ -696,14 +843,20 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: moderateScale(12),
     padding: scale(20),
-    marginHorizontal: scale(4),
     alignItems: "center",
     justifyContent: "center",
+    minHeight: verticalScale(60),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   actionText: {
     color: "white",
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
+    fontSize: getFontSize(moderateScale(14)),
   },
 
   // Updated Sales Summary Styles - Matching Image
@@ -713,6 +866,11 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: moderateScale(12),
     padding: scale(16),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
   },
   salesSummaryHeader: {
     flexDirection: "row",
@@ -726,29 +884,32 @@ const styles = StyleSheet.create({
     gap: scale(12),
     flex: 1,
   },
+  salesSummaryHeaderTextContainer: {
+    flex: 1,
+  },
   dollarIconCircle: {
     width: scale(40),
-    height: verticalScale(40),
+    height: scale(40),
     borderRadius: moderateScale(20),
     backgroundColor: "#F3F4F6",
     justifyContent: "center",
     alignItems: "center",
   },
   salesSummaryHeaderTitle: {
-    fontSize: moderateScale(16),
+    fontSize: getFontSize(moderateScale(16)),
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
     color: "#000",
   },
   salesSummaryHeaderSubtitle: {
-    fontSize: moderateScale(11),
+    fontSize: getFontSize(moderateScale(11)),
     fontFamily: "Poppins-Regular",
     color: "#999",
     marginTop: verticalScale(2),
   },
   arrowIconCircle: {
     width: scale(40),
-    height: verticalScale(40),
+    height: scale(40),
     borderRadius: moderateScale(20),
     backgroundColor: "#1C1C1C",
     justifyContent: "center",
@@ -767,17 +928,17 @@ const styles = StyleSheet.create({
   },
   productImageContainer: {
     width: scale(48),
-    height: verticalScale(48),
+    height: scale(48),
   },
   productThumbnail: {
     width: scale(48),
-    height: verticalScale(48),
+    height: scale(48),
     borderRadius: moderateScale(8),
     backgroundColor: "#F3F4F6",
   },
   productPlaceholder: {
     width: scale(48),
-    height: verticalScale(48),
+    height: scale(48),
     borderRadius: moderateScale(8),
     backgroundColor: "#F3F4F6",
     justifyContent: "center",
@@ -787,39 +948,40 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   salesSummaryProductName: {
-    fontSize: moderateScale(14),
+    fontSize: getFontSize(moderateScale(14)),
     fontWeight: "500",
     fontFamily: "Poppins-Regular",
     color: "#000",
     marginBottom: verticalScale(4),
   },
   salesSummaryDate: {
-    fontSize: moderateScale(11),
+    fontSize: getFontSize(moderateScale(11)),
     color: "#999",
     fontFamily: "Poppins-Regular",
   },
   salesSummaryRight: {
     alignItems: "flex-end",
+    minWidth: scale(80),
   },
   salesSummaryAmount: {
-    fontSize: moderateScale(16),
+    fontSize: getFontSize(moderateScale(16)),
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
     color: "#000",
     marginBottom: verticalScale(2),
   },
   salesSummaryLabel: {
-    fontSize: moderateScale(11),
+    fontSize: getFontSize(moderateScale(11)),
     color: "#999",
     fontFamily: "Poppins-Regular",
   },
   viewAllLink: {
     color: "#0056D2",
-    fontSize: moderateScale(14),
+    fontSize: getFontSize(moderateScale(14)),
     fontFamily: "Poppins-Regular",
   },
 
-  // Notification Styles (unchanged)
+  // Notification Styles
   notificationSection: {
     marginTop: verticalScale(20),
     marginHorizontal: scale(20),
@@ -827,6 +989,11 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(12),
     padding: scale(16),
     marginBottom: verticalScale(40),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
   },
   notificationHeader: {
     flexDirection: "row",
@@ -835,7 +1002,7 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(16),
   },
   notificationHeaderTitle: {
-    fontSize: moderateScale(18),
+    fontSize: getFontSize(moderateScale(18)),
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
   },
@@ -855,7 +1022,7 @@ const styles = StyleSheet.create({
   },
   notifIconBox: {
     width: scale(48),
-    height: verticalScale(48),
+    height: scale(48),
     borderRadius: moderateScale(8),
     backgroundColor: "#E3F2FD",
     justifyContent: "center",
@@ -871,43 +1038,44 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(4),
   },
   notifTitle: {
-    fontSize: moderateScale(14),
+    fontSize: getFontSize(moderateScale(14)),
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
     color: "#333",
     flex: 1,
   },
   notifTime: {
-    fontSize: moderateScale(11),
+    fontSize: getFontSize(moderateScale(11)),
     color: "#999",
     fontFamily: "Poppins-Regular",
-    marginLeft: 8,
+    marginLeft: scale(8),
   },
   notifMessage: {
-    fontSize: moderateScale(13),
+    fontSize: getFontSize(moderateScale(13)),
     color: "#666",
     fontFamily: "Poppins-Regular",
     marginBottom: verticalScale(4),
   },
   notifActions: {
-    fontSize: moderateScale(12),
+    fontSize: getFontSize(moderateScale(12)),
     color: "#1155CC",
     fontFamily: "Poppins-Regular",
     marginTop: verticalScale(4),
   },
   unreadDot: {
     width: scale(8),
-    height: verticalScale(8),
+    height: scale(8),
     borderRadius: moderateScale(4),
     backgroundColor: "#FACC15",
     marginTop: verticalScale(8),
-    marginLeft: 8,
+    marginLeft: scale(8),
   },
   emptyText: {
     textAlign: "center",
     color: "#777",
     marginTop: verticalScale(10),
     fontFamily: "Poppins-Regular",
+    fontSize: getFontSize(moderateScale(14)),
   },
 });
 

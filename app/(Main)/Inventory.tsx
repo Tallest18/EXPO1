@@ -26,13 +26,44 @@ import {
 import AddProductFlow from "../(Routes)/AddProductFlow";
 import { auth, db } from "../config/firebaseConfig";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
-// Responsive sizing functions
-const scale = (size: number) => (SCREEN_WIDTH / 375) * size;
-const verticalScale = (size: number) => (SCREEN_HEIGHT / 667) * size;
-const moderateScale = (size: number, factor = 0.5) =>
-  size + (scale(size) - size) * factor;
+// Device detection
+const isSmallDevice = width < 375;
+const isMediumDevice = width >= 375 && width < 414;
+const isTablet = width >= 768;
+
+// Enhanced responsive sizing
+const scale = (size: number) => {
+  const baseWidth = 375;
+  const ratio = width / baseWidth;
+
+  if (isTablet) {
+    return size * Math.min(ratio, 1.5);
+  }
+  return size * ratio;
+};
+
+const verticalScale = (size: number) => {
+  const baseHeight = 812;
+  const ratio = height / baseHeight;
+
+  if (isTablet) {
+    return size * Math.min(ratio, 1.5);
+  }
+  return size * ratio;
+};
+
+const moderateScale = (size: number, factor = 0.5) => {
+  return size + (scale(size) - size) * factor;
+};
+
+// Responsive font sizes
+const getFontSize = (base: number) => {
+  if (isSmallDevice) return base * 0.9;
+  if (isTablet) return base * 1.2;
+  return base;
+};
 
 // Types
 interface Product {
@@ -268,6 +299,7 @@ const Inventory: React.FC = () => {
                 activeFilter === filter.key && styles.activeFilterTab,
               ]}
               onPress={() => setActiveFilter(filter.key as FilterType)}
+              activeOpacity={0.7}
             >
               <Text
                 style={[
@@ -295,10 +327,13 @@ const Inventory: React.FC = () => {
             params: { productId: product.id },
           });
         }}
+        activeOpacity={0.8}
       >
         <View style={styles.cardContent}>
           {/* Product Name */}
-          <Text style={styles.productName}>{product.name}</Text>
+          <Text style={styles.productName} numberOfLines={2}>
+            {product.name}
+          </Text>
 
           {/* Image and Info Boxes Row */}
           <View style={styles.imageAndInfoRow}>
@@ -315,7 +350,11 @@ const Inventory: React.FC = () => {
               {/* Unit Price Box - Full Width */}
               <View style={styles.unitPriceBox}>
                 <Text style={styles.boxLabel}>Unit Price</Text>
-                <Text style={styles.largePrice}>
+                <Text
+                  style={styles.largePrice}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   ₦{product.sellingPrice.toLocaleString()}
                 </Text>
               </View>
@@ -324,13 +363,17 @@ const Inventory: React.FC = () => {
               <View style={styles.bottomBoxesRow}>
                 <View style={styles.smallInfoBox}>
                   <Text style={styles.boxLabel}>In Stock</Text>
-                  <Text style={styles.infoBoxValue}>
+                  <Text style={styles.infoBoxValue} numberOfLines={1}>
                     {product.unitsInStock}
                   </Text>
                 </View>
                 <View style={styles.smallInfoBox}>
                   <Text style={styles.boxLabel}>Cost Price</Text>
-                  <Text style={styles.infoBoxValue}>
+                  <Text
+                    style={styles.infoBoxValue}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
                     ₦{product.costPrice.toLocaleString()}
                   </Text>
                 </View>
@@ -352,6 +395,7 @@ const Inventory: React.FC = () => {
       <TouchableOpacity
         style={styles.addFirstProductButton}
         onPress={() => setShowAddProduct(true)}
+        activeOpacity={0.8}
       >
         <Text style={styles.addFirstProductButtonText}>
           Add Your First Product
@@ -367,13 +411,17 @@ const Inventory: React.FC = () => {
       <Text style={styles.emptyDescription}>
         Try adjusting your search or filter criteria
       </Text>
-      <TouchableOpacity style={styles.clearSearchButton} onPress={clearSearch}>
+      <TouchableOpacity
+        style={styles.clearSearchButton}
+        onPress={clearSearch}
+        activeOpacity={0.8}
+      >
         <Text style={styles.clearSearchText}>Clear Search</Text>
       </TouchableOpacity>
     </View>
   );
 
-  if (loading) {
+  if (loading || !fontsLoaded) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -392,6 +440,7 @@ const Inventory: React.FC = () => {
         <TouchableOpacity
           style={styles.newProductButton}
           onPress={() => setShowAddProduct(true)}
+          activeOpacity={0.8}
         >
           <Text style={styles.newProductButtonText}>New Product</Text>
           <Feather name="plus" size={moderateScale(16)} color="white" />
@@ -413,7 +462,7 @@ const Inventory: React.FC = () => {
             autoCorrect={false}
           />
         </View>
-        <TouchableOpacity style={styles.filterButton}>
+        <TouchableOpacity style={styles.filterButton} activeOpacity={0.7}>
           <Feather name="sliders" size={moderateScale(20)} color="#333" />
         </TouchableOpacity>
       </View>
@@ -425,6 +474,7 @@ const Inventory: React.FC = () => {
       <ScrollView
         style={styles.productsContainer}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.productsGrid}>
           {products.length === 0 && !loading
@@ -455,10 +505,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#E7EEFA",
   },
   loadingText: {
     marginTop: verticalScale(10),
-    fontSize: moderateScale(16),
+    fontSize: getFontSize(moderateScale(16)),
     color: "#666",
     fontFamily: "Poppins-Regular",
   },
@@ -471,7 +522,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E7EEFA",
   },
   headerTitle: {
-    fontSize: moderateScale(28),
+    fontSize: getFontSize(moderateScale(28)),
     fontWeight: "700",
     color: "#000",
     fontFamily: "Poppins-Bold",
@@ -484,10 +535,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: scale(6),
+    shadowColor: "#1155CC",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   newProductButtonText: {
     color: "white",
-    fontSize: moderateScale(14),
+    fontSize: getFontSize(moderateScale(14)),
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
   },
@@ -506,16 +562,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: moderateScale(10),
     paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(10),
+    paddingVertical: verticalScale(isSmallDevice ? 8 : 10),
     gap: scale(8),
     borderWidth: 1,
     borderColor: "#E0E0E0",
   },
   searchInput: {
     flex: 1,
-    fontSize: moderateScale(15),
+    fontSize: getFontSize(moderateScale(15)),
     fontFamily: "Poppins-Regular",
     color: "#000",
+    minHeight: verticalScale(20),
   },
   filterButton: {
     backgroundColor: "#FFFFFF",
@@ -534,17 +591,20 @@ const styles = StyleSheet.create({
     gap: scale(8),
   },
   filterTab: {
-    paddingHorizontal: scale(16),
+    paddingHorizontal: scale(isSmallDevice ? 12 : 16),
     paddingVertical: verticalScale(8),
     borderRadius: moderateScale(10),
     marginRight: scale(8),
     backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
   },
   activeFilterTab: {
     backgroundColor: "#1155CC",
+    borderColor: "#1155CC",
   },
   filterText: {
-    fontSize: moderateScale(14),
+    fontSize: getFontSize(moderateScale(14)),
     fontWeight: "500",
     color: "#1C1C1C",
     fontFamily: "Poppins-Regular",
@@ -558,6 +618,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#E7EEFA",
   },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: verticalScale(20),
+  },
   productsGrid: {
     paddingHorizontal: scale(20),
     paddingTop: verticalScale(8),
@@ -567,16 +631,22 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(12),
     marginBottom: verticalScale(16),
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   cardContent: {
     padding: scale(16),
   },
   productName: {
-    fontSize: moderateScale(20),
+    fontSize: getFontSize(moderateScale(20)),
     fontWeight: "600",
     color: "#000",
     fontFamily: "Poppins-Bold",
     marginBottom: verticalScale(12),
+    minHeight: verticalScale(isSmallDevice ? 40 : 50),
   },
   imageAndInfoRow: {
     flexDirection: "row",
@@ -599,15 +669,17 @@ const styles = StyleSheet.create({
     padding: scale(8),
     borderWidth: 1,
     borderColor: "#B5CAEF",
+    minHeight: verticalScale(isSmallDevice ? 45 : 50),
+    justifyContent: "center",
   },
   boxLabel: {
-    fontSize: moderateScale(11),
+    fontSize: getFontSize(moderateScale(11)),
     color: "#D2D2D2",
     marginBottom: verticalScale(4),
     fontFamily: "Poppins-Regular",
   },
   largePrice: {
-    fontSize: moderateScale(24),
+    fontSize: getFontSize(moderateScale(isSmallDevice ? 20 : 24)),
     fontWeight: "700",
     color: "#000",
     fontFamily: "Poppins-Bold",
@@ -620,12 +692,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderRadius: moderateScale(8),
-    padding: scale(12),
+    padding: scale(isSmallDevice ? 8 : 12),
     borderWidth: 1,
     borderColor: "#B5CAEF",
+    minHeight: verticalScale(isSmallDevice ? 45 : 50),
+    justifyContent: "center",
   },
   infoBoxValue: {
-    fontSize: moderateScale(18),
+    fontSize: getFontSize(moderateScale(isSmallDevice ? 14 : 18)),
     fontWeight: "700",
     color: "#000",
     fontFamily: "Poppins-Bold",
@@ -635,9 +709,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: verticalScale(80),
+    paddingHorizontal: scale(20),
   },
   emptyTitle: {
-    fontSize: moderateScale(20),
+    fontSize: getFontSize(moderateScale(20)),
     fontWeight: "600",
     color: "#666",
     marginTop: verticalScale(16),
@@ -645,22 +720,28 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins-Bold",
   },
   emptyDescription: {
-    fontSize: moderateScale(14),
+    fontSize: getFontSize(moderateScale(14)),
     color: "#999",
     textAlign: "center",
     marginBottom: verticalScale(24),
-    paddingHorizontal: scale(40),
+    paddingHorizontal: scale(isSmallDevice ? 20 : 40),
     fontFamily: "Poppins-Regular",
+    lineHeight: getFontSize(moderateScale(20)),
   },
   addFirstProductButton: {
     backgroundColor: "#1155CC",
     borderRadius: moderateScale(12),
     paddingHorizontal: scale(24),
     paddingVertical: verticalScale(12),
+    shadowColor: "#1155CC",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   addFirstProductButtonText: {
     color: "#FFFFFF",
-    fontSize: moderateScale(16),
+    fontSize: getFontSize(moderateScale(16)),
     fontWeight: "600",
     fontFamily: "Poppins-Bold",
   },
@@ -674,7 +755,7 @@ const styles = StyleSheet.create({
   },
   clearSearchText: {
     color: "#666",
-    fontSize: moderateScale(16),
+    fontSize: getFontSize(moderateScale(16)),
     fontWeight: "500",
     fontFamily: "Poppins-Regular",
   },
