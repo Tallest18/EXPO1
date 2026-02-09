@@ -130,10 +130,13 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={0}
+    >
       <StatusBar barStyle="light-content" backgroundColor="#2046AE" />
 
-      {/* ✅ FIX: Added firebaseConfig={config} */}
       <FirebaseRecaptchaVerifierModal
         ref={recaptchaVerifier}
         firebaseConfig={config}
@@ -149,52 +152,46 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         </Text>
       </View>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
-      >
-        <View style={styles.bottomSection}>
-          <View style={styles.handleBar} />
+      <View style={styles.bottomSection}>
+        <View style={styles.handleBar} />
 
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <TextInput
+            style={[styles.input, loading && styles.inputDisabled]}
+            placeholder="Phone number (e.g., +234XXXXXXXXX)"
+            placeholderTextColor="#9CA3AF"
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+            keyboardType="phone-pad"
+            maxLength={17}
+            autoComplete="tel"
+            textContentType="telephoneNumber"
+            editable={!loading}
+            autoFocus
+          />
+
+          <Text style={styles.infoText}>
+            We&apos;ll send you a one-time password (OTP) to verify your number.
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.continueButton, loading && styles.disabledButton]}
+            onPress={handleSendOTP}
+            disabled={loading || !phoneNumber.trim()}
           >
-            <TextInput
-              style={[styles.input, loading && styles.inputDisabled]}
-              placeholder="Phone number (e.g., +234XXXXXXXXX)"
-              placeholderTextColor="#9CA3AF"
-              value={phoneNumber}
-              onChangeText={setPhoneNumber}
-              keyboardType="phone-pad"
-              maxLength={17}
-              autoComplete="tel"
-              textContentType="telephoneNumber"
-              editable={!loading}
-              autoFocus
-            />
-
-            <Text style={styles.infoText}>
-              We&apos;ll send you a one-time password (OTP) to verify your
-              number.
-            </Text>
-
-            <TouchableOpacity
-              style={[styles.continueButton, loading && styles.disabledButton]}
-              onPress={handleSendOTP}
-              disabled={loading || !phoneNumber.trim()}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text style={styles.continueButtonText}>Send OTP</Text>
-              )}
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
-    </View>
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.continueButtonText}>Send OTP</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    </KeyboardAvoidingView>
   );
 };
 

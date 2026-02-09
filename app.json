@@ -51,7 +51,8 @@
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ],
-      "newArchEnabled": false
+      "newArchEnabled": false,
+      "softwareKeyboardLayoutMode": "pan"
     },
     "web": {
       "output": "static",
@@ -93,7 +94,8 @@
             "enableProguardInReleaseBuilds": true,
             "extraProguardRules": "-keep class com.google.android.gms.** { *; } \n-keep class com.google.firebase.** { *; }",
             "enableMinifyInReleaseBuilds": true,
-            "newArchEnabled": false
+            "newArchEnabled": false,
+            "usesCleartextTraffic": true
           }
         }
       ],

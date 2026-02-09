@@ -16,6 +16,7 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -196,10 +197,13 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={0}
+    >
       <StatusBar barStyle="light-content" backgroundColor="#2046AE" />
 
-      {/* ✅ FIX: add firebaseConfig */}
       <FirebaseRecaptchaVerifierModal
         ref={recaptchaVerifier}
         firebaseConfig={config}
@@ -209,103 +213,108 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
 
       <View style={styles.topSection} />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.bottomSection}
-      >
+      <View style={styles.bottomSection}>
         <View style={styles.handleBar} />
 
-        <View style={styles.formContainer}>
-          <Text style={styles.title}>Confirmation Code</Text>
-          <Text style={styles.subtitle}>
-            Enter the 6-digit code we sent to {phoneNumber}
-          </Text>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.formContainer}>
+            <Text style={styles.title}>Confirmation Code</Text>
+            <Text style={styles.subtitle}>
+              Enter the 6-digit code we sent to {phoneNumber}
+            </Text>
 
-          <View style={styles.codeContainer}>
-            {code.map((digit, index) => (
-              <TextInput
-                key={index}
-                ref={(ref) => {
-                  if (ref) inputRefs.current[index] = ref;
-                }}
-                style={[
-                  styles.codeInput,
-                  digit ? styles.codeInputFilled : null,
-                  loading && styles.codeInputDisabled,
-                ]}
-                value={digit}
-                onChangeText={(value) => handleCodeChange(value, index)}
-                onKeyPress={({ nativeEvent: { key } }) =>
-                  handleKeyPress(key, index)
-                }
-                keyboardType="numeric"
-                maxLength={1}
-                selectTextOnFocus
-                autoFocus={index === 0}
-                editable={!loading}
-                returnKeyType="next"
-              />
-            ))}
-          </View>
+            <View style={styles.codeContainer}>
+              {code.map((digit, index) => (
+                <TextInput
+                  key={index}
+                  ref={(ref) => {
+                    if (ref) inputRefs.current[index] = ref;
+                  }}
+                  style={[
+                    styles.codeInput,
+                    digit ? styles.codeInputFilled : null,
+                    loading && styles.codeInputDisabled,
+                  ]}
+                  value={digit}
+                  onChangeText={(value) => handleCodeChange(value, index)}
+                  onKeyPress={({ nativeEvent: { key } }) =>
+                    handleKeyPress(key, index)
+                  }
+                  keyboardType="numeric"
+                  maxLength={1}
+                  selectTextOnFocus
+                  autoFocus={index === 0}
+                  editable={!loading}
+                  returnKeyType="next"
+                />
+              ))}
+            </View>
 
-          <TouchableOpacity
-            style={[
-              styles.verifyButton,
-              (code.some((d) => d === "") || loading) && styles.disabled,
-            ]}
-            onPress={() => verifyCode(code.join(""))}
-            disabled={code.some((d) => d === "") || loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Text style={styles.verifyText}>Verify</Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.actionsContainer}>
             <TouchableOpacity
               style={[
-                styles.resendContainer,
-                (resendTimer > 0 || resendLoading) && styles.disabled,
+                styles.verifyButton,
+                (code.some((d) => d === "") || loading) && styles.disabled,
               ]}
-              onPress={resendCode}
-              disabled={resendTimer > 0 || resendLoading}
+              onPress={() => verifyCode(code.join(""))}
+              disabled={code.some((d) => d === "") || loading}
             >
-              <Text
-                style={[
-                  styles.resendText,
-                  (resendTimer > 0 || resendLoading) && styles.disabledText,
-                ]}
-              >
-                {resendLoading
-                  ? "Sending..."
-                  : resendTimer > 0
-                    ? `Didn't get the code? Resend in ${resendTimer}s`
-                    : "Didn't get the code? Resend now"}
-              </Text>
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.verifyText}>Verify</Text>
+              )}
             </TouchableOpacity>
+
+            <View style={styles.actionsContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.resendContainer,
+                  (resendTimer > 0 || resendLoading) && styles.disabled,
+                ]}
+                onPress={resendCode}
+                disabled={resendTimer > 0 || resendLoading}
+              >
+                <Text
+                  style={[
+                    styles.resendText,
+                    (resendTimer > 0 || resendLoading) && styles.disabledText,
+                  ]}
+                >
+                  {resendLoading
+                    ? "Sending..."
+                    : resendTimer > 0
+                      ? `Didn't get the code? Resend in ${resendTimer}s`
+                      : "Didn't get the code? Resend now"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={clearAllInputs}
+                disabled={loading}
+              >
+                <Text
+                  style={[styles.clearText, loading && styles.disabledText]}
+                >
+                  Clear all
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
-              style={styles.clearButton}
-              onPress={clearAllInputs}
+              style={[styles.backButton, loading && styles.disabled]}
+              onPress={handleGoBack}
               disabled={loading}
             >
-              <Text style={[styles.clearText, loading && styles.disabledText]}>
-                Clear all
-              </Text>
+              <Ionicons name="arrow-back" size={20} color="#1155CC" />
+              <Text style={styles.backText}>Back</Text>
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity
-            style={[styles.backButton, loading && styles.disabled]}
-            onPress={handleGoBack}
-            disabled={loading}
-          >
-            <Ionicons name="arrow-back" size={20} color="#1155CC" />
-            <Text style={styles.backText}>Back</Text>
-          </TouchableOpacity>
-        </View>
+        </ScrollView>
 
         {loading && (
           <View style={styles.loadingOverlay}>
@@ -313,8 +322,8 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
             <Text style={styles.loadingText}>Verifying...</Text>
           </View>
         )}
-      </KeyboardAvoidingView>
-    </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -327,6 +336,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingTop: verticalScale(8),
     minHeight: "60%",
+    flex: 1,
   },
   handleBar: {
     width: scale(40),
@@ -335,6 +345,9 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(2),
     alignSelf: "center",
     marginBottom: verticalScale(32),
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   formContainer: {
     paddingHorizontal: scale(24),

@@ -41,13 +41,15 @@ const SettingItem: React.FC<SettingItemProps> = ({
   color = "#6366f1",
 }) => {
   return (
-    <TouchableOpacity 
-      style={itemStyles.container} 
+    <TouchableOpacity
+      style={itemStyles.container}
       onPress={onPress}
       activeOpacity={0.7}
     >
       <View style={itemStyles.leftContent}>
-        <View style={[itemStyles.iconContainer, { backgroundColor: `${color}15` }]}>
+        <View
+          style={[itemStyles.iconContainer, { backgroundColor: `${color}15` }]}
+        >
           <Ionicons name={icon} size={22} color={color} />
         </View>
         <Text style={itemStyles.text}>{text}</Text>
@@ -147,8 +149,8 @@ const SettingsScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" />
-      
-      <ScrollView 
+
+      <ScrollView
         style={styles.container}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -171,7 +173,11 @@ const SettingsScreen = () => {
                 colors={["#fff", "#f3f4f6"]}
                 style={styles.avatarGradient}
               >
-                <Ionicons name="person" size={48} color={themeColor || "#6366f1"} />
+                <Ionicons
+                  name="person"
+                  size={48}
+                  color={themeColor || "#6366f1"}
+                />
               </LinearGradient>
             </View>
             <Text style={styles.name}>
@@ -211,11 +217,20 @@ const SettingsScreen = () => {
               onPress={() => router.push("../../ThemeSelectionScreen" as any)}
               color="#ec4899"
             />
-            
+
             <View style={[itemStyles.container, { marginBottom: 12 }]}>
               <View style={itemStyles.leftContent}>
-                <View style={[itemStyles.iconContainer, { backgroundColor: "#f59e0b15" }]}>
-                  <Ionicons name={isDarkMode ? "moon" : "sunny"} size={22} color="#f59e0b" />
+                <View
+                  style={[
+                    itemStyles.iconContainer,
+                    { backgroundColor: "#f59e0b15" },
+                  ]}
+                >
+                  <Ionicons
+                    name={isDarkMode ? "moon" : "sunny"}
+                    size={22}
+                    color="#f59e0b"
+                  />
                 </View>
                 <Text style={itemStyles.text}>Dark Mode</Text>
               </View>
@@ -262,7 +277,7 @@ const SettingsScreen = () => {
 
           {/* Logout Section */}
           <View style={styles.section}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.logoutButton}
               onPress={handleLogout}
               activeOpacity={0.7}
@@ -295,11 +310,6 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
     paddingBottom: 40,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
   },
   header: {
     paddingHorizontal: 24,
@@ -324,11 +334,6 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
   },
   name: {
     fontSize: 24,
@@ -368,11 +373,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: "#fee2e2",
-    shadowColor: "#ef4444",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
   },
   logoutText: {
     fontSize: 16,

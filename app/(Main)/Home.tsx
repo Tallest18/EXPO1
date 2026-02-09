@@ -723,7 +723,7 @@ const styles = StyleSheet.create({
   },
   hello: {
     fontSize: getFontSize(moderateScale(20)),
-    color: "#555",
+    color: "#1C1C1C",
     fontFamily: "Poppins-Regular",
   },
   username: {
@@ -731,6 +731,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
     maxWidth: scale(isTablet ? 300 : 200),
+    color: "#1C1C1C",
   },
   headerIcons: {
     flexDirection: "row",
@@ -751,11 +752,6 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(12),
     padding: scale(16),
     margin: scale(20),
-    shadowColor: "#1155CC",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
   salesTop: {
     flexDirection: "row",
@@ -816,11 +812,6 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: moderateScale(12),
     padding: scale(10),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   infoValue: {
     fontSize: getFontSize(moderateScale(20)),
@@ -846,11 +837,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minHeight: verticalScale(60),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
   },
   actionText: {
     color: "white",
@@ -866,11 +852,6 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: moderateScale(12),
     padding: scale(16),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
   },
   salesSummaryHeader: {
     flexDirection: "row",
@@ -989,11 +970,6 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(12),
     padding: scale(16),
     marginBottom: verticalScale(40),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
   },
   notificationHeader: {
     flexDirection: "row",
