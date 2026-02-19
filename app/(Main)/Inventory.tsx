@@ -30,40 +30,34 @@ const { width, height } = Dimensions.get("window");
 
 // Device detection
 const isSmallDevice = width < 375;
-const isMediumDevice = width >= 375 && width < 414;
 const isTablet = width >= 768;
 
-// Enhanced responsive sizing
+// Responsive sizing
 const scale = (size: number) => {
   const baseWidth = 375;
   const ratio = width / baseWidth;
-
-  if (isTablet) {
-    return size * Math.min(ratio, 1.5);
-  }
+  if (isTablet) return size * Math.min(ratio, 1.4);
   return size * ratio;
 };
 
 const verticalScale = (size: number) => {
   const baseHeight = 812;
   const ratio = height / baseHeight;
-
-  if (isTablet) {
-    return size * Math.min(ratio, 1.5);
-  }
+  if (isTablet) return size * Math.min(ratio, 1.4);
   return size * ratio;
 };
 
-const moderateScale = (size: number, factor = 0.5) => {
-  return size + (scale(size) - size) * factor;
-};
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
-// Responsive font sizes
 const getFontSize = (base: number) => {
-  if (isSmallDevice) return base * 0.9;
-  if (isTablet) return base * 1.2;
+  if (isSmallDevice) return base * 0.88;
+  if (isTablet) return base * 1.15;
   return base;
 };
+
+// Horizontal padding that scales safely
+const H_PAD = isTablet ? scale(32) : isSmallDevice ? scale(14) : scale(20);
 
 // Types
 interface Product {
@@ -117,7 +111,9 @@ const Inventory: React.FC = () => {
 
   const [fontsLoaded] = useFonts({
     "Poppins-Regular": require("../../assets/fonts/Poppins-Regular.ttf"),
+    "Poppins-Medium": require("../../assets/fonts/Poppins-Medium.ttf"),
     "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
+    "Poppins-SemiBold": require("../../assets/fonts/Poppins-SemiBold.ttf"),
     "Poppins-Light": require("../../assets/fonts/Poppins-Light.ttf"),
   });
 
@@ -131,7 +127,6 @@ const Inventory: React.FC = () => {
   useEffect(() => {
     const currentUser = auth.currentUser;
     if (!currentUser) {
-      console.log("ERROR: No authenticated user found");
       setLoading(false);
       return;
     }
@@ -146,30 +141,20 @@ const Inventory: React.FC = () => {
       (snapshot) => {
         const productsData: Product[] = [];
         snapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
-          const data = doc.data();
-          productsData.push({
-            id: doc.id,
-            ...data,
-          } as Product);
+          productsData.push({ id: doc.id, ...doc.data() } as Product);
         });
 
-        productsData.sort((a, b) => {
-          const dateA = new Date(a.dateAdded).getTime();
-          const dateB = new Date(b.dateAdded).getTime();
-          return dateB - dateA;
-        });
+        productsData.sort(
+          (a, b) =>
+            new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime(),
+        );
 
         setProducts(productsData);
         calculateFilterCounts(productsData);
         setLoading(false);
       },
       (error) => {
-        console.error("Firestore error:", error);
-        Alert.alert(
-          "Error Loading Products",
-          `There was an issue loading your products: ${error.message}`,
-          [{ text: "OK" }],
-        );
+        Alert.alert("Error Loading Products", error.message, [{ text: "OK" }]);
         setLoading(false);
       },
     );
@@ -180,7 +165,6 @@ const Inventory: React.FC = () => {
   const calculateFilterCounts = (productsData: Product[]): void => {
     const now = new Date();
     const tenDaysFromNow = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
-
     const counts: FilterCounts = {
       all: productsData.length,
       inStock: 0,
@@ -189,28 +173,21 @@ const Inventory: React.FC = () => {
     };
 
     productsData.forEach((product) => {
-      if (product.unitsInStock > 0) {
-        counts.inStock++;
-      } else {
-        counts.outOfStock++;
-      }
+      if (product.unitsInStock > 0) counts.inStock++;
+      else counts.outOfStock++;
 
       if (product.expiryDate) {
         const expiryDate = new Date(product.expiryDate);
-        if (expiryDate <= tenDaysFromNow && expiryDate > now) {
-          counts.expiring++;
-        }
+        if (expiryDate <= tenDaysFromNow && expiryDate > now) counts.expiring++;
       }
     });
 
     setFilterCounts(counts);
   };
 
-  const performSearch = (query: string): Product[] => {
-    if (!query.trim()) {
-      return products;
-    }
-    const searchTerm = query.toLowerCase().trim();
+  const performSearch = (q: string): Product[] => {
+    if (!q.trim()) return products;
+    const searchTerm = q.toLowerCase().trim();
     return products.filter((product) => {
       const name = product.name?.toLowerCase() || "";
       const category = product.category?.toLowerCase() || "";
@@ -226,62 +203,44 @@ const Inventory: React.FC = () => {
   };
 
   useEffect(() => {
-    let filtered = [...products];
-
-    if (searchQuery.trim()) {
-      filtered = performSearch(searchQuery);
-    }
+    let filtered = searchQuery.trim()
+      ? performSearch(searchQuery)
+      : [...products];
 
     if (activeFilter === "inStock") {
-      filtered = filtered.filter((product) => product.unitsInStock > 0);
+      filtered = filtered.filter((p) => p.unitsInStock > 0);
     } else if (activeFilter === "outOfStock") {
-      filtered = filtered.filter((product) => product.unitsInStock === 0);
+      filtered = filtered.filter((p) => p.unitsInStock === 0);
     } else if (activeFilter === "expiring") {
       const now = new Date();
       const tenDaysFromNow = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
-      filtered = filtered.filter((product) => {
-        if (!product.expiryDate) return false;
-        const expiryDate = new Date(product.expiryDate);
+      filtered = filtered.filter((p) => {
+        if (!p.expiryDate) return false;
+        const expiryDate = new Date(p.expiryDate);
         return expiryDate <= tenDaysFromNow && expiryDate > now;
       });
     }
+
     setFilteredProducts(filtered);
   }, [products, activeFilter, searchQuery]);
 
-  const handleSearchChange = (text: string): void => {
-    setSearchQuery(text);
-  };
+  const handleSearchChange = (text: string): void => setSearchQuery(text);
+  const clearSearch = (): void => setSearchQuery("");
 
-  const clearSearch = (): void => {
-    setSearchQuery("");
-  };
-
-  const handleAddProduct = async (productData: Product): Promise<void> => {
+  const handleAddProduct = async (): Promise<void> => {
     Alert.alert("Success", "Product added to inventory!");
   };
 
   const renderFilterTabs = (): React.ReactElement => {
     const filters: FilterItem[] = [
-      {
-        key: "all",
-        label: "All Products",
-        count: filterCounts.all,
-      },
-      {
-        key: "inStock",
-        label: "In Stock",
-        count: filterCounts.inStock,
-      },
+      { key: "all", label: "All Products", count: filterCounts.all },
+      { key: "inStock", label: "In Stock", count: filterCounts.inStock },
       {
         key: "outOfStock",
         label: "Out of Stock",
         count: filterCounts.outOfStock,
       },
-      {
-        key: "expiring",
-        label: "Expiring",
-        count: filterCounts.expiring,
-      },
+      { key: "expiring", label: "Expiring", count: filterCounts.expiring },
     ];
 
     return (
@@ -316,26 +275,33 @@ const Inventory: React.FC = () => {
     );
   };
 
+  // Tablet: 2 columns, phone: 1 column
+  const cardWidth = isTablet ? (width - H_PAD * 2 - scale(16)) / 2 : "100%";
+
   const renderProductCard = (product: Product): React.ReactElement => {
+    const imageSize = isTablet
+      ? scale(110)
+      : isSmallDevice
+        ? scale(88)
+        : scale(100);
+
     return (
       <TouchableOpacity
         key={product.id}
-        style={styles.productCard}
-        onPress={() => {
+        style={[styles.productCard, { width: cardWidth as any }]}
+        onPress={() =>
           router.push({
             pathname: "/(Routes)/ProductDetails" as any,
             params: { productId: product.id },
-          });
-        }}
+          })
+        }
         activeOpacity={0.8}
       >
         <View style={styles.cardContent}>
-          {/* Product Name */}
           <Text style={styles.productName} numberOfLines={2}>
             {product.name}
           </Text>
 
-          {/* Image and Info Boxes Row */}
           <View style={styles.imageAndInfoRow}>
             <Image
               source={
@@ -343,11 +309,13 @@ const Inventory: React.FC = () => {
                   ? { uri: product.image.uri }
                   : { uri: "https://via.placeholder.com/100" }
               }
-              style={styles.productImage}
+              style={[
+                styles.productImage,
+                { width: imageSize, height: imageSize },
+              ]}
             />
 
             <View style={styles.infoBoxesContainer}>
-              {/* Unit Price Box - Full Width */}
               <View style={styles.unitPriceBox}>
                 <Text style={styles.boxLabel}>Unit Price</Text>
                 <Text
@@ -359,7 +327,6 @@ const Inventory: React.FC = () => {
                 </Text>
               </View>
 
-              {/* Stock and Cost Price Boxes - Side by Side */}
               <View style={styles.bottomBoxesRow}>
                 <View style={styles.smallInfoBox}>
                   <Text style={styles.boxLabel}>In Stock</Text>
@@ -436,7 +403,9 @@ const Inventory: React.FC = () => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Inventory</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>
+          Inventory
+        </Text>
         <TouchableOpacity
           style={styles.newProductButton}
           onPress={() => setShowAddProduct(true)}
@@ -513,38 +482,53 @@ const styles = StyleSheet.create({
     color: "#666",
     fontFamily: "Poppins-Regular",
   },
+
+  // ── Header ────────────────────────────────────────────────────────────────
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: scale(20),
-    paddingVertical: verticalScale(16),
+    // Safe horizontal padding that never hugs the edge on any device
+    paddingHorizontal: H_PAD,
+    paddingTop: verticalScale(isTablet ? 20 : 14),
+    paddingBottom: verticalScale(isTablet ? 16 : 12),
     backgroundColor: "#E7EEFA",
   },
   headerTitle: {
-    fontSize: getFontSize(moderateScale(28)),
+    // Capped so it never overflows on small screens beside the button
+    fontSize: getFontSize(
+      moderateScale(isSmallDevice ? 22 : isTablet ? 32 : 26),
+    ),
     fontWeight: "700",
     color: "#000",
     fontFamily: "Poppins-Bold",
+    // Flex shrink so the button is never pushed off screen
+    flexShrink: 1,
+    marginRight: scale(10),
   },
   newProductButton: {
     backgroundColor: "#1155CC",
     borderRadius: moderateScale(8),
-    paddingHorizontal: scale(16),
-    paddingVertical: verticalScale(10),
+    // Horizontal padding scales with device width
+    paddingHorizontal: isSmallDevice ? scale(10) : scale(16),
+    paddingVertical: verticalScale(isSmallDevice ? 8 : 10),
     flexDirection: "row",
     alignItems: "center",
     gap: scale(6),
+    // Don't let button shrink — it must always be readable
+    flexShrink: 0,
   },
   newProductButtonText: {
     color: "white",
-    fontSize: getFontSize(moderateScale(14)),
+    fontSize: getFontSize(moderateScale(isSmallDevice ? 12 : 14)),
     fontWeight: "600",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "Poppins-SemiBold",
   },
+
+  // ── Search ────────────────────────────────────────────────────────────────
   searchContainer: {
     flexDirection: "row",
-    paddingHorizontal: scale(20),
+    paddingHorizontal: H_PAD,
     paddingBottom: verticalScale(12),
     backgroundColor: "#E7EEFA",
     alignItems: "center",
@@ -576,13 +560,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E0E0E0",
   },
+
+  // ── Filters ───────────────────────────────────────────────────────────────
   filtersContainer: {
     backgroundColor: "#E7EEFA",
     paddingVertical: verticalScale(8),
     paddingBottom: verticalScale(12),
   },
   filtersContentContainer: {
-    paddingHorizontal: scale(20),
+    paddingHorizontal: H_PAD,
     gap: scale(8),
   },
   filterTab: {
@@ -600,15 +586,15 @@ const styles = StyleSheet.create({
   },
   filterText: {
     fontSize: getFontSize(moderateScale(14)),
-    fontWeight: "500",
     color: "#1C1C1C",
     fontFamily: "Poppins-Regular",
   },
   activeFilterText: {
     color: "#FFFFFF",
-    fontWeight: "600",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "Poppins-SemiBold",
   },
+
+  // ── Products ──────────────────────────────────────────────────────────────
   productsContainer: {
     flex: 1,
     backgroundColor: "#E7EEFA",
@@ -618,8 +604,11 @@ const styles = StyleSheet.create({
     paddingBottom: verticalScale(20),
   },
   productsGrid: {
-    paddingHorizontal: scale(20),
+    paddingHorizontal: H_PAD,
     paddingTop: verticalScale(8),
+    flexDirection: isTablet ? "row" : "column",
+    flexWrap: isTablet ? "wrap" : "nowrap",
+    gap: isTablet ? scale(16) : 0,
   },
   productCard: {
     backgroundColor: "#FFFFFF",
@@ -628,15 +617,15 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   cardContent: {
-    padding: scale(16),
+    padding: scale(isSmallDevice ? 12 : 16),
   },
   productName: {
-    fontSize: getFontSize(moderateScale(20)),
+    fontSize: getFontSize(moderateScale(isSmallDevice ? 17 : 20)),
     fontWeight: "600",
     color: "#000",
     fontFamily: "Poppins-Bold",
     marginBottom: verticalScale(12),
-    minHeight: verticalScale(isSmallDevice ? 40 : 50),
+    minHeight: verticalScale(isSmallDevice ? 38 : 48),
   },
   imageAndInfoRow: {
     flexDirection: "row",
@@ -644,8 +633,6 @@ const styles = StyleSheet.create({
     gap: scale(12),
   },
   productImage: {
-    width: scale(100),
-    height: scale(100),
     borderRadius: moderateScale(8),
     backgroundColor: "#F0F0F0",
   },
@@ -659,7 +646,7 @@ const styles = StyleSheet.create({
     padding: scale(8),
     borderWidth: 1,
     borderColor: "#B5CAEF",
-    minHeight: verticalScale(isSmallDevice ? 45 : 50),
+    minHeight: verticalScale(isSmallDevice ? 42 : 50),
     justifyContent: "center",
   },
   boxLabel: {
@@ -669,7 +656,7 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins-Regular",
   },
   largePrice: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 20 : 24)),
+    fontSize: getFontSize(moderateScale(isSmallDevice ? 18 : 22)),
     fontWeight: "700",
     color: "#000",
     fontFamily: "Poppins-Bold",
@@ -685,21 +672,23 @@ const styles = StyleSheet.create({
     padding: scale(isSmallDevice ? 8 : 12),
     borderWidth: 1,
     borderColor: "#B5CAEF",
-    minHeight: verticalScale(isSmallDevice ? 45 : 50),
+    minHeight: verticalScale(isSmallDevice ? 42 : 50),
     justifyContent: "center",
   },
   infoBoxValue: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 14 : 18)),
+    fontSize: getFontSize(moderateScale(isSmallDevice ? 13 : 17)),
     fontWeight: "700",
     color: "#000",
     fontFamily: "Poppins-Bold",
   },
+
+  // ── Empty States ──────────────────────────────────────────────────────────
   emptyState: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: verticalScale(80),
-    paddingHorizontal: scale(20),
+    paddingHorizontal: H_PAD,
   },
   emptyTitle: {
     fontSize: getFontSize(moderateScale(20)),
@@ -707,16 +696,16 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: verticalScale(16),
     marginBottom: verticalScale(8),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "Poppins-SemiBold",
   },
   emptyDescription: {
     fontSize: getFontSize(moderateScale(14)),
     color: "#999",
     textAlign: "center",
     marginBottom: verticalScale(24),
-    paddingHorizontal: scale(isSmallDevice ? 20 : 40),
+    paddingHorizontal: scale(isSmallDevice ? 10 : 30),
     fontFamily: "Poppins-Regular",
-    lineHeight: getFontSize(moderateScale(20)),
+    lineHeight: getFontSize(moderateScale(22)),
   },
   addFirstProductButton: {
     backgroundColor: "#1155CC",
@@ -728,7 +717,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: getFontSize(moderateScale(16)),
     fontWeight: "600",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "Poppins-SemiBold",
   },
   clearSearchButton: {
     backgroundColor: "#F8F9FA",
@@ -741,7 +730,6 @@ const styles = StyleSheet.create({
   clearSearchText: {
     color: "#666",
     fontSize: getFontSize(moderateScale(16)),
-    fontWeight: "500",
     fontFamily: "Poppins-Regular",
   },
   bottomPadding: {

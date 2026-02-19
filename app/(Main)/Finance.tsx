@@ -321,7 +321,6 @@ const Finance = () => {
         const item = doc.data();
         allInventoryItems.push(item);
 
-        // Check if item has lastRestocked or createdAt field
         const lastRestocked = item.lastRestocked?.toDate
           ? item.lastRestocked.toDate()
           : item.createdAt?.toDate
@@ -330,7 +329,7 @@ const Finance = () => {
                 item.dateAdded ||
                   item.createdDate ||
                   Date.now() - 60 * 24 * 60 * 60 * 1000,
-              ); // Default to 60 days ago if no date
+              );
 
         const daysInStock = Math.floor(
           (Date.now() - lastRestocked.getTime()) / (1000 * 60 * 60 * 24),
@@ -338,7 +337,6 @@ const Finance = () => {
 
         console.log(`Item: ${item.name}, Days in stock: ${daysInStock}`);
 
-        // Items that haven't sold well (more than 20 days old)
         if (daysInStock > 20) {
           slowMovingArray.push({
             name: item.name || item.productName || "Unknown Product",
@@ -349,14 +347,12 @@ const Finance = () => {
         }
       });
 
-      // Sort by days in stock (descending) and take top items
       slowMovingArray.sort((a, b) => b.daysInStock - a.daysInStock);
       console.log("Slow moving stock found:", slowMovingArray.length);
 
       // Generate stock recommendations
       const recommendations: StockRecommendation[] = [];
 
-      // Check for low stock items (at least 3 recommendations)
       allInventoryItems.forEach((item) => {
         const quantity = item.quantity || item.stock || 0;
         const minStock = item.minStock || item.reorderLevel || 10;
@@ -371,7 +367,6 @@ const Finance = () => {
         }
       });
 
-      // Add best-selling recommendation
       if (topProductsArray.length > 0 && recommendations.length < 3) {
         recommendations.push({
           type: "info",
@@ -381,7 +376,6 @@ const Finance = () => {
         });
       }
 
-      // Add performance recommendation
       if (topProductsArray.length > 1 && recommendations.length < 3) {
         const secondBest = topProductsArray[1];
         recommendations.push({
@@ -395,13 +389,12 @@ const Finance = () => {
       // Generate seasonal insights from real data
       const insights: SeasonalInsight[] = [];
 
-      // Sort months by sales to find peak and good performing months
       const sortedMonths = Object.entries(monthlySales)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 2);
 
       if (sortedMonths.length > 0) {
-        const [peakMonth, peakSales] = sortedMonths[0];
+        const [peakMonth] = sortedMonths[0];
         const monthName = peakMonth.split(" ")[0];
         insights.push({
           month: monthName,
@@ -413,7 +406,7 @@ const Finance = () => {
       }
 
       if (sortedMonths.length > 1) {
-        const [goodMonth, goodSales] = sortedMonths[1];
+        const [goodMonth] = sortedMonths[1];
         const monthName = goodMonth.split(" ")[0];
         insights.push({
           month: monthName,
@@ -443,7 +436,7 @@ const Finance = () => {
       });
 
       setTopProducts(topProductsArray);
-      setSlowMovingStock(slowMovingArray.slice(0, 2)); // Show top 2 slow-moving items
+      setSlowMovingStock(slowMovingArray.slice(0, 2));
       setStockRecommendations(recommendations);
       setSeasonalInsights(insights);
 
@@ -1531,6 +1524,7 @@ const styles = StyleSheet.create({
   },
   recommendationEmoji: {
     fontSize: moderateScale(24),
+    fontFamily: "Poppins-Regular",
   },
   recommendationContent: {
     flex: 1,

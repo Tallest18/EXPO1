@@ -29,40 +29,39 @@ const { width, height } = Dimensions.get("window");
 
 // Device detection
 const isSmallDevice = width < 375;
-const isMediumDevice = width >= 375 && width < 414;
 const isTablet = width >= 768;
 
-// Enhanced responsive sizing
+// Responsive sizing
 const scale = (size: number) => {
   const baseWidth = 375;
   const ratio = width / baseWidth;
-
-  if (isTablet) {
-    return size * Math.min(ratio, 1.5);
-  }
+  if (isTablet) return size * Math.min(ratio, 1.4);
   return size * ratio;
 };
 
 const verticalScale = (size: number) => {
   const baseHeight = 812;
   const ratio = height / baseHeight;
-
-  if (isTablet) {
-    return size * Math.min(ratio, 1.5);
-  }
+  if (isTablet) return size * Math.min(ratio, 1.4);
   return size * ratio;
 };
 
-const moderateScale = (size: number, factor = 0.5) => {
-  return size + (scale(size) - size) * factor;
-};
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
-// Responsive font sizes
 const getFontSize = (base: number) => {
-  if (isSmallDevice) return base * 0.9;
-  if (isTablet) return base * 1.2;
+  if (isSmallDevice) return base * 0.88;
+  if (isTablet) return base * 1.15;
   return base;
 };
+
+// Horizontal padding that scales safely — never hugs the edge
+const H_PAD = isTablet ? scale(32) : isSmallDevice ? scale(14) : scale(20);
+
+// Product card: 3 columns on tablet, 2 on phone
+const NUM_COLS = isTablet ? 3 : 2;
+const CARD_GAP = scale(12);
+const CARD_WIDTH = (width - H_PAD * 2 - CARD_GAP * (NUM_COLS - 1)) / NUM_COLS;
 
 // Types
 interface Product {
@@ -82,10 +81,7 @@ interface Product {
   sellingPrice: number;
   lowStockThreshold: number;
   expiryDate: string;
-  supplier: {
-    name: string;
-    phone: string;
-  };
+  supplier: { name: string; phone: string };
   dateAdded: string;
   userId: string;
 }
@@ -127,21 +123,19 @@ const Sell: React.FC = () => {
 
   const [fontsLoaded] = useFonts({
     "Poppins-Regular": require("../../assets/fonts/Poppins-Regular.ttf"),
+    "Poppins-Medium": require("../../assets/fonts/Poppins-Medium.ttf"),
     "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
+    "Poppins-SemiBold": require("../../assets/fonts/Poppins-SemiBold.ttf"),
     "Poppins-Light": require("../../assets/fonts/Poppins-Light.ttf"),
   });
 
-  // Check if we should navigate to history tab from params
   useEffect(() => {
-    if (params.tab === "history") {
-      setActiveTab("history");
-    }
+    if (params.tab === "history") setActiveTab("history");
   }, [params]);
 
   useEffect(() => {
     const currentUser = auth.currentUser;
     if (!currentUser) {
-      console.log("ERROR: No authenticated user found");
       setLoading(false);
       return;
     }
@@ -156,36 +150,24 @@ const Sell: React.FC = () => {
       (snapshot) => {
         const productsData: Product[] = [];
         snapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
-          const data = doc.data();
-          productsData.push({
-            id: doc.id,
-            ...data,
-          } as Product);
+          productsData.push({ id: doc.id, ...doc.data() } as Product);
         });
 
-        // Sort by most frequently sold or date added
-        productsData.sort((a, b) => {
-          const dateA = new Date(a.dateAdded).getTime();
-          const dateB = new Date(b.dateAdded).getTime();
-          return dateB - dateA;
-        });
+        productsData.sort(
+          (a, b) =>
+            new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime(),
+        );
 
         setProducts(productsData);
         setFilteredProducts(productsData);
         setLoading(false);
       },
       (error) => {
-        console.error("Firestore error:", error);
-        Alert.alert(
-          "Error Loading Products",
-          `There was an issue loading your products: ${error.message}`,
-          [{ text: "OK" }],
-        );
+        Alert.alert("Error Loading Products", error.message, [{ text: "OK" }]);
         setLoading(false);
       },
     );
 
-    // Fetch sales history
     const salesQuery = query(
       collection(db, "sales"),
       where("userId", "==", currentUser.uid),
@@ -196,19 +178,12 @@ const Sell: React.FC = () => {
       (snapshot) => {
         const salesData: Sale[] = [];
         snapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
-          const data = doc.data();
-          salesData.push({
-            id: doc.id,
-            ...data,
-          } as Sale);
+          salesData.push({ id: doc.id, ...doc.data() } as Sale);
         });
 
-        // Sort by date (most recent first)
-        salesData.sort((a, b) => {
-          const dateA = new Date(a.date).getTime();
-          const dateB = new Date(b.date).getTime();
-          return dateB - dateA;
-        });
+        salesData.sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        );
 
         setSales(salesData);
       },
@@ -226,20 +201,19 @@ const Sell: React.FC = () => {
   useEffect(() => {
     if (searchQuery.trim()) {
       const searchTerm = searchQuery.toLowerCase().trim();
-      const filtered = products.filter((product) => {
-        const name = product.name?.toLowerCase() || "";
-        const category = product.category?.toLowerCase() || "";
-        return name.includes(searchTerm) || category.includes(searchTerm);
-      });
-      setFilteredProducts(filtered);
+      setFilteredProducts(
+        products.filter((product) => {
+          const name = product.name?.toLowerCase() || "";
+          const category = product.category?.toLowerCase() || "";
+          return name.includes(searchTerm) || category.includes(searchTerm);
+        }),
+      );
     } else {
       setFilteredProducts(products);
     }
   }, [searchQuery, products]);
 
-  const handleSearchChange = (text: string): void => {
-    setSearchQuery(text);
-  };
+  const handleSearchChange = (text: string): void => setSearchQuery(text);
 
   const handleCartIconPress = (productId: string): void => {
     const product = products.find((p) => p.id === productId);
@@ -250,18 +224,10 @@ const Sell: React.FC = () => {
       return;
     }
 
-    // Add product to cart immediately with quantity 1
     setCart((prevCart) => {
-      const existingItem = prevCart.find(
-        (item) => item.productId === productId,
-      );
-      if (existingItem) {
-        // Already in cart, do nothing (quantity selector already visible)
-        return prevCart;
-      } else {
-        // Add new item with quantity 1
-        return [...prevCart, { productId, quantity: 1 }];
-      }
+      const existing = prevCart.find((item) => item.productId === productId);
+      if (existing) return prevCart;
+      return [...prevCart, { productId, quantity: 1 }];
     });
   };
 
@@ -280,8 +246,8 @@ const Sell: React.FC = () => {
       return;
     }
 
-    setCart((prevCart) =>
-      prevCart.map((item) =>
+    setCart((prev) =>
+      prev.map((item) =>
         item.productId === productId
           ? { ...item, quantity: item.quantity + 1 }
           : item,
@@ -294,44 +260,37 @@ const Sell: React.FC = () => {
     if (!cartItem) return;
 
     if (cartItem.quantity > 1) {
-      setCart((prevCart) =>
-        prevCart.map((item) =>
+      setCart((prev) =>
+        prev.map((item) =>
           item.productId === productId
             ? { ...item, quantity: item.quantity - 1 }
             : item,
         ),
       );
     } else {
-      // Remove from cart if quantity would be 0
-      setCart((prevCart) =>
-        prevCart.filter((item) => item.productId !== productId),
-      );
+      setCart((prev) => prev.filter((item) => item.productId !== productId));
     }
   };
 
-  const getTotalCartItems = (): number => {
-    return cart.reduce((total, item) => total + item.quantity, 0);
-  };
+  const getTotalCartItems = (): number =>
+    cart.reduce((total, item) => total + item.quantity, 0);
 
   const viewCart = (): void => {
     if (cart.length === 0) {
       Alert.alert("Empty Cart", "Your cart is empty. Add some products first!");
       return;
     }
-
-    console.log("Navigating to cart with items:", cart);
-
     router.push({
       pathname: "/(Routes)/Cart" as any,
       params: {
         cartData: JSON.stringify(cart),
-        timestamp: Date.now().toString(), // Force refresh
+        timestamp: Date.now().toString(),
       },
     });
   };
 
   const renderProductCard = (product: Product): React.ReactElement | null => {
-    if (!product || !product.id) return null;
+    if (!product?.id) return null;
 
     const isOutOfStock = product.unitsInStock <= 0;
     const cartItem = cart.find((item) => item.productId === product.id);
@@ -373,7 +332,7 @@ const Sell: React.FC = () => {
               >
                 <Feather
                   name="shopping-cart"
-                  size={moderateScale(20)}
+                  size={moderateScale(18)}
                   color={isOutOfStock ? "#999" : "white"}
                 />
               </TouchableOpacity>
@@ -387,19 +346,17 @@ const Sell: React.FC = () => {
               >
                 <Feather
                   name="minus"
-                  size={moderateScale(18)}
+                  size={moderateScale(16)}
                   color="#007AFF"
                 />
               </TouchableOpacity>
-
               <Text style={styles.quantityText}>{quantity}</Text>
-
               <TouchableOpacity
                 style={styles.quantityButton}
                 onPress={() => incrementQuantity(product.id)}
                 activeOpacity={0.7}
               >
-                <Feather name="plus" size={moderateScale(18)} color="#007AFF" />
+                <Feather name="plus" size={moderateScale(16)} color="#007AFF" />
               </TouchableOpacity>
             </View>
           )}
@@ -420,22 +377,19 @@ const Sell: React.FC = () => {
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    const options: Intl.DateTimeFormatOptions = {
+    return date.toLocaleDateString("en-US", {
       weekday: "long",
       day: "numeric",
       month: "long",
       year: "numeric",
-    };
-    return date.toLocaleDateString("en-US", options);
+    });
   };
 
   const groupSalesByDate = (): { [key: string]: Sale[] } => {
     const grouped: { [key: string]: Sale[] } = {};
     sales.forEach((sale) => {
       const dateKey = formatDate(sale.date);
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
-      }
+      if (!grouped[dateKey]) grouped[dateKey] = [];
       grouped[dateKey].push(sale);
     });
     return grouped;
@@ -493,7 +447,6 @@ const Sell: React.FC = () => {
     }
 
     const groupedSales = groupSalesByDate();
-
     return (
       <View style={styles.historyContainer}>
         {Object.entries(groupedSales).map(([date, salesForDate]) => (
@@ -521,9 +474,13 @@ const Sell: React.FC = () => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Sell</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>
+          Sell
+        </Text>
+
+        {/* Cart button — never hugs the right edge */}
         <View style={styles.cartContainer}>
-          <Text style={styles.cartfont}>Cart</Text>
+          <Text style={styles.cartLabel}>Cart</Text>
           <TouchableOpacity
             style={styles.cartButton}
             onPress={viewCart}
@@ -531,7 +488,7 @@ const Sell: React.FC = () => {
           >
             <Feather
               name="shopping-cart"
-              size={moderateScale(24)}
+              size={moderateScale(22)}
               color="#007AFF"
             />
             {getTotalCartItems() > 0 && (
@@ -602,7 +559,7 @@ const Sell: React.FC = () => {
         </View>
       )}
 
-      {/* Products Grid */}
+      {/* Products Grid / History */}
       <ScrollView
         style={styles.productsContainer}
         showsVerticalScrollIndicator={false}
@@ -619,12 +576,10 @@ const Sell: React.FC = () => {
         ) : (
           renderSalesHistory()
         )}
-
-        {/* Bottom padding to ensure content doesn't get hidden behind the fixed button */}
         <View style={styles.bottomPadding} />
       </ScrollView>
 
-      {/* View Cart Button - Always visible when cart has items */}
+      {/* View Cart FAB */}
       {getTotalCartItems() > 0 && (
         <View style={styles.viewCartContainer}>
           <TouchableOpacity
@@ -664,59 +619,75 @@ const styles = StyleSheet.create({
     color: "#666",
     fontFamily: "Poppins-Regular",
   },
+
+  // ── Header ────────────────────────────────────────────────────────────────
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: scale(20),
-    paddingVertical: verticalScale(15),
+    // Consistent safe padding on every device — never clips the edge
+    paddingHorizontal: H_PAD,
+    paddingTop: verticalScale(isTablet ? 20 : 14),
+    paddingBottom: verticalScale(isTablet ? 14 : 10),
     backgroundColor: "#E7EEFA",
   },
   headerTitle: {
-    fontSize: getFontSize(moderateScale(34)),
+    // Controlled size: large enough to look good, small enough to never overflow
+    fontSize: getFontSize(
+      moderateScale(isSmallDevice ? 24 : isTablet ? 34 : 28),
+    ),
     color: "#000",
     fontFamily: "Poppins-Bold",
+    // Shrinks before pushing cart off screen
+    flexShrink: 1,
+    marginRight: scale(10),
   },
-  cartButton: {
-    position: "relative",
-    padding: scale(8),
-  },
-  cartBadge: {
-    position: "absolute",
-    top: verticalScale(0),
-    right: scale(0),
-    backgroundColor: "#FF3B30",
-    borderRadius: moderateScale(10),
-    minWidth: scale(20),
-    height: verticalScale(20),
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: scale(5),
-  },
-  cartBadgeText: {
-    color: "white",
-    fontSize: getFontSize(moderateScale(12)),
-    fontWeight: "bold",
-    fontFamily: "Poppins-Bold",
-  },
+
+  // ── Cart ──────────────────────────────────────────────────────────────────
   cartContainer: {
     flexDirection: "row",
     borderRadius: moderateScale(20),
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: "#B5CAEF",
-    margin: scale(5),
-    paddingHorizontal: scale(10),
-    paddingVertical: verticalScale(1),
+    paddingHorizontal: isSmallDevice ? scale(8) : scale(12),
+    paddingVertical: verticalScale(4),
     alignItems: "center",
-    gap: scale(5),
+    gap: scale(4),
+    // Never shrinks — always readable
+    flexShrink: 0,
   },
-  cartfont: {
-    fontSize: getFontSize(moderateScale(16)),
+  cartLabel: {
+    fontSize: getFontSize(moderateScale(isSmallDevice ? 13 : 15)),
     fontFamily: "Poppins-Regular",
+    color: "#333",
   },
+  cartButton: {
+    position: "relative",
+    padding: scale(6),
+  },
+  cartBadge: {
+    position: "absolute",
+    // Positioned inside the button, not floating into the title
+    top: verticalScale(-2),
+    right: scale(-2),
+    backgroundColor: "#FF3B30",
+    borderRadius: moderateScale(10),
+    minWidth: scale(18),
+    height: verticalScale(18),
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: scale(3),
+  },
+  cartBadgeText: {
+    color: "white",
+    fontSize: getFontSize(moderateScale(10)),
+    fontFamily: "Poppins-Bold",
+  },
+
+  // ── Search ────────────────────────────────────────────────────────────────
   searchContainer: {
     flexDirection: "row",
-    paddingHorizontal: scale(20),
+    paddingHorizontal: H_PAD,
     paddingVertical: verticalScale(8),
     backgroundColor: "#E7EEFA",
     alignItems: "center",
@@ -728,13 +699,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     borderRadius: moderateScale(12),
-    paddingHorizontal: scale(16),
-    paddingVertical: verticalScale(isSmallDevice ? 6 : 8),
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(isSmallDevice ? 6 : 9),
     gap: scale(8),
   },
   searchInput: {
     flex: 1,
-    fontSize: getFontSize(moderateScale(18)),
+    fontSize: getFontSize(moderateScale(15)),
     fontFamily: "Poppins-Regular",
     color: "#000",
     minHeight: verticalScale(20),
@@ -742,17 +713,19 @@ const styles = StyleSheet.create({
   filterButton: {
     backgroundColor: "#F8F9FA",
     borderRadius: moderateScale(12),
-    padding: scale(15),
+    padding: scale(13),
   },
+
+  // ── Tabs ──────────────────────────────────────────────────────────────────
   tabsContainer: {
     flexDirection: "row",
-    paddingHorizontal: scale(20),
-    paddingVertical: verticalScale(10),
+    paddingHorizontal: H_PAD,
+    paddingVertical: verticalScale(8),
     gap: scale(12),
     backgroundColor: "#E7EEFA",
   },
   tab: {
-    paddingHorizontal: scale(20),
+    paddingHorizontal: scale(isSmallDevice ? 14 : 20),
     paddingVertical: verticalScale(8),
     borderRadius: moderateScale(10),
     backgroundColor: "transparent",
@@ -763,80 +736,86 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   tabText: {
-    fontSize: getFontSize(moderateScale(16)),
+    fontSize: getFontSize(moderateScale(15)),
     fontFamily: "Poppins-Regular",
     color: "#666",
   },
+  // Fixed: now has explicit fontFamily so it never falls back to system font
   activeTabText: {
     color: "#000",
-    fontWeight: "600",
+    fontFamily: "Poppins-SemiBold",
   },
   sectionHeader: {
-    paddingHorizontal: scale(20),
-    paddingVertical: verticalScale(10),
+    paddingHorizontal: H_PAD,
+    paddingVertical: verticalScale(8),
     backgroundColor: "#E7EEFA",
   },
   sectionTitle: {
-    fontSize: getFontSize(moderateScale(16)),
+    fontSize: getFontSize(moderateScale(15)),
     fontFamily: "Poppins-Regular",
     color: "#666",
   },
+
+  // ── Products Grid ─────────────────────────────────────────────────────────
   productsContainer: {
     flex: 1,
-    paddingHorizontal: scale(20),
+    paddingHorizontal: H_PAD,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: verticalScale(100),
+    paddingBottom: verticalScale(110),
   },
   productsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
     paddingTop: verticalScale(10),
+    // Even gap between all cards
+    gap: CARD_GAP,
   },
   productCard: {
-    width: isTablet ? "48%" : "48%",
+    // Exact computed width — same formula as CARD_WIDTH above
+    width: CARD_WIDTH,
     backgroundColor: "#FFFFFF",
     borderRadius: moderateScale(12),
-    padding: scale(12),
-    marginBottom: verticalScale(16),
+    padding: scale(isSmallDevice ? 8 : 12),
   },
   productImage: {
     width: "100%",
-    height: verticalScale(120),
+    // Height proportional to card width so it looks right on every screen
+    height: CARD_WIDTH * 0.75,
     borderRadius: moderateScale(8),
     backgroundColor: "#F0F0F0",
     marginBottom: verticalScale(8),
   },
   productDetails: {
-    gap: scale(8),
+    gap: scale(6),
   },
   productName: {
-    fontSize: getFontSize(moderateScale(16)),
+    fontSize: getFontSize(moderateScale(isSmallDevice ? 13 : 15)),
     fontFamily: "Poppins-Bold",
     color: "#000",
-    minHeight: verticalScale(40),
+    minHeight: verticalScale(36),
   },
   priceRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#EBEFFC",
-    padding: scale(5),
+    paddingVertical: scale(4),
+    paddingHorizontal: scale(6),
     borderRadius: moderateScale(50),
   },
   productPrice: {
-    fontSize: getFontSize(moderateScale(18)),
+    fontSize: getFontSize(moderateScale(isSmallDevice ? 13 : 15)),
     fontFamily: "Poppins-Bold",
     color: "#000",
     flex: 1,
   },
   addToCartButton: {
     backgroundColor: "#007AFF",
-    borderRadius: moderateScale(20),
-    width: scale(40),
-    height: verticalScale(40),
+    borderRadius: moderateScale(18),
+    width: scale(34),
+    height: scale(34),
     justifyContent: "center",
     alignItems: "center",
   },
@@ -848,55 +827,59 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#EBEFFC",
-    paddingVertical: verticalScale(8),
-    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(6),
+    paddingHorizontal: scale(8),
     borderRadius: moderateScale(50),
-    gap: scale(16),
+    gap: scale(10),
   },
   quantityButton: {
-    width: scale(32),
-    height: verticalScale(32),
+    width: scale(28),
+    height: scale(28),
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: moderateScale(16),
+    borderRadius: moderateScale(14),
   },
   quantityText: {
-    fontSize: getFontSize(moderateScale(18)),
+    fontSize: getFontSize(moderateScale(15)),
     fontFamily: "Poppins-Bold",
     color: "#000",
-    minWidth: scale(24),
+    minWidth: scale(20),
     textAlign: "center",
   },
+
+  // ── Empty States ──────────────────────────────────────────────────────────
   emptyState: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: verticalScale(60),
-    paddingHorizontal: scale(20),
+    paddingHorizontal: H_PAD,
   },
   emptyTitle: {
     fontSize: getFontSize(moderateScale(20)),
-    fontWeight: "600",
     color: "#666",
     marginTop: verticalScale(16),
     marginBottom: verticalScale(8),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "Poppins-SemiBold",
   },
   emptyDescription: {
     fontSize: getFontSize(moderateScale(14)),
     color: "#999",
     textAlign: "center",
-    paddingHorizontal: scale(isSmallDevice ? 20 : 40),
+    paddingHorizontal: scale(isSmallDevice ? 10 : 30),
     fontFamily: "Poppins-Regular",
-    lineHeight: getFontSize(moderateScale(20)),
+    lineHeight: getFontSize(moderateScale(22)),
   },
+
+  // ── View Cart FAB ─────────────────────────────────────────────────────────
   viewCartContainer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    padding: scale(20),
+    padding: H_PAD,
+    paddingBottom: verticalScale(isTablet ? 24 : 16),
     backgroundColor: "#E7EEFA",
     borderTopWidth: 1,
     borderTopColor: "#D0D0D0",
@@ -904,22 +887,23 @@ const styles = StyleSheet.create({
   viewCartButton: {
     backgroundColor: "#007AFF",
     borderRadius: moderateScale(12),
-    paddingVertical: verticalScale(16),
+    paddingVertical: verticalScale(14),
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     gap: scale(8),
   },
+  // Fixed: was Poppins-Regular with fontWeight 600 — now uses SemiBold correctly
   viewCartButtonText: {
     color: "white",
     fontSize: getFontSize(moderateScale(16)),
-    fontWeight: "600",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "Poppins-SemiBold",
   },
   bottomPadding: {
     height: verticalScale(20),
   },
-  // Sales History Styles
+
+  // ── Sales History ─────────────────────────────────────────────────────────
   historyContainer: {
     paddingTop: verticalScale(10),
   },
@@ -951,7 +935,7 @@ const styles = StyleSheet.create({
   },
   productIconContainer: {
     width: scale(40),
-    height: verticalScale(40),
+    height: scale(40),
     borderRadius: moderateScale(8),
     backgroundColor: "#F5F7FA",
     justifyContent: "center",
@@ -960,7 +944,7 @@ const styles = StyleSheet.create({
   },
   productIcon: {
     width: scale(24),
-    height: verticalScale(24),
+    height: scale(24),
     borderRadius: moderateScale(4),
     backgroundColor: "#C77D4A",
   },
@@ -978,16 +962,14 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins-Regular",
     color: "#999",
   },
-  saleAmount: {
-    fontSize: getFontSize(moderateScale(16)),
-    fontFamily: "Poppins-Bold",
-    color: "#000",
-    marginBottom: verticalScale(4),
-  },
   saleRightSection: {
     alignItems: "flex-end",
-    gap: scale(4),
     minWidth: scale(80),
+  },
+  saleAmount: {
+    fontSize: getFontSize(moderateScale(15)),
+    fontFamily: "Poppins-Bold",
+    color: "#000",
   },
 });
 
