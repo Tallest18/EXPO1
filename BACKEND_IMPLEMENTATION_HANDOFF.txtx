@@ -1,0 +1,887 @@
+================================================================================
+INVENTRA BACKEND IMPLEMENTATION HANDOFF
+SUPPLEMENT TO: INVENTRA_BACKEND_DOCUMENTATION.txt
+Generated: March 12, 2026
+Audience: Backend Developer
+Purpose: Document the exact frontend flow currently implemented in mobile, highlight all backend gaps and response-shape mismatches, and make the remaining backend work implementable without guessing.
+================================================================================
+
+
+1) WHY THIS DOCUMENT EXISTS
+================================================================================
+The existing backend documentation is useful, but it does not fully match the current mobile app flow anymore.
+
+This handoff explains:
+- the actual frontend flow screen by screen
+- what the frontend already calls successfully
+- what the frontend still needs from backend
+- where the frontend and backend contracts currently conflict
+- what should be implemented or adjusted on backend so the mobile app can work cleanly without hacks
+
+This file should be read together with:
+- INVENTRA_BACKEND_DOCUMENTATION.txt
+
+The original backend document is the general API contract.
+This handoff is the frontend integration reality.
+
+
+2) HIGH-LEVEL STATE OF THE MOBILE APP
+================================================================================
+The mobile app is now largely backend-driven and no longer relies on Firebase for core business data.
+
+Current backend-driven flows already used by mobile:
+- session bootstrap from stored JWT + profile probe
+- profile fetch and update
+- products list
+- product details
+- product create
+- product update
+- product delete
+- sales list
+- sale create
+- sale detail
+- sale delete
+- notification list
+- notification detail read
+- dashboard overview
+- analytics financial summary
+- analytics revenue trend
+- analytics top products
+- analytics slow moving products
+- logout
+
+Important: authentication UX in the mobile app is still visually OTP-based, but the backend only supports phone + password.
+This is the biggest remaining flow mismatch.
+
+
+3) APP BOOTSTRAP FLOW
+================================================================================
+Frontend behavior:
+1. On app launch, mobile checks if an access token exists in storage.
+2. If no access token exists, user is treated as unauthenticated.
+3. If token exists, mobile calls:
+   GET /api/auth/profile/
+4. If profile request succeeds, user is treated as authenticated.
+5. If profile request fails with invalid/expired session and refresh cannot recover it, tokens are cleared and user is redirected to auth flow.
+
+Backend requirements for this flow:
+- access token must work with Bearer auth on /api/auth/profile/
+- refresh endpoint must return a new access token and, because refresh rotation is enabled, should also return refresh
+- profile endpoint must be stable and fast enough to act as the session-validation probe
+
+Required response stability:
+GET /api/auth/profile/ should always include:
+{
+  "id": 1,
+  "phone": "08012345678",
+  "name": "John Doe",
+  "business_name": "John Stores",
+  "business_type": "retail",
+  "profile_image": "https://..." | null
+}
+
+
+4) AUTH FLOW: CURRENT FRONTEND BEHAVIOR VS REQUIRED BACKEND FLOW
+================================================================================
+
+4.1 What the mobile UI currently looks like
+- Welcome screen asks only for phone number.
+- It presents itself as OTP auth.
+- Verification screen asks for a 6-digit code.
+- There is a resend code button and resend timer.
+
+4.2 What the backend currently documents
+Existing documented auth endpoints:
+- POST /api/auth/register/
+- POST /api/token/
+- POST /api/token/refresh/
+- POST /api/auth/logout/
+- GET/PATCH /api/auth/profile/
+
+Current documented login model:
+- phone + password
+
+4.3 Current mismatch
+The mobile app flow is OTP-based.
+The backend contract is password-based.
+These are not the same flow.
+
+Because of this mismatch, the current mobile auth implementation is only a temporary compatibility workaround:
+- Welcome screen does NOT actually request OTP from backend.
+- It creates a fake verification id locally.
+- Verification screen currently tries:
+  1. login(phone, entered_6_digit_code_as_password)
+  2. if login fails, register(phone, generated_name, entered_6_digit_code_as_password)
+
+This is not a real OTP system.
+It must not be treated as the final authentication design.
+
+4.4 What backend should implement
+Preferred solution: add a real OTP auth flow while keeping JWT as the final session mechanism.
+
+Recommended endpoints:
+
+A. Request OTP
+- Method: POST
+- Path: /api/auth/request-otp/
+- Auth: Public
+- Body:
+{
+  "phone": "+2348012345678"
+}
+- Success 200 or 201:
+{
+  "verification_id": "otp_abc123",
+  "phone": "+2348012345678",
+  "masked_phone": "+23480*****678",
+  "expires_in": 300,
+  "resend_available_in": 45,
+  "is_existing_user": true
+}
+
+Behavior:
+- validates phone
+- generates OTP
+- sends SMS
+- stores verification session server-side
+- returns verification_id and timing metadata
+
+B. Verify OTP
+- Method: POST
+- Path: /api/auth/verify-otp/
+- Auth: Public
+- Body:
+{
+  "phone": "+2348012345678",
+  "verification_id": "otp_abc123",
+  "code": "123456"
+}
+- Success 200:
+{
+  "user": {
+    "id": 1,
+    "phone": "+2348012345678",
+    "name": "John Doe",
+    "business_name": "John Stores",
+    "business_type": "retail",
+    "profile_image": null
+  },
+  "tokens": {
+    "refresh": "<jwt_refresh>",
+    "access": "<jwt_access>"
+  },
+  "is_new_user": false,
+  "requires_business_type": false,
+  "requires_profile_completion": false
+}
+
+Behavior:
+- validates verification session
+- validates OTP code
+- creates user if phone does not exist yet, OR signs in existing user
+- returns JWT tokens
+- optionally returns flags that frontend can use for onboarding branching
+
+C. Resend OTP
+- Method: POST
+- Path: /api/auth/resend-otp/
+- Auth: Public
+- Body:
+{
+  "phone": "+2348012345678",
+  "verification_id": "otp_abc123"
+}
+- Success 200:
+{
+  "verification_id": "otp_new456",
+  "expires_in": 300,
+  "resend_available_in": 45
+}
+
+4.5 If backend will NOT implement OTP
+If backend wants to stay phone + password only, then frontend auth flow must later be redesigned under the same UI visuals.
+In that case the backend does not need OTP endpoints, but the mobile UX copy and verification logic must be changed.
+That is a frontend follow-up, not the recommended backend path.
+
+4.6 Additional auth-related gap
+BusinessSelectionScreen currently saves business type only in AsyncStorage.
+It does NOT sync business_type to backend.
+
+If backend wants business type stored centrally, at least one of these is needed:
+- OTP verify response should include onboarding flags and backend should accept business_type later via profile patch
+- OR add onboarding completion endpoint
+
+Recommended simplest approach:
+- keep business_type writable via PATCH /api/auth/profile/
+- after auth, frontend can patch business_type when onboarding completes
+
+
+5) PROFILE FLOW
+================================================================================
+Frontend behavior:
+- Profile screen loads by calling GET /api/auth/profile/
+- User can update:
+  - name
+  - business_name
+  - business_type optionally
+  - profile image
+- If a new image is chosen, frontend sends multipart PATCH /api/auth/profile/
+
+Backend requirements:
+- PATCH /api/auth/profile/ must support both JSON and multipart/form-data
+- profile_image file upload must return the updated absolute media URL in response
+- phone remains read-only
+
+Expected frontend-safe behavior:
+- if only text fields change, JSON PATCH should work
+- if image changes, multipart PATCH should work
+- response should always come back in the same profile shape as GET profile
+
+
+6) HOME SCREEN FLOW
+================================================================================
+When Home screen loads, frontend fetches all of these in parallel:
+- GET /api/auth/profile/
+- GET /api/products/dashboard/overview/
+- GET /api/products/items/
+- GET /api/products/sales/
+- GET /api/products/notifications/
+
+Frontend then derives:
+- user name
+- user profile image
+- today sales
+- today profit
+- transaction count
+- total stock left = sum of quantity_left across products
+- sales summary from sale items
+- recent notifications
+
+Polling behavior:
+- Home refreshes every 15 seconds
+- this is simple polling, not sockets
+
+Backend expectations:
+- all endpoints above must be efficient enough for periodic polling
+- sales list must include sale items with product_name, subtotal, profit
+- notification list must include created_at
+
+
+7) INVENTORY FLOW
+================================================================================
+The Inventory screen uses:
+- GET /api/products/items/
+
+Frontend behaviors supported from inventory area:
+- list all products
+- filter/search client-side after fetch
+- open product details
+- open add product modal
+
+Important product fields the frontend actively uses:
+- id
+- name
+- category_name
+- barcode or code
+- image
+- quantity_type
+- quantity or quantity_left
+- buying_price
+- selling_price
+- low_stock_threshold
+- expiry_date
+- supplier_name or supplier_obj_name
+- supplier_phone
+- created_at
+
+If any of these are missing or renamed, product cards and details degrade.
+
+
+8) ADD PRODUCT FLOW
+================================================================================
+This flow is important because it carries several hidden backend assumptions.
+
+8.1 User-facing flow
+The add-product modal is multi-step:
+- Step 1: product info
+- Step 2: pricing and packaging
+- Step 3: stock and extras
+- Step 4: save
+
+There is also a "search existing product" path that pulls from existing product list to prefill fields.
+
+8.2 Frontend calls used
+- GET /api/products/items/?search=...
+- GET /api/products/categories/
+- GET /api/products/suppliers/
+- POST /api/products/items/ or multipart POST /api/products/items/
+
+8.3 Save behavior
+Before save, frontend computes final inventory values:
+- quantity_type = "Single Items" or "Carton" or "Both"
+- for Single Items:
+  quantity = numberOfItems
+  buying_price = costPrice
+  selling_price = sellingPrice
+- for Carton:
+  quantity = unitsPerCarton * numberOfCartons
+  buying_price = costPricePerCarton
+  selling_price = sellingPricePerCarton
+- for Both:
+  quantity = unitsPerCarton * numberOfCartons
+  buying_price = costPricePerCarton
+  selling_price = sellingPricePerUnit
+
+Important note:
+The frontend currently stores only the final computed quantity and price fields in backend.
+It does NOT send carton metadata fields separately.
+If backend wants to preserve packaging details like units_per_carton, number_of_cartons, price_per_carton, those fields need to be added to the backend contract and later integrated in frontend.
+
+8.4 Category dependency gap
+The UI shows hard-coded category labels such as:
+- Foodstuffs
+- Soft Drinks
+- Beverages
+- Noodles & Pasta
+- Snacks & Biscuits
+
+On save, frontend fetches backend categories and tries exact name match, case-insensitive.
+If no exact match is found, it silently falls back to the first category returned by backend.
+
+This means backend must do one of the following:
+- seed categories whose names exactly match the frontend labels
+- OR provide a mapping strategy agreed with frontend
+- OR later frontend must stop hardcoding categories and render categories from backend
+
+Recommended backend action now:
+Seed categories that match the mobile UI labels exactly.
+
+8.5 Supplier dependency gap
+Create product requires supplier in the backend contract.
+Frontend fetches suppliers, tries exact name match from form input, and falls back to the first supplier if no match exists.
+If suppliers endpoint returns empty array, product creation is blocked.
+
+This means backend must ensure at least one supplier exists in the system, OR relax the supplier requirement.
+
+Recommended backend action now:
+Either:
+- pre-seed at least one usable default supplier
+or
+- make supplier nullable on create
+or
+- expose supplier create endpoint so mobile can create one
+
+8.6 Image upload behavior
+If user selected an image from device:
+- frontend sends multipart/form-data to /api/products/items/
+- image is sent under field name: image
+
+Expected response:
+- response should include image absolute URL in product object
+
+8.7 Expiry date sent by frontend
+Frontend sends expiry_date as:
+- YYYY-MM-DD
+
+Backend should accept that exact format consistently.
+
+8.8 Post-create notification behavior
+After product create, frontend currently attempts to create notifications for:
+- product_added
+- low_stock if threshold is met
+- expiry if close to expiry
+
+This currently depends on client-side notification creation, which conflicts with the original backend documentation. See section 13.
+
+
+9) EDIT PRODUCT FLOW
+================================================================================
+Frontend calls:
+- GET /api/products/items/{id}/
+- PATCH /api/products/items/{id}/ or multipart PATCH
+- GET /api/products/categories/
+- GET /api/products/suppliers/
+
+Requirements:
+- backend should allow partial update
+- backend should keep returning same product object after patch
+- multipart patch should support image replacement
+
+Important contract note:
+The mobile edit flow also depends on category and supplier lookup behavior exactly like create flow.
+So the same seeded-category and supplier availability requirements apply here.
+
+Known gap affecting edit prefill:
+- mobile legacy parser still assumes slash-based dates in some parts of the product form logic
+- backend should still return dates consistently as YYYY-MM-DD because that is the correct documented format
+- this particular parsing issue is a frontend gap, not a backend bug, but it is worth knowing during testing
+
+
+10) PRODUCT DETAILS FLOW
+================================================================================
+Frontend calls:
+- GET /api/products/items/{id}/
+- DELETE /api/products/items/{id}/
+
+Expected delete behavior:
+- mobile expects delete to succeed and then return user back to previous screen
+- existing backend docs say this is soft delete, which is fine
+- deleted products should disappear from normal list endpoints
+
+Recommended behavior:
+- GET list endpoints should exclude soft-deleted products by default
+
+
+11) SELL FLOW AND CHECKOUT FLOW
+================================================================================
+There are two sale entry paths:
+- full sell flow using cart + checkout
+- quick sell flow
+
+11.1 Cart/Checkout flow
+Frontend calls:
+- GET /api/products/items/{id}/ for each cart item to hydrate latest product details
+- POST /api/products/sales/
+
+Sale create payload used by frontend:
+{
+  "payment_method": "cash" | "transfer" | "pos" | "credit",
+  "notes": "optional",
+  "customer_name": "required only for credit flow",
+  "customer_phone": "required only for credit flow",
+  "amount_owed": "required for credit flow",
+  "amount_paid": "0" for credit flow, else total sale amount,
+  "items": [
+    {
+      "product": 10,
+      "quantity": 2
+    }
+  ]
+}
+
+Required backend behavior:
+- validate product exists
+- validate quantity >= 1
+- validate stock availability
+- atomically reduce stock when sale is created
+- compute total_amount and total_profit server-side
+- for credit sales, preserve debtor information
+
+11.2 Quick Sell flow
+Frontend calls:
+- GET /api/products/items/
+- POST /api/products/sales/
+
+Quick sell always uses:
+- payment_method = cash
+- amount_paid = totalAmount
+- no customer fields
+
+Required backend behavior is same as standard checkout create sale.
+
+11.3 Sale record consistency requirement
+The frontend assumes createSale is the single source of truth for stock deduction.
+There is no second stock adjustment call from frontend.
+So backend must perform stock deduction inside sale creation transactionally.
+
+
+12) SALES DETAIL FLOW AND DELETE-SALE GAP
+================================================================================
+Frontend calls:
+- GET /api/products/sales/{id}/
+- DELETE /api/products/sales/{id}/
+
+Current UI behavior:
+- user can open sale detail
+- user can delete a sale
+
+Critical backend gap:
+The original backend docs list sale deletion but do NOT clearly define whether deleting a sale should restore stock.
+This must be decided explicitly, otherwise inventory integrity will break.
+
+Recommended backend behavior:
+Option A, preferred:
+- deleting a sale should either be forbidden once created
+- OR be implemented as a soft-cancel operation that restores product stock and preserves audit history
+
+Option B, less safe:
+- hard delete sale without stock restoration
+
+Option B is not recommended because it causes inventory/history mismatch.
+
+Recommended final contract:
+- Do not hard-delete sales silently.
+- Either:
+  - implement a cancel sale action that restores stock
+  - or soft-delete with reversal logic
+  - or disallow deletion and return clear 400/403
+
+If keeping DELETE /api/products/sales/{id}/, document exact stock side effect.
+
+
+13) NOTIFICATIONS FLOW AND CONTRACT CONFLICT
+================================================================================
+
+13.1 Read flow currently used by frontend
+- GET /api/products/notifications/
+- GET /api/products/notifications/{id}/ indirectly through passed params and detail handling
+- PATCH /api/products/notifications/{id}/mark_read/
+- PATCH /api/products/notifications/mark_all_read/
+- GET /api/products/notifications/unread_count/
+
+Frontend refreshes notifications every 15 seconds.
+
+13.2 Current frontend write behavior
+Frontend now also tries to create notifications from the client through:
+- POST /api/products/notifications/
+
+This is used after:
+- product created
+- quick sale completed
+- low stock check
+- high selling check
+- expiry check
+
+13.3 Direct contradiction with original backend document
+Original backend doc says:
+- POST on notifications is disabled
+- notification creation is server-driven
+
+But current mobile code expects POST /api/products/notifications/ to work.
+
+13.4 What backend should do
+Preferred architecture:
+- backend should own notification generation
+- product create, sale create, low stock detection, expiry detection, high-selling detection should generate notifications server-side
+- mobile should become read-only for notifications later
+
+However, for the current mobile build to work immediately, backend must choose one of these two approaches:
+
+Approach A, preferred final architecture:
+- keep notifications server-driven only
+- implement notification generation inside product/sale/business logic
+- mobile will later be cleaned to stop posting notifications
+
+Approach B, short-term compatibility:
+- enable POST /api/products/notifications/
+- accept payload:
+  {
+    "type": "low_stock",
+    "title": "Low Stock Alert",
+    "message": "Rice is low (2 left)",
+    "product": 10
+  }
+- return Notification Object
+
+If backend does not enable POST and also does not auto-generate these notifications server-side, notification UX will remain incomplete.
+
+
+14) FINANCE / ANALYTICS FLOW AND RESPONSE-SHAPE GAPS
+================================================================================
+The Finance screen currently calls these endpoints in parallel:
+- GET /api/products/dashboard/overview/
+- GET /api/products/analytics/financial-summary/?period=today|week|month
+- GET /api/products/analytics/top-products/?period=today|week|month
+- GET /api/products/analytics/slow-moving/
+- GET /api/products/analytics/revenue-trend/?days=7
+- GET /api/products/items/
+
+14.1 Dashboard overview
+This contract is already mostly fine.
+Frontend uses:
+- today.sales
+- today.profit
+- today.transactions
+- week.sales / profit / transactions
+- month.sales / profit / transactions
+
+14.2 Financial summary
+This contract is also fine.
+Frontend uses:
+- total_revenue
+- total_expenses
+- total_profit or net_profit
+
+14.3 Top products endpoint mismatch
+Original docs show response like:
+[
+  {
+    "product__id": 10,
+    "product__name": "Rice",
+    "product__code": "PROD-20260312-0001",
+    "total_revenue": "54000.00",
+    "total_units": 4
+  }
+]
+
+Current mobile finance screen expects fields closer to:
+[
+  {
+    "id": 10,
+    "name": "Rice",
+    "quantity": 4,
+    "revenue": 54000.00,
+    "profit": 4000.00,
+    "image_url": "https://..."
+  }
+]
+
+The current frontend has some fallback parsing, but not enough for full reliability.
+For example:
+- it does NOT explicitly read product__name
+- it does NOT explicitly read total_units
+- it benefits from profit and image fields being present
+
+Recommended backend response for top-products:
+[
+  {
+    "id": 10,
+    "name": "Rice",
+    "code": "PROD-20260312-0001",
+    "quantity": 4,
+    "revenue": 54000.00,
+    "profit": 4000.00,
+    "image_url": "https://..."
+  }
+]
+
+14.4 Slow moving endpoint mismatch
+Original docs say slow-moving returns array of Product Object.
+Current mobile finance screen expects extra metadata such as:
+- days_in_stock
+- quantity
+- image_url
+- name
+
+Recommended backend response for slow-moving:
+[
+  {
+    "id": 10,
+    "name": "Rice",
+    "quantity": 20,
+    "days_in_stock": 34,
+    "image_url": "https://...",
+    "low_stock_threshold": 10,
+    "expiry_date": "2026-12-31"
+  }
+]
+
+If backend returns only raw Product Object without days_in_stock, finance UI loses part of its meaning.
+
+14.5 Revenue trend
+Current contract is acceptable if it returns:
+[
+  {
+    "date": "2026-03-06",
+    "revenue": 0.0,
+    "profit": 0.0
+  }
+]
+
+14.6 Expenses usage note
+The current Finance screen does not directly create expenses from mobile yet.
+But summary calculations expect total_expenses to be correct in analytics response.
+So backend must ensure financial summary includes expenses properly.
+
+
+15) NOTIFICATION DETAIL FLOW
+================================================================================
+Frontend behavior:
+- opens notification object passed from list/home
+- if notification has productId, it fetches product via GET /api/products/items/{id}/
+- if notification is unread, it calls PATCH /api/products/notifications/{id}/mark_read/
+
+Action buttons expected by UI:
+- low_stock/out_of_stock notifications show action buttons like restock/view product
+
+Important note:
+Current notification detail screen routes "Restock now" into AddProductFlow, but AddProductFlow is not yet a true restock flow.
+This is a frontend gap, not a backend contract issue.
+
+
+16) MORE / SETTINGS / LOGOUT FLOW
+================================================================================
+Frontend calls:
+- GET /api/auth/profile/
+- POST /api/auth/logout/
+- token clear on device after logout request
+
+Required backend behavior:
+- logout must accept refresh token
+- logout should blacklist refresh token
+- if logout fails because token already invalid, mobile may still clear local tokens and continue
+
+
+17) BUSINESS TYPE / ONBOARDING GAP
+================================================================================
+Current mobile onboarding stores business type locally only:
+- retail
+- service
+
+It is not reliably persisted to backend today.
+
+If business_type matters for backend reporting, permissions, analytics, or onboarding completeness, then backend must support one of these:
+- PATCH /api/auth/profile/ with business_type after onboarding
+- OR dedicated onboarding completion endpoint
+
+Recommended simple contract:
+- continue using PATCH /api/auth/profile/
+- allow:
+  {
+    "business_type": "retail"
+  }
+
+
+18) DATE FORMAT EXPECTATIONS
+================================================================================
+Backend should consistently use:
+- date fields: YYYY-MM-DD
+- datetime fields: ISO 8601
+
+Frontend currently sends product expiry_date as YYYY-MM-DD.
+Frontend expects created_at / updated_at / sale_date as ISO datetimes.
+
+Known frontend-side gap:
+- some product-prefill logic still assumes legacy slash-delimited dates in a few places
+- backend should not change date format to accommodate that
+- backend should stay consistent with YYYY-MM-DD
+- frontend can be corrected later
+
+
+19) PERFORMANCE EXPECTATIONS
+================================================================================
+The app currently uses polling rather than sockets for several areas.
+
+Polling cadence in current mobile behavior:
+- Home: every 15 seconds
+- Notifications: every 15 seconds
+- Inventory/Sell areas may refresh manually or on re-entry
+
+Backend implications:
+- these endpoints should be reasonably fast:
+  - /api/auth/profile/
+  - /api/products/dashboard/overview/
+  - /api/products/items/
+  - /api/products/sales/
+  - /api/products/notifications/
+
+Pagination note:
+- original docs say list endpoints return arrays with no pagination configured
+- that is acceptable for now only if record counts remain manageable
+- if backend introduces pagination later, frontend must be updated at the same time
+
+
+20) PRIORITY LIST OF BACKEND WORK REQUIRED
+================================================================================
+Priority 1: Real auth flow
+- implement OTP endpoints OR confirm backend will remain password-only so frontend can later be adjusted
+- recommended: implement request-otp, verify-otp, resend-otp
+
+Priority 2: Resolve notification contract conflict
+- either enable POST /api/products/notifications/
+- or generate notifications server-side for product/sale/stock events
+- preferred final architecture: server-driven notifications
+
+Priority 3: Seed or relax category/supplier dependencies
+- categories must match current mobile labels or mobile may map wrongly
+- suppliers endpoint must never be empty if supplier remains required
+
+Priority 4: Align analytics response shapes
+- top-products should return stable mobile-friendly fields
+- slow-moving should include days_in_stock and image_url
+
+Priority 5: Define sale deletion semantics
+- explicitly document whether delete restores stock, is forbidden, or becomes cancel
+- preferred: cancel/soft-delete with stock reversal or disallow delete
+
+Priority 6: Persist onboarding business_type
+- use PATCH /api/auth/profile/ or dedicated onboarding endpoint
+
+
+21) RECOMMENDED FINAL CONTRACT CHANGES
+================================================================================
+The following are the most useful backend additions/adjustments:
+
+Add:
+- POST /api/auth/request-otp/
+- POST /api/auth/verify-otp/
+- POST /api/auth/resend-otp/
+
+Clarify or adjust:
+- POST /api/products/notifications/ support OR remove need by making notifications server-driven
+- DELETE /api/products/sales/{id}/ side effects
+- /api/products/analytics/top-products/ response shape
+- /api/products/analytics/slow-moving/ response shape
+
+Seed or support:
+- categories matching frontend names
+- at least one supplier, or nullable supplier
+
+Persist:
+- business_type through profile patch or onboarding endpoint
+
+
+22) ACCEPTANCE CHECKLIST FOR BACKEND DEVELOPER
+================================================================================
+Backend implementation should be considered ready for final frontend hookup when all of the following are true:
+
+Authentication
+- phone entry can trigger a real server OTP request
+- verification code can be validated server-side
+- successful OTP verification returns JWT tokens and user profile
+- resend OTP works with timer-compatible metadata
+
+Session
+- access token works on protected routes
+- refresh rotation works
+- logout blacklists refresh token
+
+Profile
+- profile GET works
+- profile PATCH works for text-only changes
+- profile PATCH multipart works for image changes
+
+Products
+- product list works
+- product create works with JSON and multipart image upload
+- product update works with JSON and multipart image upload
+- soft delete hides products from normal list
+- categories endpoint returns expected values
+- suppliers endpoint returns usable values
+
+Sales
+- create sale atomically validates stock and deducts stock
+- credit sales preserve debtor information
+- sale detail works
+- sale delete/cancel behavior is explicitly defined and safe
+
+Notifications
+- list works
+- detail/read state works
+- unread count works
+- notification creation path is resolved either by POST support or fully server-driven event generation
+
+Analytics
+- dashboard overview works
+- financial summary works
+- top products returns mobile-friendly fields
+- slow moving returns days_in_stock and related fields
+- revenue trend works
+
+Onboarding
+- business_type can be persisted to backend if required
+
+
+23) FINAL NOTE
+================================================================================
+If backend implements the pieces above, especially the OTP flow and notification strategy, the remaining frontend cleanup will be straightforward.
+
+The two most important unresolved items are:
+- auth flow mismatch
+- notification creation mismatch
+
+Everything else is mostly response-shape alignment and dependency seeding.
+
+
+END OF HANDOFF
+================================================================================

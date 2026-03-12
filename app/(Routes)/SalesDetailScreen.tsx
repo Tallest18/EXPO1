@@ -1,27 +1,31 @@
 // app/(Routes)/SalesDetailScreen.tsx
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { deleteDoc, doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
-  Dimensions,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Dimensions,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { db } from "../config/firebaseConfig";
+
+import { deleteSale, getSale } from "@/src/api";
 
 const { width, height } = Dimensions.get("window");
 
 // Responsive sizing functions
-const scale = (size: number) => (width / 375) * size;
-const verticalScale = (size: number) => (height / 812) * size;
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+const scale = (size: number) =>
+  clamp((width / 375) * size, size * 0.76, size * 1.3);
+const verticalScale = (size: number) =>
+  clamp((height / 812) * size, size * 0.62, size * 1.2);
 const moderateScale = (size: number, factor = 0.5) =>
   size + (scale(size) - size) * factor;
 
@@ -60,25 +64,44 @@ const SalesDetailScreen = () => {
       if (params.sale) {
         const saleData = JSON.parse(params.sale as string);
 
-        // If we have a sale ID, try to fetch the latest data from Firestore
+        // If we have a sale ID, try to fetch the latest data from backend
         if (saleData.id) {
           try {
-            const saleDoc = await getDoc(doc(db, "sales", saleData.id));
-            if (saleDoc.exists()) {
-              setSale({ id: saleDoc.id, ...saleDoc.data() } as SaleDetail);
+            const apiSale = await getSale(saleData.id);
+            if (apiSale) {
+              const firstItem = apiSale.items?.[0];
+
+              setSale({
+                id: String(apiSale.id),
+                name: firstItem?.product_name || saleData.name || "Sale",
+                image: saleData.image,
+                quantity: Number(firstItem?.quantity || saleData.quantity || 1),
+                date:
+                  apiSale.sale_date ||
+                  apiSale.created_at ||
+                  saleData.date ||
+                  new Date().toISOString(),
+                amount: Number(apiSale.total_amount || saleData.amount || 0),
+                profit: Number(apiSale.total_profit || saleData.profit || 0),
+                costPrice: Number(
+                  firstItem?.cost_price || saleData.costPrice || 0,
+                ),
+                sellingPrice: Number(
+                  firstItem?.unit_price || saleData.sellingPrice || 0,
+                ),
+                customerName: apiSale.customer_name || saleData.customerName,
+                customerPhone: apiSale.customer_phone || saleData.customerPhone,
+                paymentMethod: apiSale.payment_method || saleData.paymentMethod,
+                notes: apiSale.notes || saleData.notes,
+                productId: firstItem?.product
+                  ? String(firstItem.product)
+                  : saleData.productId,
+              });
             } else {
-              // If document doesn't exist in Firestore, use the passed data
-              console.log(
-                "Sale document not found in Firestore, using passed data",
-              );
               setSale(saleData);
             }
-          } catch (firestoreError) {
-            // If Firestore fetch fails (e.g., permission denied), fall back to passed data
-            console.log(
-              "Firestore fetch failed, using passed data:",
-              firestoreError,
-            );
+          } catch (apiError) {
+            console.log("API fetch failed, using passed data:", apiError);
             setSale(saleData);
           }
         } else {
@@ -110,7 +133,7 @@ const SalesDetailScreen = () => {
           onPress: async () => {
             try {
               setDeleting(true);
-              await deleteDoc(doc(db, "sales", sale.id));
+              await deleteSale(sale.id);
               Alert.alert("Success", "Sale record deleted successfully");
               router.back();
             } catch (error) {

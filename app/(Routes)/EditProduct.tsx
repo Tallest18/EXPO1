@@ -1,38 +1,45 @@
+import {
+    getProduct,
+    listCategories,
+    listSuppliers,
+    updateProductWithImage,
+} from "@/src/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Image,
-  Modal,
-  PermissionsAndroid,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Image,
+    Modal,
+    PermissionsAndroid,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import {
-  Asset,
-  ImagePickerResponse,
-  launchCamera,
-  launchImageLibrary,
-  MediaType,
+    Asset,
+    ImagePickerResponse,
+    launchCamera,
+    launchImageLibrary,
+    MediaType,
 } from "react-native-image-picker";
-import { auth, db, storage } from "../config/firebaseConfig"; // Adjust path as necessary
 
 const { width, height } = Dimensions.get("window");
 
 // Responsive sizing functions
-const scale = (size: number) => (width / 375) * size;
-const verticalScale = (size: number) => (height / 812) * size;
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+const scale = (size: number) =>
+  clamp((width / 375) * size, size * 0.76, size * 1.3);
+const verticalScale = (size: number) =>
+  clamp((height / 812) * size, size * 0.62, size * 1.2);
 const moderateScale = (size: number, factor = 0.5) =>
   size + (scale(size) - size) * factor;
 
@@ -160,8 +167,6 @@ const EditProduct: React.FC = () => {
     "Stock & Extras",
     "Summary",
   ];
-  const currentUser = auth.currentUser;
-
   // 1. Fetch Existing Product Data
   useEffect(() => {
     const fetchProduct = async () => {
@@ -172,12 +177,28 @@ const EditProduct: React.FC = () => {
       }
 
       try {
-        const productDoc = await getDoc(doc(db, "products", productIdString));
+        const apiProduct = await getProduct(productIdString);
 
-        if (productDoc.exists()) {
+        if (apiProduct) {
           const product = {
-            id: productDoc.id,
-            ...productDoc.data(),
+            id: String(apiProduct.id),
+            name: apiProduct.name,
+            category: apiProduct.category_name || "",
+            barcode: apiProduct.barcode || apiProduct.code || "",
+            image: apiProduct.image ? { uri: apiProduct.image } : null,
+            quantityType: apiProduct.quantity_type || "Single Items",
+            unitsInStock: apiProduct.quantity_left ?? apiProduct.quantity,
+            costPrice: Number(apiProduct.buying_price || 0),
+            sellingPrice: Number(apiProduct.selling_price || 0),
+            lowStockThreshold: apiProduct.low_stock_threshold ?? 10,
+            expiryDate: apiProduct.expiry_date || "",
+            supplier: {
+              name:
+                apiProduct.supplier_name || apiProduct.supplier_obj_name || "",
+              phone: apiProduct.supplier_phone || "",
+            },
+            dateAdded: apiProduct.created_at || new Date().toISOString(),
+            userId: "api-user",
           } as Product;
           setProductData(product);
           setFormData(parseProductToFormData(product));
@@ -275,34 +296,6 @@ const EditProduct: React.FC = () => {
     Alert.alert("Success", "Barcode scanned successfully!");
   };
 
-  // 3. Image Upload Logic (Checks if URI is local or remote)
-  const uploadImage = async (uri: string): Promise<string | null> => {
-    if (uri.startsWith("http")) {
-      // Image is already a remote URL (kept the existing image)
-      return uri;
-    }
-
-    // Image is a local URI and needs to be uploaded/re-uploaded
-    setImageUploading(true);
-    try {
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const user = auth.currentUser;
-      if (!user) throw new Error("User not authenticated.");
-
-      const fileRef = ref(storage, `product_images/${user.uid}/${Date.now()}`);
-      await uploadBytes(fileRef, blob);
-      const downloadURL = await getDownloadURL(fileRef);
-      return downloadURL;
-    } catch (error) {
-      console.error("Image upload error:", error);
-      Alert.alert("Error", "Failed to upload image.");
-      return null;
-    } finally {
-      setImageUploading(false);
-    }
-  };
-
   const handlePickImage = async (useCamera: boolean) => {
     // ... (Your existing handlePickImage and permissions logic)
     if (Platform.OS === "android") {
@@ -388,7 +381,7 @@ const EditProduct: React.FC = () => {
 
   // 4. Update Product Logic (Modified from handleSaveProduct)
   const handleUpdateProduct = async () => {
-    if (!currentUser || !productIdString) {
+    if (!productIdString) {
       Alert.alert("Authentication Error", "Please log in to update products.");
       return;
     }
@@ -398,45 +391,59 @@ const EditProduct: React.FC = () => {
     setUpdating(true);
 
     try {
-      let imageUrl = null;
-      if (formData.productImage) {
-        // This will either return the existing remote URL or upload a new one.
-        imageUrl = await uploadImage(formData.productImage.uri);
+      const [categories, suppliers] = await Promise.all([
+        listCategories(),
+        listSuppliers(),
+      ]);
+
+      if (!categories.length || !suppliers.length) {
+        Alert.alert(
+          "Error",
+          "Categories or suppliers are not available from backend.",
+        );
+        return;
       }
+
+      const matchedCategory = categories.find(
+        (c) => c.name.toLowerCase() === (formData.category || "").toLowerCase(),
+      );
+      const matchedSupplier = suppliers.find(
+        (s) =>
+          s.name.toLowerCase() === (formData.supplier.name || "").toLowerCase(),
+      );
 
       // Prepare updated data for Firestore
       const updatedData = {
         name: formData.productName || productData?.name || "Untitled Product",
-        category: formData.category || productData?.category || "Food",
+        category: matchedCategory?.id ?? categories[0].id,
+        supplier: matchedSupplier?.id ?? suppliers[0].id,
         barcode: formData.sku || productData?.barcode || "",
-        image: imageUrl ? { uri: imageUrl } : null,
         quantityType:
           formData.quantityType || productData?.quantityType || "Single Items",
-        unitsInStock: parseInt(formData.numberOfItems) || 0,
-        costPrice: parseFloat(formData.costPrice) || 0,
-        sellingPrice: parseFloat(formData.sellingPrice) || 0,
-        lowStockThreshold: parseInt(formData.lowStockThreshold) || 10,
+        quantity: parseInt(formData.numberOfItems) || 0,
+        buying_price: String(parseFloat(formData.costPrice) || 0),
+        selling_price: String(parseFloat(formData.sellingPrice) || 0),
+        low_stock_threshold: parseInt(formData.lowStockThreshold) || 10,
         expiryDate:
           formData.expiryDate.month && formData.expiryDate.year
-            ? `${formData.expiryDate.month}/${
-                formData.expiryDate.day || "01"
-              }/${formData.expiryDate.year}`
+            ? `${formData.expiryDate.year}-${String(
+                Number(formData.expiryDate.month),
+              ).padStart(2, "0")}-${String(
+                Number(formData.expiryDate.day || "1"),
+              ).padStart(2, "0")}`
             : productData?.expiryDate || "12/01/2025",
-        supplier: {
-          name:
-            formData.supplier.name ||
-            productData?.supplier.name ||
-            "Gideon Otuedor",
-          phone:
-            formData.supplier.phone ||
-            productData?.supplier.phone ||
-            "+234 123 4567 890",
-        },
+        supplier_name:
+          formData.supplier.name || productData?.supplier.name || "",
+        supplier_phone:
+          formData.supplier.phone || productData?.supplier.phone || "",
         // We do not change dateAdded or userId
       };
 
-      // Save to Firestore using updateDoc
-      await updateDoc(doc(db, "products", productIdString), updatedData);
+      await updateProductWithImage(
+        productIdString,
+        updatedData as any,
+        formData.productImage?.uri,
+      );
 
       // Navigate back to the details page (or previous screen)
       Alert.alert("Success", `${updatedData.name} updated successfully!`, [

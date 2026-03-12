@@ -1,24 +1,22 @@
 // app/(Main)/Profile.tsx
+import { getProfile, updateProfile } from "@/src/api";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { auth, db, storage } from "../config/firebaseConfig";
 
 const Profile = () => {
   const router = useRouter();
@@ -40,32 +38,17 @@ const Profile = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       setLoading(true);
-      const user = auth.currentUser;
-      if (user) {
-        try {
-          const docRef = doc(db, "users", user.uid);
-          const docSnap = await getDoc(docRef);
-
-          if (docSnap.exists()) {
-            const userData = docSnap.data();
-            setBusinessName(userData.name || userData.businessName || "");
-            setPhoneNumber(userData.phone || userData.phoneNumber || "");
-            setBusinessType(userData.businessType || "");
-            setProfileImage(
-              userData.profileImage || "https://via.placeholder.com/150",
-            );
-          } else {
-            // Create doc if it doesn't exist
-            await setDoc(docRef, {
-              name: "Business Name",
-              profileImage: "https://via.placeholder.com/150",
-            });
-            setBusinessName("Business Name");
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-          Alert.alert("Error", "Could not fetch profile data.");
-        }
+      try {
+        const userData = await getProfile();
+        setBusinessName(userData.name || userData.business_name || "");
+        setPhoneNumber(userData.phone || "");
+        setBusinessType(userData.business_type || "");
+        setProfileImage(
+          userData.profile_image || "https://via.placeholder.com/150",
+        );
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        Alert.alert("Error", "Could not fetch profile data.");
       }
       setLoading(false);
     };
@@ -76,19 +59,15 @@ const Profile = () => {
   const uploadImage = async (uri: string) => {
     setImageUploading(true);
     try {
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const user = auth.currentUser;
-      if (!user) throw new Error("User not authenticated.");
-      const fileRef = ref(storage, `profile_pictures/${user.uid}`);
-      await uploadBytes(fileRef, blob);
-
-      const downloadURL = await getDownloadURL(fileRef);
-      setProfileImage(downloadURL);
-
-      // Update Firestore immediately
-      const userDocRef = doc(db, "users", user.uid);
-      await updateDoc(userDocRef, { profileImage: downloadURL });
+      const updated = await updateProfile(
+        {
+          name: businessName,
+          business_name: businessName,
+          business_type: businessType || undefined,
+        },
+        uri,
+      );
+      setProfileImage(updated.profile_image || uri);
 
       Alert.alert("Success", "Profile picture updated successfully.");
     } catch (error) {
@@ -133,23 +112,18 @@ const Profile = () => {
       return;
     }
     setLoading(true);
-    const user = auth.currentUser;
-    if (user) {
-      try {
-        const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, {
-          name: businessName,
-          businessName: businessName,
-          profileImage: profileImage,
-          updatedAt: new Date().toISOString(),
-        });
+    try {
+      await updateProfile({
+        name: businessName,
+        business_name: businessName,
+        business_type: businessType || undefined,
+      });
 
-        Alert.alert("Success", "Profile details saved!");
-        router.back();
-      } catch (error) {
-        console.error("Error saving profile:", error);
-        Alert.alert("Error", "Failed to save profile details.");
-      }
+      Alert.alert("Success", "Profile details saved!");
+      router.back();
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      Alert.alert("Error", "Failed to save profile details.");
     }
     setLoading(false);
   };

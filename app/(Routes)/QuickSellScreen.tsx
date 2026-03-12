@@ -1,35 +1,25 @@
 // screens/QuickSellScreen.tsx
+import { createSale, listProducts } from "@/src/api";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
-import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  updateDoc,
-  where,
-} from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
-  FlatList,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    FlatList,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { auth, db } from "../config/firebaseConfig";
 import {
-  checkHighSelling,
-  checkLowStock,
-  notifySaleCompleted,
+    checkHighSelling,
+    checkLowStock,
+    notifySaleCompleted,
 } from "../notificationHelpers";
 
 interface Product {
@@ -68,20 +58,19 @@ const QuickSellScreen = () => {
   // Fetch products
   useEffect(() => {
     const fetchProducts = async () => {
-      const currentUser = auth.currentUser;
-      if (!currentUser) return;
-
       try {
-        const productsQuery = query(
-          collection(db, "products"),
-          where("userId", "==", currentUser.uid),
-        );
-        const snapshot = await getDocs(productsQuery);
-        const fetchedProducts: Product[] = [];
-
-        snapshot.forEach((doc) => {
-          fetchedProducts.push({ id: doc.id, ...doc.data() } as Product);
-        });
+        const apiProducts = await listProducts();
+        const fetchedProducts: Product[] = apiProducts.map((p) => ({
+          id: String(p.id),
+          name: p.name,
+          category: p.category_name || "",
+          image: p.image ? { uri: p.image } : null,
+          unitsInStock: p.quantity_left ?? p.quantity ?? 0,
+          costPrice: Number(p.buying_price || 0),
+          sellingPrice: Number(p.selling_price || 0),
+          lowStockThreshold: p.low_stock_threshold ?? 10,
+          barcode: p.barcode || p.code || "",
+        }));
 
         setProducts(fetchedProducts);
         setFilteredProducts(fetchedProducts);
@@ -188,12 +177,6 @@ const QuickSellScreen = () => {
   // Complete sale
   const handleCompleteSale = async () => {
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        Alert.alert("Error", "Please log in to complete sale");
-        return;
-      }
-
       if (cartItems.length === 0) {
         Alert.alert("Error", "Cart is empty");
         return;
@@ -204,58 +187,35 @@ const QuickSellScreen = () => {
       let totalAmount = 0;
       let totalProfit = 0;
 
-      // Process each item in the cart
       for (const item of cartItems) {
-        const productRef = doc(db, "products", item.id);
-        const productDoc = await getDoc(productRef);
-
-        if (!productDoc.exists()) {
-          console.error(`Product ${item.id} not found`);
-          continue;
-        }
-
-        const productData = productDoc.data();
-        const newStock = productData.unitsInStock - item.quantity;
-
-        // Calculate amounts
         const saleAmount = item.sellingPrice * item.quantity;
         const profit = (item.sellingPrice - item.costPrice) * item.quantity;
         totalAmount += saleAmount;
         totalProfit += profit;
-
-        // Update product stock in Firestore
-        await updateDoc(productRef, {
-          unitsInStock: newStock,
-        });
-
-        // Record the sale
-        await addDoc(collection(db, "sales"), {
-          userId: currentUser.uid,
-          productId: item.id,
-          name: item.name,
-          image: item.image?.uri || null,
-          quantity: item.quantity,
-          amount: saleAmount,
-          profit: profit,
-          date: new Date().toLocaleDateString(),
-          createdAt: new Date(),
-        });
-
-        // Check for low stock notification
-        await checkLowStock(
-          currentUser.uid,
-          item.id,
-          item.name,
-          newStock,
-          productData.lowStockThreshold,
-        );
-
-        // Check if this product is high-selling
-        await checkHighSelling(currentUser.uid, item.id, item.name);
       }
 
-      // Notify sale completion
-      await notifySaleCompleted(currentUser.uid, totalAmount, cartItems.length);
+      await createSale({
+        payment_method: "cash",
+        amount_paid: String(totalAmount),
+        items: cartItems.map((item) => ({
+          product: Number(item.id),
+          quantity: item.quantity,
+        })),
+      });
+
+      for (const item of cartItems) {
+        const updatedStock = Math.max(0, item.unitsInStock - item.quantity);
+        await checkLowStock(
+          "api-user",
+          item.id,
+          item.name,
+          updatedStock,
+          item.lowStockThreshold,
+        );
+        await checkHighSelling("api-user", item.id, item.name);
+      }
+
+      await notifySaleCompleted("api-user", totalAmount, cartItems.length);
 
       // Clear cart and show success
       setCartItems([]);

@@ -1,20 +1,32 @@
 // app/(routes)/BusinessSelectionScreen.tsx
+import { updateProfile } from "@/src/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Platform,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
+
+const { width, height } = Dimensions.get("window");
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+const scale = (size: number) =>
+  clamp((width / 375) * size, size * 0.76, size * 1.3);
+const verticalScale = (size: number) =>
+  clamp((height / 812) * size, size * 0.62, size * 1.2);
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
 interface BusinessType {
   id: string;
@@ -83,6 +95,7 @@ const BusinessSelectionScreen: React.FC<BusinessSelectionExtraProps> = ({
       await Promise.all([
         AsyncStorage.setItem("businessType", selectedType),
         AsyncStorage.setItem("hasCompletedOnboarding", "true"),
+        updateProfile({ business_type: selectedType }),
       ]);
 
       try {
@@ -225,63 +238,66 @@ const BusinessSelectionScreen: React.FC<BusinessSelectionExtraProps> = ({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#2046AE" },
-  topSection: { height: 350 },
+  topSection: { height: verticalScale(320) },
   bottomSection: {
     backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 8,
+    borderTopLeftRadius: moderateScale(24),
+    borderTopRightRadius: moderateScale(24),
+    paddingTop: verticalScale(8),
     flex: 1,
   },
   handleBar: {
-    width: 80,
-    height: 4,
+    width: scale(80),
+    height: verticalScale(4),
     backgroundColor: "black",
-    borderRadius: 2,
+    borderRadius: moderateScale(2),
     alignSelf: "center",
-    marginBottom: 24,
+    marginBottom: verticalScale(20),
   },
   scrollContainer: { flex: 1 },
-  scrollContent: { flexGrow: 1, paddingBottom: 20 },
-  formContainer: { paddingHorizontal: 24, minHeight: 400 },
+  scrollContent: { flexGrow: 1, paddingBottom: verticalScale(20) },
+  formContainer: {
+    paddingHorizontal: scale(24),
+    minHeight: verticalScale(360),
+  },
   successText: {
-    fontSize: 16,
+    fontSize: moderateScale(15),
     color: "#2046AE",
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
     fontFamily: "Poppins-Bold",
   },
   title: {
-    fontSize: 30,
+    fontSize: moderateScale(26),
     fontFamily: "Poppins-Bold",
     color: "#111827",
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: moderateScale(16),
     color: "#6B7280",
     textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 32,
+    lineHeight: moderateScale(22),
+    marginBottom: verticalScale(24),
     fontFamily: "Poppins-Regular",
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: moderateScale(19),
     fontFamily: "Poppins-Bold",
     color: "#111827",
-    marginBottom: 16,
+    marginBottom: verticalScale(14),
   },
-  optionsContainer: { marginBottom: 20 },
+  optionsContainer: { marginBottom: verticalScale(16) },
   businessOption: {
     borderWidth: 1.5,
     borderColor: "#E5E7EB",
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: moderateScale(12),
+    padding: moderateScale(14),
     backgroundColor: "#FFFFFF",
     position: "relative",
-    minHeight: 80,
-    marginBottom: 12,
+    minHeight: verticalScale(76),
+    marginBottom: verticalScale(10),
   },
   selectedOption: {
     borderColor: "#2046AE",
@@ -291,51 +307,52 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    minHeight: 48,
+    minHeight: verticalScale(46),
   },
-  businessInfo: { flex: 1, paddingRight: 16 },
+  businessInfo: { flex: 1, paddingRight: scale(14) },
   businessTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(16),
     fontFamily: "Poppins-Bold",
     color: "#111827",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
   },
   businessDescription: {
-    fontSize: 14,
+    fontSize: moderateScale(13),
     color: "#6B7280",
-    lineHeight: 20,
+    lineHeight: moderateScale(18),
     fontFamily: "Poppins-Regular",
   },
   businessIcon: {
-    width: 70,
-    height: 70,
+    width: scale(62),
+    height: scale(62),
     justifyContent: "center",
     alignItems: "center",
   },
   selectionIndicator: {
     position: "absolute",
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
+    top: verticalScale(8),
+    right: scale(8),
+    width: scale(8),
+    height: scale(8),
     backgroundColor: "#2046AE",
-    borderRadius: 4,
+    borderRadius: moderateScale(4),
   },
   buttonContainer: {
-    paddingHorizontal: 24,
-    paddingBottom: Platform.OS === "ios" ? 34 : 20,
+    paddingHorizontal: scale(24),
+    paddingBottom:
+      Platform.OS === "ios" ? verticalScale(30) : verticalScale(18),
     backgroundColor: "#FFFFFF",
   },
   finishButton: {
     backgroundColor: "#2046AE",
-    borderRadius: 25,
-    paddingVertical: 16,
+    borderRadius: moderateScale(25),
+    paddingVertical: verticalScale(14),
     alignItems: "center",
-    minHeight: 54,
+    minHeight: verticalScale(50),
   },
   finishButtonText: {
     color: "#FFFFFF",
-    fontSize: 20,
+    fontSize: moderateScale(18),
     fontFamily: "Poppins-Bold",
   },
   disabled: { opacity: 0.6 },
@@ -351,13 +368,13 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 18,
+    marginTop: verticalScale(10),
+    fontSize: moderateScale(16),
     fontFamily: "Poppins-Regular",
     color: "#2046AE",
   },
   emoji: {
-    fontSize: 50,
+    fontSize: moderateScale(42),
   },
 });
 

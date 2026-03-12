@@ -1,22 +1,33 @@
+import { clearTokens, getProfile, logout } from "@/src/api";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
+
 import {
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Dimensions,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import useThemeStore from "../../stores/themeStore";
-import { auth, db } from "../config/firebaseConfig";
+
+const { width, height } = Dimensions.get("window");
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+const scale = (size: number) =>
+  clamp((width / 375) * size, size * 0.76, size * 1.3);
+const verticalScale = (size: number) =>
+  clamp((height / 812) * size, size * 0.62, size * 1.2);
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
 // Types
 interface SettingItemProps {
@@ -66,11 +77,11 @@ const itemStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    paddingVertical: verticalScale(14),
+    paddingHorizontal: scale(16),
     backgroundColor: "#fff",
-    borderRadius: 16,
-    marginBottom: 12,
+    borderRadius: moderateScale(16),
+    marginBottom: verticalScale(10),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -82,15 +93,15 @@ const itemStyles = StyleSheet.create({
     alignItems: "center",
   },
   iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: scale(42),
+    height: scale(42),
+    borderRadius: moderateScale(12),
     justifyContent: "center",
     alignItems: "center",
   },
   text: {
-    fontSize: 16,
-    marginLeft: 16,
+    fontSize: moderateScale(15),
+    marginLeft: scale(14),
     color: "#1f2937",
     fontWeight: "500",
   },
@@ -103,47 +114,31 @@ const SettingsScreen = () => {
   // Handle user logout
   const handleLogout = async () => {
     try {
-      await auth.signOut();
+      await logout();
+      await clearTokens();
       router.replace("../../Onboarding1");
     } catch (error) {
       console.error("Logout failed:", error);
-      alert("Failed to log out. Please try again.");
+      Alert.alert("Error", "Failed to log out. Please try again.");
     }
   };
 
   // Fetch user profile data on mount
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
-      if (user) {
-        try {
-          const userDocRef = doc(db, "users", user.uid);
-          const userDocSnap = await getDoc(userDocRef);
-
-          if (userDocSnap.exists()) {
-            const userData = userDocSnap.data();
-            setProfile({
-              name: userData.name || "User's Name",
-              username: userData.username || user.email || "username",
-            });
-          } else {
-            setProfile({
-              name: user.displayName || "User's Name",
-              username: user.email || "username",
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching user profile:", error);
-          setProfile({
-            name: user.displayName || "User's Name",
-            username: user.email || "username",
-          });
-        }
-      } else {
+    const loadProfile = async () => {
+      try {
+        const user = await getProfile();
+        setProfile({
+          name: user.name || "User's Name",
+          username: user.phone || "username",
+        });
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
         setProfile(null);
       }
-    });
+    };
 
-    return () => unsubscribe();
+    loadProfile();
   }, []);
 
   return (
@@ -304,61 +299,61 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: verticalScale(32),
   },
   headerGradient: {
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    paddingBottom: 40,
+    borderBottomLeftRadius: moderateScale(32),
+    borderBottomRightRadius: moderateScale(32),
+    paddingBottom: verticalScale(32),
   },
   header: {
-    paddingHorizontal: 24,
-    paddingTop: Platform.OS === "ios" ? 20 : 40,
-    paddingBottom: 20,
+    paddingHorizontal: scale(24),
+    paddingTop: Platform.OS === "ios" ? verticalScale(18) : verticalScale(34),
+    paddingBottom: verticalScale(16),
   },
   title: {
-    fontSize: 32,
+    fontSize: moderateScale(28),
     fontWeight: "bold",
     color: "#fff",
   },
   profileSection: {
     alignItems: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: scale(24),
   },
   avatarContainer: {
-    marginBottom: 16,
+    marginBottom: verticalScale(14),
   },
   avatarGradient: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: scale(92),
+    height: scale(92),
+    borderRadius: moderateScale(50),
     justifyContent: "center",
     alignItems: "center",
   },
   name: {
-    fontSize: 24,
+    fontSize: moderateScale(22),
     fontWeight: "bold",
     color: "#fff",
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
   },
   username: {
-    fontSize: 15,
+    fontSize: moderateScale(14),
     color: "#fff",
     opacity: 0.85,
   },
   sectionsContainer: {
-    paddingHorizontal: 20,
-    marginTop: -20,
+    paddingHorizontal: scale(20),
+    marginTop: -verticalScale(18),
   },
   section: {
-    marginBottom: 24,
+    marginBottom: verticalScale(20),
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: moderateScale(11),
     fontWeight: "700",
     color: "#9ca3af",
-    marginBottom: 12,
-    marginLeft: 4,
+    marginBottom: verticalScale(10),
+    marginLeft: scale(4),
     letterSpacing: 1,
   },
   switch: {
@@ -369,22 +364,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#fff",
-    paddingVertical: 16,
-    borderRadius: 16,
+    paddingVertical: verticalScale(14),
+    borderRadius: moderateScale(16),
     borderWidth: 1.5,
     borderColor: "#fee2e2",
   },
   logoutText: {
-    fontSize: 16,
+    fontSize: moderateScale(15),
     fontWeight: "600",
     color: "#ef4444",
-    marginLeft: 8,
+    marginLeft: scale(8),
   },
   version: {
     textAlign: "center",
-    fontSize: 13,
+    fontSize: moderateScale(12),
     color: "#9ca3af",
-    marginTop: 16,
+    marginTop: verticalScale(14),
   },
 });
 

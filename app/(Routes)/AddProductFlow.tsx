@@ -1,35 +1,38 @@
+import {
+    createProductWithImage,
+    listCategories,
+    listProducts,
+    listSuppliers,
+} from "@/src/api";
 import { Ionicons } from "@expo/vector-icons";
-import { addDoc, collection, getDocs, query, where } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Image,
-  Modal,
-  PermissionsAndroid,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Image,
+    Modal,
+    PermissionsAndroid,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import {
-  Asset,
-  ImagePickerResponse,
-  launchCamera,
-  launchImageLibrary,
-  MediaType,
+    Asset,
+    ImagePickerResponse,
+    launchCamera,
+    launchImageLibrary,
+    MediaType,
 } from "react-native-image-picker";
-import { auth, db, storage } from "../config/firebaseConfig";
 import {
-  checkExpiringProducts,
-  checkLowStock,
-  notifyProductAdded,
+    checkExpiringProducts,
+    checkLowStock,
+    notifyProductAdded,
 } from "../notificationHelpers";
 
 const { width } = Dimensions.get("window");
@@ -164,8 +167,6 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
 
   const steps = ["Product Info", "Pricing & Packaging", "Stock & Extras"];
 
-  const currentUser = auth.currentUser;
-
   useEffect(() => {
     if (visible) {
       setShowInitialChoice(true);
@@ -185,36 +186,26 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
     setIsSearching(true);
 
     try {
-      const productsRef = collection(db, "products");
-      const q = query(productsRef, where("userId", "==", currentUser?.uid));
-
-      const querySnapshot = await getDocs(q);
-      const results: Product[] = [];
-
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        if (
-          data.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-          data.barcode?.includes(searchText)
-        ) {
-          results.push({
-            id: doc.id,
-            name: data.name,
-            category: data.category,
-            barcode: data.barcode,
-            image: data.image,
-            quantityType: data.quantityType,
-            unitsInStock: data.unitsInStock,
-            costPrice: data.costPrice,
-            sellingPrice: data.sellingPrice,
-            lowStockThreshold: data.lowStockThreshold,
-            expiryDate: data.expiryDate,
-            supplier: data.supplier,
-            dateAdded: data.dateAdded,
-            userId: data.userId,
-          } as Product);
-        }
-      });
+      const products = await listProducts({ search: searchText });
+      const results: Product[] = products.map((p) => ({
+        id: String(p.id),
+        name: p.name,
+        category: p.category_name || "",
+        barcode: p.barcode || p.code || "",
+        image: p.image ? { uri: p.image } : null,
+        quantityType: p.quantity_type || "Single Items",
+        unitsInStock: p.quantity_left ?? p.quantity ?? 0,
+        costPrice: Number(p.buying_price || 0),
+        sellingPrice: Number(p.selling_price || 0),
+        lowStockThreshold: p.low_stock_threshold ?? 10,
+        expiryDate: p.expiry_date || "",
+        supplier: {
+          name: p.supplier_name || p.supplier_obj_name || "",
+          phone: p.supplier_phone || "",
+        },
+        dateAdded: p.created_at || new Date().toISOString(),
+        userId: "api-user",
+      }));
 
       setSearchResults(results);
     } catch (error) {
@@ -279,28 +270,6 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         ...prev,
         [field]: value,
       }));
-    }
-  };
-
-  const uploadImage = async (uri: string): Promise<string> => {
-    setImageUploading(true);
-    try {
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const user = auth.currentUser;
-      if (!user) {
-        throw new Error("User not authenticated.");
-      }
-      const fileRef = ref(storage, `product_images/${user.uid}/${Date.now()}`);
-      await uploadBytes(fileRef, blob);
-      const downloadURL = await getDownloadURL(fileRef);
-      return downloadURL;
-    } catch (error) {
-      console.error("Image upload error:", error);
-      Alert.alert("Error", "Failed to upload image.");
-      throw error;
-    } finally {
-      setImageUploading(false);
     }
   };
 
@@ -458,11 +427,6 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
   };
 
   const handleSaveProduct = async () => {
-    if (!currentUser) {
-      Alert.alert("Authentication Error", "Please log in to add products.");
-      return;
-    }
-
     if (saving) {
       return;
     }
@@ -470,11 +434,6 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
     setSaving(true);
 
     try {
-      let imageUrl = null;
-      if (formData.productImage) {
-        imageUrl = await uploadImage(formData.productImage.uri);
-      }
-
       let unitsInStock = 0;
       let finalCostPrice = 0;
       let finalSellingPrice = 0;
@@ -497,46 +456,85 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         finalSellingPrice = parseFloat(formData.sellingPricePerUnit) || 0;
       }
 
-      const productData = {
-        name: formData.productName || "Untitled Product",
-        category: formData.category || "Foodstuffs",
-        barcode: formData.sku || "",
-        image: imageUrl ? { uri: imageUrl } : null,
-        quantityType: formData.quantityType || "Single Items",
-        unitsInStock: unitsInStock,
-        costPrice: finalCostPrice,
-        sellingPrice: finalSellingPrice,
-        lowStockThreshold: parseInt(formData.lowStockThreshold) || 10,
-        expiryDate:
-          formData.expiryDate.month && formData.expiryDate.year
-            ? `${formData.expiryDate.month}/${
-                formData.expiryDate.day || "01"
-              }/${formData.expiryDate.year}`
-            : "12/01/2025",
-        supplier: {
-          name: formData.supplier.name || "Gideon Otuedor",
-          phone: formData.supplier.phone || "+234 123 4567 890",
-        },
-        dateAdded: new Date().toISOString(),
-        userId: currentUser.uid,
-      };
+      const [categories, suppliers] = await Promise.all([
+        listCategories(),
+        listSuppliers(),
+      ]);
 
-      const docRef = await addDoc(collection(db, "products"), productData);
+      const matchedCategory = categories.find(
+        (c) => c.name.toLowerCase() === (formData.category || "").toLowerCase(),
+      );
+      const matchedSupplier = suppliers.find(
+        (s) =>
+          s.name.toLowerCase() === (formData.supplier.name || "").toLowerCase(),
+      );
+
+      if (!categories.length || !suppliers.length) {
+        Alert.alert(
+          "Error",
+          "Categories or suppliers are not available from backend yet.",
+        );
+        return;
+      }
+
+      const apiProduct = await createProductWithImage(
+        {
+          name: formData.productName || "Untitled Product",
+          category: matchedCategory?.id ?? categories[0].id,
+          supplier: matchedSupplier?.id ?? suppliers[0].id,
+          buying_price: String(finalCostPrice),
+          selling_price: String(finalSellingPrice),
+          quantity: unitsInStock,
+          quantity_type: formData.quantityType || "Single Items",
+          low_stock_threshold: parseInt(formData.lowStockThreshold) || 10,
+          barcode: formData.sku || "",
+          expiry_date:
+            formData.expiryDate.month && formData.expiryDate.year
+              ? `${formData.expiryDate.year}-${String(
+                  Number(formData.expiryDate.month),
+                ).padStart(2, "0")}-${String(
+                  Number(formData.expiryDate.day || "1"),
+                ).padStart(2, "0")}`
+              : undefined,
+          supplier_name: formData.supplier.name || undefined,
+          supplier_phone: formData.supplier.phone || undefined,
+        },
+        formData.productImage?.uri,
+      );
 
       const savedProduct: Product = {
-        id: docRef.id,
-        ...productData,
+        id: String(apiProduct.id),
+        name: apiProduct.name,
+        category: apiProduct.category_name || formData.category || "",
+        barcode: apiProduct.barcode || apiProduct.code || "",
+        image: apiProduct.image ? { uri: apiProduct.image } : null,
+        quantityType: apiProduct.quantity_type || formData.quantityType,
+        unitsInStock: apiProduct.quantity_left ?? apiProduct.quantity,
+        costPrice: Number(apiProduct.buying_price || 0),
+        sellingPrice: Number(apiProduct.selling_price || 0),
+        lowStockThreshold: apiProduct.low_stock_threshold ?? 10,
+        expiryDate: apiProduct.expiry_date || "",
+        supplier: {
+          name: apiProduct.supplier_name || apiProduct.supplier_obj_name || "",
+          phone: apiProduct.supplier_phone || "",
+        },
+        dateAdded: apiProduct.created_at || new Date().toISOString(),
+        userId: "api-user",
       } as Product;
 
-      await notifyProductAdded(currentUser.uid, docRef.id, productData.name);
-      await checkLowStock(
-        currentUser.uid,
-        docRef.id,
-        productData.name,
-        productData.unitsInStock,
-        productData.lowStockThreshold,
+      await notifyProductAdded(
+        "api-user",
+        String(apiProduct.id),
+        savedProduct.name,
       );
-      await checkExpiringProducts(currentUser.uid);
+      await checkLowStock(
+        "api-user",
+        String(apiProduct.id),
+        savedProduct.name,
+        savedProduct.unitsInStock,
+        savedProduct.lowStockThreshold,
+      );
+      await checkExpiringProducts("api-user");
 
       onSaveProduct(savedProduct);
       onClose();
@@ -1522,28 +1520,6 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
       </SafeAreaView>
     </Modal>
   );
-
-  if (!currentUser) {
-    return (
-      <Modal
-        visible={visible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <View
-          style={[
-            styles.container,
-            { justifyContent: "center", alignItems: "center" },
-          ]}
-        >
-          <Text style={styles.errorText}>Please log in to add products</Text>
-          <TouchableOpacity style={styles.addManuallyButton} onPress={onClose}>
-            <Text style={styles.addManuallyButtonText}>Close</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
-    );
-  }
 
   return (
     <>

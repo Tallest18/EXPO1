@@ -2,32 +2,29 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import { router } from "expo-router";
-import {
-  collection,
-  DocumentData,
-  onSnapshot,
-  orderBy,
-  query,
-  QueryDocumentSnapshot,
-} from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Dimensions,
-  FlatList,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Dimensions,
+    FlatList,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { auth, db } from "../config/firebaseConfig";
+
+import { listNotifications } from "@/src/api";
 
 const { width, height } = Dimensions.get("window");
 
 // Responsive sizing functions
-const scale = (size: number) => (width / 375) * size;
-const verticalScale = (size: number) => (height / 812) * size;
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+const scale = (size: number) =>
+  clamp((width / 375) * size, size * 0.76, size * 1.3);
+const verticalScale = (size: number) =>
+  clamp((height / 812) * size, size * 0.62, size * 1.2);
 const moderateScale = (size: number, factor = 0.5) =>
   size + (scale(size) - size) * factor;
 
@@ -43,7 +40,9 @@ interface Notification {
     | "expense"
     | "expiry"
     | "backup"
-    | "app_update";
+    | "app_update"
+    | "sale"
+    | "product_added";
   title: string;
   message: string;
   time: string;
@@ -107,57 +106,55 @@ const NotificationsScreen = () => {
   });
 
   useEffect(() => {
-    // Check if user is authenticated
-    const user = auth.currentUser;
+    const getTimeAgo = (dateString?: string): string => {
+      if (!dateString) return "Just now";
 
-    if (!user) {
-      console.log("No authenticated user");
-      setError("Please log in to view notifications");
-      setLoading(false);
-      return;
-    }
+      const date = new Date(dateString).getTime();
+      const diff = Math.max(0, Date.now() - date);
+      const minute = 60 * 1000;
+      const hour = 60 * minute;
+      const day = 24 * hour;
 
-    console.log("Setting up notification listener for user:", user.uid);
+      if (diff < minute) return "Just now";
+      if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
+      if (diff < day) return `${Math.floor(diff / hour)}h ago`;
+      return `${Math.floor(diff / day)}d ago`;
+    };
 
-    try {
-      const notificationsCollection = collection(db, "notifications");
-      const notificationsQuery = query(
-        notificationsCollection,
-        orderBy("dateAdded", "desc"),
-      );
+    const loadNotifications = async () => {
+      try {
+        const response = await listNotifications();
+        const fetchedNotifications: Notification[] = response.map((n) => ({
+          id: String(n.id),
+          type: (n.type as Notification["type"]) || "daily_summary",
+          title: n.title,
+          message: n.message,
+          time: getTimeAgo(n.created_at),
+          isRead: n.is_read,
+          productId: n.product ? String(n.product) : undefined,
+          dateAdded: n.created_at
+            ? new Date(n.created_at).getTime()
+            : Date.now(),
+          userId: "api-user",
+        }));
 
-      const unsubscribe = onSnapshot(
-        notificationsQuery,
-        (snapshot) => {
-          const fetchedNotifications: Notification[] = [];
-          snapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
-            const data = doc.data();
-            fetchedNotifications.push({
-              id: doc.id,
-              ...data,
-            } as Notification);
-          });
-          console.log("Fetched notifications:", fetchedNotifications.length);
-          setNotifications(fetchedNotifications);
-          setLoading(false);
-          setError(null);
-        },
-        (error) => {
-          console.error("Firestore error:", error);
-          setError("Failed to load notifications. Please try again.");
-          setLoading(false);
-        },
-      );
+        setNotifications(fetchedNotifications);
+        setError(null);
+      } catch (loadError) {
+        console.error("Notification load error:", loadError);
+        setError("Failed to load notifications. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      return () => {
-        console.log("Cleaning up notification listener");
-        unsubscribe();
-      };
-    } catch (error) {
-      console.error("Error setting up notification listener:", error);
-      setError("Failed to initialize notifications");
-      setLoading(false);
-    }
+    loadNotifications();
+
+    const interval = setInterval(() => {
+      loadNotifications();
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const getNotificationIcon = (type: Notification["type"]) => {

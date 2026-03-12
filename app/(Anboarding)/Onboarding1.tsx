@@ -5,8 +5,12 @@ import { Dimensions, Image, StyleSheet, Text, View } from "react-native";
 const { width, height } = Dimensions.get("window");
 
 // Responsive sizing functions
-const scale = (size: number) => (width / 375) * size;
-const verticalScale = (size: number) => (height / 812) * size;
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+const scale = (size: number) =>
+  clamp((width / 375) * size, size * 0.76, size * 1.3);
+const verticalScale = (size: number) =>
+  clamp((height / 812) * size, size * 0.62, size * 1.2);
 const moderateScale = (size: number, factor = 0.5) =>
   size + (scale(size) - size) * factor;
 

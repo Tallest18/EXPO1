@@ -1,21 +1,21 @@
 import { Feather, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { deleteDoc, doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { db } from "../config/firebaseConfig";
+
+import { deleteProduct, getProduct } from "@/src/api";
 
 // Types
 interface Product {
@@ -73,12 +73,27 @@ const ProductDetails: React.FC = () => {
       }
 
       try {
-        const productDoc = await getDoc(doc(db, "products", productId));
+        const response = await getProduct(productId);
 
-        if (productDoc.exists()) {
+        if (response) {
           const productData = {
-            id: productDoc.id,
-            ...productDoc.data(),
+            id: String(response.id),
+            name: response.name,
+            category: response.category_name || "",
+            barcode: response.barcode || "",
+            image: response.image ? { uri: response.image } : null,
+            quantityType: response.quantity_type || "Single Items",
+            unitsInStock: response.quantity_left ?? response.quantity,
+            costPrice: Number(response.buying_price || 0),
+            sellingPrice: Number(response.selling_price || 0),
+            lowStockThreshold: response.low_stock_threshold ?? 0,
+            expiryDate: response.expiry_date || "",
+            supplier: {
+              name: response.supplier_name || response.supplier_obj_name || "",
+              phone: response.supplier_phone || "",
+            },
+            dateAdded: response.created_at || new Date().toISOString(),
+            userId: "api-user",
           } as Product;
 
           setProduct(productData);
@@ -107,7 +122,7 @@ const ProductDetails: React.FC = () => {
     setDeleting(true);
 
     try {
-      await deleteDoc(doc(db, "products", product.id));
+      await deleteProduct(product.id);
 
       Alert.alert("Success", "Product deleted successfully", [
         { text: "OK", onPress: () => router.back() },

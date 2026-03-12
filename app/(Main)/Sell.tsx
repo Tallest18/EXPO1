@@ -1,29 +1,22 @@
 import { Feather } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import {
-  collection,
-  DocumentData,
-  onSnapshot,
-  query,
-  QueryDocumentSnapshot,
-  where,
-} from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { auth, db } from "../config/firebaseConfig";
+
+import { ApiProduct, ApiSale, listProducts, listSales } from "@/src/api";
 
 const { width, height } = Dimensions.get("window");
 
@@ -108,6 +101,41 @@ interface Sale {
   timestamp: any;
 }
 
+const mapApiProduct = (product: ApiProduct): Product => ({
+  id: String(product.id),
+  name: product.name,
+  category: product.category_name || "",
+  barcode: product.barcode || "",
+  image: product.image ? { uri: product.image } : null,
+  quantityType: product.quantity_type || "Single Items",
+  unitsInStock: product.quantity_left ?? product.quantity,
+  costPrice: Number(product.buying_price || 0),
+  sellingPrice: Number(product.selling_price || 0),
+  lowStockThreshold: product.low_stock_threshold ?? 0,
+  expiryDate: product.expiry_date || "",
+  supplier: {
+    name: product.supplier_name || product.supplier_obj_name || "",
+    phone: product.supplier_phone || "",
+  },
+  dateAdded: product.created_at || new Date().toISOString(),
+  userId: "api-user",
+});
+
+const mapApiSale = (sale: ApiSale): Sale => ({
+  id: String(sale.id),
+  items: (sale.items || []).map((item) => ({
+    productId: String(item.product),
+    productName: item.product_name || "Unknown Product",
+    quantity: Number(item.quantity || 0),
+    unitPrice: Number(item.unit_price || 0),
+    totalPrice: Number(item.subtotal || 0),
+  })),
+  totalAmount: Number(sale.total_amount || 0),
+  paymentMethod: sale.payment_method || "cash",
+  date: sale.sale_date || sale.created_at || new Date().toISOString(),
+  timestamp: sale.sale_date || sale.created_at || new Date().toISOString(),
+});
+
 type TabType = "all" | "history";
 
 const Sell: React.FC = () => {
@@ -134,68 +162,47 @@ const Sell: React.FC = () => {
   }, [params]);
 
   useEffect(() => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      setLoading(false);
-      return;
-    }
+    const loadData = async () => {
+      try {
+        const [productsResponse, salesResponse] = await Promise.all([
+          listProducts(),
+          listSales(),
+        ]);
 
-    const productsQuery = query(
-      collection(db, "products"),
-      where("userId", "==", currentUser.uid),
-    );
+        const productsData = productsResponse
+          .map(mapApiProduct)
+          .sort(
+            (a, b) =>
+              new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime(),
+          );
 
-    const unsubscribe = onSnapshot(
-      productsQuery,
-      (snapshot) => {
-        const productsData: Product[] = [];
-        snapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
-          productsData.push({ id: doc.id, ...doc.data() } as Product);
-        });
-
-        productsData.sort(
-          (a, b) =>
-            new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime(),
-        );
+        const salesData = salesResponse
+          .map(mapApiSale)
+          .sort(
+            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+          );
 
         setProducts(productsData);
         setFilteredProducts(productsData);
-        setLoading(false);
-      },
-      (error) => {
-        Alert.alert("Error Loading Products", error.message, [{ text: "OK" }]);
-        setLoading(false);
-      },
-    );
-
-    const salesQuery = query(
-      collection(db, "sales"),
-      where("userId", "==", currentUser.uid),
-    );
-
-    const unsubscribeSales = onSnapshot(
-      salesQuery,
-      (snapshot) => {
-        const salesData: Sale[] = [];
-        snapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
-          salesData.push({ id: doc.id, ...doc.data() } as Sale);
-        });
-
-        salesData.sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-        );
-
         setSales(salesData);
-      },
-      (error) => {
-        console.error("Error loading sales:", error);
-      },
-    );
-
-    return () => {
-      unsubscribe();
-      unsubscribeSales();
+      } catch (error: any) {
+        Alert.alert(
+          "Error Loading Data",
+          error?.message || "Failed to load data",
+          [{ text: "OK" }],
+        );
+      } finally {
+        setLoading(false);
+      }
     };
+
+    loadData();
+
+    const interval = setInterval(() => {
+      loadData();
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {

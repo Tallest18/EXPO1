@@ -1,30 +1,23 @@
 import { Feather } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
-import {
-  collection,
-  DocumentData,
-  onSnapshot,
-  query,
-  QueryDocumentSnapshot,
-  where,
-} from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
+
+import { ApiProduct, listProducts } from "@/src/api";
 import AddProductFlow from "../(Routes)/AddProductFlow";
-import { auth, db } from "../config/firebaseConfig";
 
 const { width, height } = Dimensions.get("window");
 
@@ -85,6 +78,26 @@ interface Product {
   userId: string;
 }
 
+const mapApiProduct = (product: ApiProduct): Product => ({
+  id: String(product.id),
+  name: product.name,
+  category: product.category_name || "",
+  barcode: product.barcode || "",
+  image: product.image ? { uri: product.image } : null,
+  quantityType: product.quantity_type || "Single Items",
+  unitsInStock: product.quantity_left ?? product.quantity,
+  costPrice: Number(product.buying_price || 0),
+  sellingPrice: Number(product.selling_price || 0),
+  lowStockThreshold: product.low_stock_threshold ?? 0,
+  expiryDate: product.expiry_date || "",
+  supplier: {
+    name: product.supplier_name || product.supplier_obj_name || "",
+    phone: product.supplier_phone || "",
+  },
+  dateAdded: product.created_at || new Date().toISOString(),
+  userId: "api-user",
+});
+
 type FilterType = "all" | "inStock" | "outOfStock" | "expiring";
 
 interface FilterCounts {
@@ -125,41 +138,36 @@ const Inventory: React.FC = () => {
   });
 
   useEffect(() => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      setLoading(false);
-      return;
-    }
-
-    const productsQuery = query(
-      collection(db, "products"),
-      where("userId", "==", currentUser.uid),
-    );
-
-    const unsubscribe = onSnapshot(
-      productsQuery,
-      (snapshot) => {
-        const productsData: Product[] = [];
-        snapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
-          productsData.push({ id: doc.id, ...doc.data() } as Product);
-        });
-
-        productsData.sort(
-          (a, b) =>
-            new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime(),
-        );
+    const loadProducts = async () => {
+      try {
+        const response = await listProducts();
+        const productsData = response
+          .map(mapApiProduct)
+          .sort(
+            (a, b) =>
+              new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime(),
+          );
 
         setProducts(productsData);
         calculateFilterCounts(productsData);
+      } catch (error: any) {
+        Alert.alert(
+          "Error Loading Products",
+          error?.message || "Failed to load products",
+          [{ text: "OK" }],
+        );
+      } finally {
         setLoading(false);
-      },
-      (error) => {
-        Alert.alert("Error Loading Products", error.message, [{ text: "OK" }]);
-        setLoading(false);
-      },
-    );
+      }
+    };
 
-    return () => unsubscribe();
+    loadProducts();
+
+    const interval = setInterval(() => {
+      loadProducts();
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const calculateFilterCounts = (productsData: Product[]): void => {
