@@ -34,6 +34,7 @@ interface WelcomeScreenProps {
   onNavigateToVerification?: (
     phoneNumber: string,
     verificationId: string,
+    mockCode?: string,
   ) => void;
 }
 
@@ -47,7 +48,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   });
   const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
-  const [mockCode, setMockCode] = useState<string | null>(null);
 
   if (!fontsLoaded) return null;
 
@@ -85,21 +85,19 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
     try {
       setLoading(true);
-      setMockCode(null);
       const resp = await requestOtp(formattedPhone);
       const verificationId = resp.verification_id;
-
-      // Mock mode — backend returns the code directly so we can test without SMS
-      if (resp.code) setMockCode(resp.code);
+      const returnedCode = resp.code;
 
       if (onNavigateToVerification) {
-        onNavigateToVerification(formattedPhone, verificationId);
+        onNavigateToVerification(formattedPhone, verificationId, returnedCode);
       } else {
         router.push({
           pathname: "./VerificationScreen",
           params: {
             phoneNumber: formattedPhone,
             verificationId: verificationId,
+            mockCode: returnedCode,
           },
         });
       }
@@ -168,13 +166,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               <Text style={styles.continueButtonText}>Send OTP</Text>
             )}
           </TouchableOpacity>
-
-          {mockCode ? (
-            <Text style={styles.mockCodeText}>
-              Test code (mock mode):{" "}
-              <Text style={styles.mockCodeValue}>{mockCode}</Text>
-            </Text>
-          ) : null}
         </ScrollView>
       </View>
     </KeyboardAvoidingView>
@@ -267,18 +258,6 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(17),
     fontFamily: "Poppins-Bold",
     lineHeight: moderateScale(24),
-  },
-  mockCodeText: {
-    marginTop: verticalScale(10),
-    fontSize: moderateScale(11),
-    fontFamily: "Poppins-Regular",
-    color: "#9CA3AF",
-    textAlign: "center",
-  },
-  mockCodeValue: {
-    fontFamily: "Poppins-Bold",
-    color: "#1155CC",
-    letterSpacing: 2,
   },
 });
 

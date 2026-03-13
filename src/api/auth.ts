@@ -43,11 +43,19 @@ export interface UpdateProfilePayload {
   business_type?: string;
 }
 
+interface UploadableProfileImage {
+  uri: string;
+  fileName?: string;
+  mimeType?: string;
+  type?: string;
+  file?: File;
+}
+
 export async function updateProfile(
   payload: UpdateProfilePayload,
-  profileImageUri?: string,
+  profileImage?: string | UploadableProfileImage,
 ): Promise<UserProfile> {
-  if (profileImageUri) {
+  if (profileImage) {
     const formData = new FormData();
 
     Object.entries(payload).forEach(([key, value]) => {
@@ -56,13 +64,36 @@ export async function updateProfile(
       }
     });
 
-    if (profileImageUri.startsWith("http")) {
-      formData.append("profile_image", profileImageUri);
+    if (typeof profileImage === "string") {
+      if (!profileImage.startsWith("http")) {
+        formData.append("profile_image", {
+          uri: profileImage,
+          name: `profile-${Date.now()}.jpg`,
+          type: "image/jpeg",
+        } as any);
+      }
+    } else if (profileImage.file instanceof File) {
+      formData.append("profile_image", profileImage.file);
+    } else if (
+      profileImage.uri.startsWith("blob:") ||
+      profileImage.uri.startsWith("data:")
+    ) {
+      const blobResponse = await fetch(profileImage.uri);
+      const blob = await blobResponse.blob();
+      const fallbackName = profileImage.fileName || `profile-${Date.now()}.jpg`;
+      const file = new File([blob], fallbackName, {
+        type:
+          profileImage.mimeType ||
+          profileImage.type ||
+          blob.type ||
+          "image/jpeg",
+      });
+      formData.append("profile_image", file);
     } else {
       formData.append("profile_image", {
-        uri: profileImageUri,
-        name: `profile-${Date.now()}.jpg`,
-        type: "image/jpeg",
+        uri: profileImage.uri,
+        name: profileImage.fileName || `profile-${Date.now()}.jpg`,
+        type: profileImage.mimeType || profileImage.type || "image/jpeg",
       } as any);
     }
 
@@ -70,7 +101,8 @@ export async function updateProfile(
       "/auth/profile/",
       formData,
       {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { "Content-Type": undefined },
+        transformRequest: [(data: any) => data],
       },
     );
     return response.data;

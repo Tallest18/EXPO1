@@ -38,6 +38,7 @@ export interface VerificationExtraProps {
   onGoBack?: () => void;
   phoneNumber?: string;
   verificationId?: string;
+  mockCode?: string;
 }
 
 const VerificationScreen: React.FC<VerificationExtraProps> = ({
@@ -45,6 +46,7 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
   onGoBack,
   phoneNumber: propPhoneNumber,
   verificationId: propVerificationId,
+  mockCode: propMockCode,
 }) => {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<AppStackParamList, "VerificationScreen">>();
@@ -59,6 +61,9 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
   const phoneNumber = propPhoneNumber || params?.phoneNumber || "";
   const [verificationId, setVerificationId] = useState(
     propVerificationId || params?.verificationId || "",
+  );
+  const [mockCode, setMockCode] = useState<string | null>(
+    propMockCode || params?.mockCode || null,
   );
 
   const [code, setCode] = useState(["", "", "", "", "", ""]);
@@ -137,6 +142,7 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
     try {
       const resp = await resendOtp(verificationId);
       setVerificationId(resp.verification_id);
+      setMockCode(resp.code || null);
       setResendTimer(45);
       setResendLoading(false);
       Alert.alert("Success", "Verification code resent successfully!");
@@ -217,6 +223,13 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
                 />
               ))}
             </View>
+
+            {mockCode ? (
+              <Text style={styles.mockCodeText}>
+                Test code (mock mode):{" "}
+                <Text style={styles.mockCodeValue}>{mockCode}</Text>
+              </Text>
+            ) : null}
 
             <TouchableOpacity
               style={[
@@ -333,8 +346,20 @@ const styles = StyleSheet.create({
   codeContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: verticalScale(24),
+    marginBottom: verticalScale(10),
     gap: scale(3),
+  },
+  mockCodeText: {
+    marginBottom: verticalScale(14),
+    fontSize: moderateScale(11),
+    fontFamily: "Poppins-Regular",
+    color: "#6B7280",
+    textAlign: "left",
+  },
+  mockCodeValue: {
+    fontFamily: "Poppins-Bold",
+    color: "#1155CC",
+    letterSpacing: 2,
   },
   codeInput: {
     width: scale(50),

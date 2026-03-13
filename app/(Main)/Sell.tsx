@@ -310,7 +310,7 @@ const Sell: React.FC = () => {
           source={
             product.image?.uri
               ? { uri: product.image.uri }
-              : { uri: "https://via.placeholder.com/120" }
+              : require("../../assets/images/icon.png")
           }
           style={styles.productImage}
         />

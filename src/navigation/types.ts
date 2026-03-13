@@ -18,9 +18,10 @@ export type AppStackParamList = {
   VerificationScreen: {
     verificationId: string;
     phoneNumber: string;
+    mockCode?: string;
     isTestMode?: boolean;
-    onVerificationSuccess: () => void;
-    onGoBack: () => void;
+    onVerificationSuccess?: () => void;
+    onGoBack?: () => void;
   };
 
   BusinessSelectionScreen: {

@@ -145,6 +145,10 @@ const EditProduct: React.FC = () => {
   const [updating, setUpdating] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [productData, setProductData] = useState<Product | null>(null);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [availableCategories, setAvailableCategories] = useState<
+    Array<{ id: number; name: string }>
+  >([]);
 
   const [formData, setFormData] = useState<FormData>({
     productName: "",
@@ -177,7 +181,13 @@ const EditProduct: React.FC = () => {
       }
 
       try {
-        const apiProduct = await getProduct(productIdString);
+        const [apiProduct, categories] = await Promise.all([
+          getProduct(productIdString),
+          listCategories(),
+        ]);
+        setAvailableCategories(
+          categories.map((item) => ({ id: item.id, name: item.name })),
+        );
 
         if (apiProduct) {
           const product = {
@@ -528,18 +538,54 @@ const EditProduct: React.FC = () => {
         </Text>
         <TouchableOpacity
           style={styles.dropdown}
-          onPress={() => updateFormData("category", "Food")}
+          onPress={() =>
+            availableCategories.length > 0 &&
+            setShowCategoryDropdown(!showCategoryDropdown)
+          }
         >
-          <Text
-            style={
-              formData.category
-                ? styles.dropdownText
-                : styles.dropdownPlaceholder
-            }
-          >
-            {formData.category || "Category"}
-          </Text>
+          <View style={styles.dropdownRow}>
+            <Text
+              style={
+                formData.category
+                  ? styles.dropdownText
+                  : styles.dropdownPlaceholder
+              }
+            >
+              {formData.category || "Category"}
+            </Text>
+            <Ionicons
+              name={showCategoryDropdown ? "chevron-up" : "chevron-down"}
+              size={18}
+              color="#718096"
+            />
+          </View>
         </TouchableOpacity>
+        {showCategoryDropdown && (
+          <View style={styles.dropdownMenu}>
+            {availableCategories.map((category) => (
+              <TouchableOpacity
+                key={category.id}
+                style={styles.dropdownItem}
+                onPress={() => {
+                  updateFormData("category", category.name);
+                  setShowCategoryDropdown(false);
+                }}
+              >
+                <Text style={styles.dropdownItemText}>{category.name}</Text>
+                {formData.category === category.name && (
+                  <Ionicons name="checkmark" size={18} color="#007AFF" />
+                )}
+              </TouchableOpacity>
+            ))}
+            {!availableCategories.length && (
+              <View style={styles.dropdownItem}>
+                <Text style={styles.dropdownItemText}>
+                  No categories from API
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
       </View>
 
       <View style={styles.inputGroup}>
@@ -1115,6 +1161,31 @@ const styles = StyleSheet.create({
     backgroundColor: "#F0F4F8",
     borderRadius: moderateScale(8),
     padding: scale(15),
+  },
+  dropdownRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  dropdownMenu: {
+    marginTop: verticalScale(8),
+    borderWidth: 1,
+    borderColor: "#CBD5E0",
+    borderRadius: moderateScale(8),
+    backgroundColor: "#FFFFFF",
+  },
+  dropdownItem: {
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(12),
+    borderBottomWidth: 1,
+    borderBottomColor: "#EDF2F7",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  dropdownItemText: {
+    fontSize: moderateScale(15),
+    color: "#2D3748",
   },
   dropdownText: {
     fontSize: moderateScale(16),

@@ -1,49 +1,42 @@
 import {
-    createProductWithImage,
-    listCategories,
-    listProducts,
-    listSuppliers,
+  createProductWithImage,
+  listCategories,
+  listProducts,
+  listSuppliers,
 } from "@/src/api";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Image,
-    Modal,
-    PermissionsAndroid,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Image,
+  Modal,
+  PermissionsAndroid,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import {
-    Asset,
-    ImagePickerResponse,
-    launchCamera,
-    launchImageLibrary,
-    MediaType,
+  Asset,
+  ImagePickerResponse,
+  launchCamera,
+  launchImageLibrary,
+  MediaType,
 } from "react-native-image-picker";
 import {
-    checkExpiringProducts,
-    checkLowStock,
-    notifyProductAdded,
+  checkExpiringProducts,
+  checkLowStock,
+  notifyProductAdded,
 } from "../notificationHelpers";
 
 const { width } = Dimensions.get("window");
-
-const CATEGORIES = [
-  "Foodstuffs",
-  "Soft Drinks",
-  "Beverages",
-  "Noodles & Pasta",
-  "Snacks & Biscuits",
-];
+const isSmall = width < 360;
 
 interface Product {
   id: string;
@@ -124,16 +117,13 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Product[]>([]);
-  const [recentSearches] = useState<string[]>([
-    "Indomitable",
-    "Viva Soup",
-    "Eva",
-    "Shortbread Biscuit",
-    "Flora Biscuit",
-    "Bic Razor",
-  ]);
+  const [recentSearches] = useState<string[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [availableCategories, setAvailableCategories] = useState<
+    Array<{ id: number; name: string }>
+  >([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -169,11 +159,27 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
 
   useEffect(() => {
     if (visible) {
+      const loadCategories = async () => {
+        setCategoriesLoading(true);
+        try {
+          const categories = await listCategories();
+          setAvailableCategories(
+            categories.map((item) => ({ id: item.id, name: item.name })),
+          );
+        } catch (error) {
+          console.error("Error loading categories:", error);
+          setAvailableCategories([]);
+        } finally {
+          setCategoriesLoading(false);
+        }
+      };
+
       setShowInitialChoice(true);
       setShowSearchModal(false);
       setSearchQuery("");
       setSearchResults([]);
       setShowCategoryDropdown(false);
+      loadCategories();
     }
   }, [visible]);
 
@@ -578,7 +584,11 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
   );
 
   const renderStep1 = () => (
-    <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.stepContent}
+      contentContainerStyle={styles.stepContentContainer}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Card 1: Product Name and Category */}
       <View style={styles.card}>
         <View style={styles.fieldGroup}>
@@ -600,7 +610,11 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
           </Text>
           <TouchableOpacity
             style={styles.dropdown}
-            onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
+            onPress={() =>
+              !categoriesLoading &&
+              availableCategories.length > 0 &&
+              setShowCategoryDropdown(!showCategoryDropdown)
+            }
           >
             <Text
               style={
@@ -609,7 +623,9 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
                   : styles.dropdownPlaceholder
               }
             >
-              {formData.category || "Category"}
+              {categoriesLoading
+                ? "Loading categories..."
+                : formData.category || "Category"}
             </Text>
             <Ionicons
               name={showCategoryDropdown ? "chevron-up" : "chevron-down"}
@@ -620,21 +636,28 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
 
           {showCategoryDropdown && (
             <View style={styles.dropdownMenu}>
-              {CATEGORIES.map((category, index) => (
+              {availableCategories.map((category) => (
                 <TouchableOpacity
-                  key={index}
+                  key={category.id}
                   style={styles.dropdownItem}
                   onPress={() => {
-                    updateFormData("category", category);
+                    updateFormData("category", category.name);
                     setShowCategoryDropdown(false);
                   }}
                 >
-                  <Text style={styles.dropdownItemText}>{category}</Text>
-                  {formData.category === category && (
+                  <Text style={styles.dropdownItemText}>{category.name}</Text>
+                  {formData.category === category.name && (
                     <Ionicons name="checkmark" size={18} color="#1155CC" />
                   )}
                 </TouchableOpacity>
               ))}
+              {!availableCategories.length && (
+                <View style={styles.dropdownItem}>
+                  <Text style={styles.dropdownItemText}>
+                    No categories from API
+                  </Text>
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -724,7 +747,11 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
   );
 
   const renderStep2 = () => (
-    <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.stepContent}
+      contentContainerStyle={styles.stepContentContainer}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.card}>
         <View style={styles.fieldGroup}>
           <Text style={styles.label}>
@@ -1066,7 +1093,11 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
   );
 
   const renderStep3 = () => (
-    <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.stepContent}
+      contentContainerStyle={styles.stepContentContainer}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.card}>
         <View style={styles.fieldGroup}>
           <Text style={styles.label}>
@@ -1144,7 +1175,11 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
   );
 
   const renderSummary = () => (
-    <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.stepContent}
+      contentContainerStyle={styles.stepContentContainer}
+      showsVerticalScrollIndicator={false}
+    >
       <Text style={styles.summaryTitle}>Summary</Text>
 
       {formData.productImage && (
@@ -1452,7 +1487,7 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         </View>
 
         <ScrollView style={styles.searchContent}>
-          {searchQuery.length === 0 && (
+          {searchQuery.length === 0 && recentSearches.length > 0 && (
             <View style={styles.recentSearchesSection}>
               <Text style={styles.recentSearchesHeader}>Recent</Text>
               {recentSearches.map((item, index) => (
@@ -1524,6 +1559,7 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
   return (
     <>
       <Modal
+        style={{ backgroundColor: "#ad5e1a" }}
         visible={visible && !showInitialChoice && !showSearchModal}
         animationType="slide"
         presentationStyle="pageSheet"
@@ -1604,21 +1640,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: isSmall ? 14 : 20,
+    paddingVertical: isSmall ? 10 : 16,
     backgroundColor: "#E7EEFA",
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: isSmall ? 16 : 20,
     fontWeight: "600",
     color: "#1A202C",
     fontFamily: "Poppins-SemiBold",
   },
   closeBtn: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: 8,
     backgroundColor: "#fff",
     alignItems: "center",
@@ -1633,22 +1669,23 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     flexDirection: "row",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: isSmall ? 12 : 20,
+    paddingVertical: isSmall ? 10 : 14,
     backgroundColor: "#FFF",
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
-    margin: 20,
-    gap: 10,
+    marginHorizontal: isSmall ? 12 : 20,
+    marginVertical: isSmall ? 8 : 14,
+    gap: isSmall ? 6 : 10,
   },
   stepItem: {
     flex: 1,
   },
   stepText: {
-    fontSize: 12,
+    fontSize: isSmall ? 9 : 12,
     fontWeight: "500",
     fontFamily: "Poppins-Medium",
-    marginBottom: 6,
+    marginBottom: 5,
   },
   stepTextActive: {
     color: "#1155CC",
@@ -1657,7 +1694,7 @@ const styles = StyleSheet.create({
     color: "#A0AEC0",
   },
   progressBar: {
-    height: 8,
+    height: isSmall ? 5 : 8,
     borderRadius: 4,
   },
   progressBarActive: {
@@ -1668,23 +1705,26 @@ const styles = StyleSheet.create({
   },
   stepContent: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: isSmall ? 10 : 16,
+    paddingTop: isSmall ? 10 : 16,
+  },
+  stepContentContainer: {
+    paddingBottom: 20,
   },
   card: {
     backgroundColor: "#FFF",
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    padding: isSmall ? 12 : 16,
+    marginBottom: isSmall ? 10 : 16,
   },
   fieldGroup: {
-    marginBottom: 16,
+    marginBottom: isSmall ? 10 : 16,
   },
   label: {
-    fontSize: 13,
+    fontSize: isSmall ? 11 : 13,
     fontWeight: "600",
     color: "#2D3748",
-    marginBottom: 6,
+    marginBottom: 5,
     fontFamily: "Poppins-SemiBold",
   },
   required: {
@@ -1693,28 +1733,32 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: "#EDF2F7",
     borderRadius: 6,
-    padding: 12,
-    fontSize: 13,
+    paddingVertical: isSmall ? 8 : 12,
+    paddingHorizontal: isSmall ? 10 : 12,
+    fontSize: isSmall ? 11 : 13,
     color: "#2D3748",
     fontFamily: "Poppins-Regular",
   },
   dropdown: {
     backgroundColor: "#EDF2F7",
     borderRadius: 6,
-    padding: 12,
+    paddingVertical: isSmall ? 8 : 12,
+    paddingHorizontal: isSmall ? 10 : 12,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   dropdownText: {
-    fontSize: 13,
+    fontSize: isSmall ? 11 : 13,
     color: "#2D3748",
     fontFamily: "Poppins-Regular",
+    flex: 1,
   },
   dropdownPlaceholder: {
-    fontSize: 13,
+    fontSize: isSmall ? 11 : 13,
     color: "#CBD5E0",
     fontFamily: "Poppins-Regular",
+    flex: 1,
   },
   dropdownMenu: {
     backgroundColor: "#FFF",
@@ -1728,53 +1772,56 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 12,
+    paddingVertical: isSmall ? 8 : 12,
+    paddingHorizontal: isSmall ? 10 : 12,
     borderBottomWidth: 1,
     borderBottomColor: "#F7FAFC",
   },
   dropdownItemText: {
-    fontSize: 13,
+    fontSize: isSmall ? 11 : 13,
     color: "#2D3748",
     fontFamily: "Poppins-Regular",
   },
   imageUploadBox: {
     backgroundColor: "#FFF",
     borderRadius: 8,
-    padding: 20,
+    padding: isSmall ? 14 : 20,
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
   imageIconCircle: {
-    marginBottom: 10,
+    marginBottom: 8,
   },
   imageUploadTitle: {
-    fontSize: 13,
+    fontSize: isSmall ? 11 : 13,
     color: "#4A5568",
-    marginBottom: 14,
+    marginBottom: isSmall ? 10 : 14,
     fontFamily: "Poppins-Medium",
   },
   imageButtonsRow: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 10,
+    gap: isSmall ? 6 : 10,
+    marginBottom: 8,
+    flexWrap: "wrap",
+    justifyContent: "center",
   },
   imageBtnOutline: {
     backgroundColor: "transparent",
     borderRadius: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: isSmall ? 10 : 16,
+    paddingVertical: isSmall ? 6 : 8,
     borderWidth: 1,
     borderColor: "#CBD5E0",
   },
   imageBtnOutlineText: {
-    fontSize: 12,
+    fontSize: isSmall ? 10 : 12,
     color: "#4A5568",
     fontWeight: "500",
     fontFamily: "Poppins-Medium",
   },
   imageUploadInfo: {
-    fontSize: 10,
+    fontSize: isSmall ? 9 : 10,
     color: "#718096",
     textAlign: "center",
     fontFamily: "Poppins-Regular",
@@ -1784,8 +1831,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   uploadedImage: {
-    width: 100,
-    height: 100,
+    width: isSmall ? 80 : 100,
+    height: isSmall ? 80 : 100,
     borderRadius: 8,
     marginBottom: 12,
   },
@@ -1795,11 +1842,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#EDF2F7",
     borderRadius: 6,
-    paddingVertical: 12,
+    paddingVertical: isSmall ? 10 : 12,
     gap: 6,
   },
   searchOnlineText: {
-    fontSize: 13,
+    fontSize: isSmall ? 11 : 13,
     color: "#1155CC",
     fontWeight: "500",
     fontFamily: "Poppins-Medium",
@@ -1807,19 +1854,19 @@ const styles = StyleSheet.create({
   radioGroup: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 14,
+    gap: isSmall ? 8 : 14,
   },
   radioOption: {
     flexDirection: "row",
     alignItems: "center",
   },
   radioCircle: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     borderWidth: 2,
     borderColor: "#CBD5E0",
-    marginRight: 6,
+    marginRight: 5,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1827,13 +1874,13 @@ const styles = StyleSheet.create({
     borderColor: "#1155CC",
   },
   radioInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
     backgroundColor: "#1155CC",
   },
   radioText: {
-    fontSize: 13,
+    fontSize: isSmall ? 11 : 13,
     color: "#2D3748",
     fontFamily: "Poppins-Regular",
   },
@@ -1842,59 +1889,62 @@ const styles = StyleSheet.create({
     backgroundColor: "#EDF2F7",
     borderRadius: 6,
     alignItems: "center",
-    paddingLeft: 12,
-    marginBottom: 10,
+    paddingLeft: isSmall ? 8 : 12,
+    marginBottom: 8,
   },
   currency: {
-    fontSize: 13,
+    fontSize: isSmall ? 11 : 13,
     color: "#718096",
-    marginRight: 6,
+    marginRight: 4,
     fontFamily: "Poppins-Regular",
   },
   priceInput: {
     flex: 1,
-    padding: 12,
+    paddingVertical: isSmall ? 8 : 12,
     paddingLeft: 0,
-    fontSize: 13,
+    paddingRight: 10,
+    fontSize: isSmall ? 11 : 13,
     color: "#2D3748",
     fontFamily: "Poppins-Regular",
   },
   priceOptionsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: isSmall ? 5 : 8,
   },
   priceChip: {
     backgroundColor: "#EDF2F7",
     borderRadius: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: isSmall ? 8 : 14,
+    paddingVertical: isSmall ? 4 : 6,
   },
   priceChipText: {
-    fontSize: 12,
+    fontSize: isSmall ? 10 : 12,
     color: "#1155CC",
     fontWeight: "500",
     fontFamily: "Poppins-Medium",
   },
   dateRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: isSmall ? 5 : 10,
   },
   dateBox: {
     backgroundColor: "#EDF2F7",
     borderRadius: 6,
-    padding: 12,
-    fontSize: 13,
+    paddingVertical: isSmall ? 8 : 12,
+    paddingHorizontal: isSmall ? 2 : 8,
+    fontSize: isSmall ? 11 : 13,
     color: "#2D3748",
     flex: 1,
     textAlign: "center",
     fontFamily: "Poppins-Regular",
+    minWidth: 0,
   },
   navigationButtons: {
     flexDirection: "row",
-    gap: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    gap: isSmall ? 8 : 10,
+    paddingHorizontal: isSmall ? 12 : 20,
+    paddingVertical: isSmall ? 10 : 14,
     backgroundColor: "#FFF",
     borderTopWidth: 1,
     borderTopColor: "#E2E8F0",
@@ -1904,15 +1954,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 5,
     backgroundColor: "#FFF",
     borderWidth: 1,
     borderColor: "#E2E8F0",
     borderRadius: 8,
-    paddingVertical: 12,
+    paddingVertical: isSmall ? 10 : 12,
   },
   backBtnText: {
-    fontSize: 14,
+    fontSize: isSmall ? 12 : 14,
     color: "#4A5568",
     fontWeight: "500",
     fontFamily: "Poppins-Medium",
@@ -1922,39 +1972,39 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 5,
     backgroundColor: "#1155CC",
     borderRadius: 8,
-    paddingVertical: 12,
+    paddingVertical: isSmall ? 10 : 12,
   },
   nextBtnText: {
-    fontSize: 14,
+    fontSize: isSmall ? 12 : 14,
     color: "#FFF",
     fontWeight: "600",
     fontFamily: "Poppins-SemiBold",
   },
   summaryTitle: {
-    fontSize: 20,
+    fontSize: isSmall ? 16 : 20,
     fontWeight: "700",
     color: "#1A202C",
     paddingHorizontal: 4,
-    marginBottom: 14,
+    marginBottom: isSmall ? 10 : 14,
     fontFamily: "Poppins-Bold",
   },
   summaryImageContainer: {
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: isSmall ? 10 : 14,
   },
   summaryImage: {
-    width: 90,
-    height: 90,
+    width: isSmall ? 70 : 90,
+    height: isSmall ? 70 : 90,
     borderRadius: 10,
   },
   summaryHeader: {
-    fontSize: 11,
+    fontSize: isSmall ? 10 : 11,
     fontWeight: "700",
     color: "#2D3748",
-    marginBottom: 10,
+    marginBottom: 8,
     letterSpacing: 0.5,
     fontFamily: "Poppins-Bold",
   },
@@ -1962,16 +2012,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   summaryLabel: {
-    fontSize: 12,
+    fontSize: isSmall ? 11 : 12,
     color: "#718096",
     flex: 1,
     fontFamily: "Poppins-Regular",
   },
   summaryValue: {
-    fontSize: 12,
+    fontSize: isSmall ? 11 : 12,
     color: "#2D3748",
     fontWeight: "500",
     flex: 1,
@@ -1985,11 +2035,11 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: "#1155CC",
     borderRadius: 8,
-    paddingVertical: 14,
+    paddingVertical: isSmall ? 12 : 14,
     marginTop: 8,
   },
   confirmBtnText: {
-    fontSize: 14,
+    fontSize: isSmall ? 12 : 14,
     color: "#FFF",
     fontWeight: "600",
     fontFamily: "Poppins-SemiBold",
@@ -2007,7 +2057,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 10,
-    fontSize: 14,
+    fontSize: isSmall ? 12 : 14,
     color: "#1155CC",
     fontWeight: "500",
     fontFamily: "Poppins-Medium",
@@ -2024,7 +2074,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingHorizontal: 24,
+    paddingHorizontal: isSmall ? 16 : 24,
     paddingBottom: 34,
     paddingTop: 8,
   },
@@ -2037,26 +2087,26 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   bottomSheetHeader: {
-    fontSize: 15,
+    fontSize: isSmall ? 13 : 15,
     fontWeight: "600",
     color: "#1155CC",
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 16,
     fontFamily: "Poppins-SemiBold",
   },
   initialChoiceTitle: {
-    fontSize: 19,
+    fontSize: isSmall ? 16 : 19,
     fontWeight: "600",
     color: "#1A202C",
     textAlign: "center",
-    marginBottom: 10,
+    marginBottom: 8,
     fontFamily: "Poppins-SemiBold",
   },
   initialChoiceSubtitle: {
-    fontSize: 13,
+    fontSize: isSmall ? 11 : 13,
     color: "#718096",
     textAlign: "center",
-    marginBottom: 28,
+    marginBottom: isSmall ? 20 : 28,
     lineHeight: 19,
     fontFamily: "Poppins-Regular",
   },
@@ -2067,13 +2117,13 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: "#fff",
     borderRadius: 50,
-    paddingVertical: 13,
+    paddingVertical: isSmall ? 11 : 13,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: "#1155CC",
   },
   searchButtonInitialText: {
-    fontSize: 14,
+    fontSize: isSmall ? 13 : 14,
     color: "#1C1C1C",
     fontWeight: "500",
     fontFamily: "Poppins-Medium",
@@ -2085,10 +2135,10 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: "#1155CC",
     borderRadius: 50,
-    paddingVertical: 13,
+    paddingVertical: isSmall ? 11 : 13,
   },
   addManuallyButtonText: {
-    fontSize: 14,
+    fontSize: isSmall ? 13 : 14,
     color: "#FFF",
     fontWeight: "600",
     fontFamily: "Poppins-SemiBold",
@@ -2101,14 +2151,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: isSmall ? 14 : 20,
     paddingVertical: 14,
     backgroundColor: "#FFF",
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
   },
   searchHeaderTitle: {
-    fontSize: 17,
+    fontSize: isSmall ? 15 : 17,
     fontWeight: "600",
     color: "#1A202C",
     fontFamily: "Poppins-SemiBold",
@@ -2120,8 +2170,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFF",
-    marginHorizontal: 16,
-    marginVertical: 14,
+    marginHorizontal: isSmall ? 10 : 16,
+    marginVertical: 12,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -2133,7 +2183,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: isSmall ? 13 : 14,
     color: "#2D3748",
     fontFamily: "Poppins-Regular",
   },
@@ -2166,7 +2216,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F7FAFC",
   },
   recentSearchText: {
-    fontSize: 13,
+    fontSize: isSmall ? 12 : 13,
     color: "#2D3748",
     marginLeft: 10,
     fontFamily: "Poppins-Regular",
@@ -2175,7 +2225,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   searchResultsHeader: {
-    fontSize: 12,
+    fontSize: isSmall ? 11 : 12,
     color: "#718096",
     paddingHorizontal: 20,
     paddingVertical: 12,
@@ -2195,7 +2245,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFF",
-    paddingHorizontal: 20,
+    paddingHorizontal: isSmall ? 14 : 20,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#F7FAFC",
@@ -2222,14 +2272,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   searchResultName: {
-    fontSize: 13,
+    fontSize: isSmall ? 12 : 13,
     fontWeight: "500",
     color: "#2D3748",
     flex: 1,
     fontFamily: "Poppins-Medium",
   },
   searchResultButton: {
-    fontSize: 12,
+    fontSize: isSmall ? 11 : 12,
     color: "#1155CC",
     fontWeight: "500",
     fontFamily: "Poppins-Medium",
@@ -2239,7 +2289,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   noResultsText: {
-    fontSize: 13,
+    fontSize: isSmall ? 12 : 13,
     color: "#718096",
     textAlign: "center",
     fontFamily: "Poppins-Regular",

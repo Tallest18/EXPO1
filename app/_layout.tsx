@@ -60,9 +60,15 @@ export default function AppLayout() {
       const inProtectedGroup =
         segments[0] === "(Main)" || segments[0] === "(Routes)";
       const inAuthFlow = segments[0] === "(Auth)";
+      const inOnboardingFlow = segments[0] === "(Anboarding)";
       const hasSegments = segments.length > 0;
 
-      if (isAuthenticated && (!inProtectedGroup || inAuthFlow)) {
+      if (
+        isAuthenticated &&
+        !inProtectedGroup &&
+        !inAuthFlow &&
+        !inOnboardingFlow
+      ) {
         // User is logged in, go to main app
         router.replace("/(Main)/Home");
       } else if (!isAuthenticated && inProtectedGroup) {

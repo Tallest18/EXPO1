@@ -248,8 +248,7 @@ const Home = () => {
       setUserData((prev) => ({
         ...prev,
         name: profile?.name || profile?.phone || "User",
-        profileImage:
-          profile?.profile_image || "https://via.placeholder.com/40",
+        profileImage: profile?.profile_image || "",
         todaySales: Number(overview.today?.sales || 0),
         profit: Number(overview.today?.profit || 0),
         transactions: Number(overview.today?.transactions || 0),
@@ -405,9 +404,11 @@ const Home = () => {
             activeOpacity={0.7}
           >
             <Image
-              source={{
-                uri: userData.profileImage || "https://via.placeholder.com/40",
-              }}
+              source={
+                userData.profileImage
+                  ? { uri: userData.profileImage }
+                  : require("../../assets/images/icon.png")
+              }
               style={styles.avatar}
             />
           </TouchableOpacity>

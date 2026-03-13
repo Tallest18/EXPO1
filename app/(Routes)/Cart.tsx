@@ -252,7 +252,7 @@ const Cart: React.FC = () => {
           source={
             item.product.image?.uri
               ? { uri: item.product.image.uri }
-              : { uri: "https://via.placeholder.com/60" }
+              : require("../../assets/images/icon.png")
           }
           style={styles.productImage}
         />

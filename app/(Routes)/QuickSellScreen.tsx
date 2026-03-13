@@ -243,9 +243,11 @@ const QuickSellScreen = () => {
   const renderCartItem = ({ item }: { item: CartItem }) => (
     <View style={styles.cartItem}>
       <Image
-        source={{
-          uri: item.image?.uri || "https://via.placeholder.com/60",
-        }}
+        source={
+          item.image?.uri
+            ? { uri: item.image.uri }
+            : require("../../assets/images/icon.png")
+        }
         style={styles.cartItemImage}
       />
       <View style={styles.cartItemInfo}>
@@ -284,9 +286,11 @@ const QuickSellScreen = () => {
       onPress={() => addToCart(item)}
     >
       <Image
-        source={{
-          uri: item.image?.uri || "https://via.placeholder.com/50",
-        }}
+        source={
+          item.image?.uri
+            ? { uri: item.image.uri }
+            : require("../../assets/images/icon.png")
+        }
         style={styles.productImage}
       />
       <View style={styles.productInfo}>

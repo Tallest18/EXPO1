@@ -247,9 +247,11 @@ const SalesDetailScreen = () => {
 
           <View style={styles.productInfo}>
             <Image
-              source={{
-                uri: sale.image || "https://via.placeholder.com/60",
-              }}
+              source={
+                sale.image
+                  ? { uri: sale.image }
+                  : require("../../assets/images/icon.png")
+              }
               style={styles.productImage}
             />
             <View style={styles.productDetails}>

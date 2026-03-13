@@ -112,15 +112,42 @@ const SettingsScreen = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   // Handle user logout
-  const handleLogout = async () => {
+  const proceedLogout = async () => {
     try {
       await logout();
-      await clearTokens();
-      router.replace("../../Onboarding1");
     } catch (error) {
-      console.error("Logout failed:", error);
-      Alert.alert("Error", "Failed to log out. Please try again.");
+      console.error("Remote logout failed, clearing local session:", error);
+    } finally {
+      await clearTokens();
+      router.replace("/(Auth)/WelcomeScreen");
     }
+  };
+
+  const handleLogout = () => {
+    if (Platform.OS === "web") {
+      const confirmed =
+        typeof window !== "undefined"
+          ? window.confirm("Do you want to log out?")
+          : true;
+      if (confirmed) {
+        void proceedLogout();
+      }
+      return;
+    }
+
+    Alert.alert("Log out", "Do you want to log out?", [
+      {
+        text: "No",
+        style: "cancel",
+      },
+      {
+        text: "Yes",
+        style: "destructive",
+        onPress: () => {
+          void proceedLogout();
+        },
+      },
+    ]);
   };
 
   // Fetch user profile data on mount

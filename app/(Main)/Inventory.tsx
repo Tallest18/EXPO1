@@ -315,7 +315,7 @@ const Inventory: React.FC = () => {
               source={
                 product.image?.uri
                   ? { uri: product.image.uri }
-                  : { uri: "https://via.placeholder.com/100" }
+                  : require("../../assets/images/icon.png")
               }
               style={[
                 styles.productImage,

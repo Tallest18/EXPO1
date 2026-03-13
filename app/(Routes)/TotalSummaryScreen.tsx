@@ -63,7 +63,7 @@ const TotalSummaryScreen = () => {
           if (items.length === 0) {
             salesData.push({
               id: String(sale.id),
-              image: "https://via.placeholder.com/40",
+              image: undefined,
               name: "Sale",
               quantity: 1,
               date:
@@ -84,7 +84,7 @@ const TotalSummaryScreen = () => {
 
             salesData.push({
               id: `${sale.id}-${item.product}-${index}`,
-              image: "https://via.placeholder.com/40",
+              image: undefined,
               name: item.product_name || "Unknown Product",
               quantity: Number(item.quantity || 1),
               date:
@@ -151,10 +151,13 @@ const TotalSummaryScreen = () => {
         })
       }
     >
-      <Image
-        source={{ uri: item.image || "https://via.placeholder.com/40" }}
-        style={styles.image}
-      />
+      {item.image ? (
+        <Image source={{ uri: item.image }} style={styles.image} />
+      ) : (
+        <View style={[styles.image, styles.imageFallback]}>
+          <Feather name="image" size={18} color="#94A3B8" />
+        </View>
+      )}
       <View style={styles.itemInfo}>
         <Text style={styles.name}>
           {item.name} ×{item.quantity}
@@ -371,6 +374,10 @@ const styles = StyleSheet.create({
     height: verticalScale(48),
     borderRadius: moderateScale(8),
     backgroundColor: "#f0f0f0",
+  },
+  imageFallback: {
+    alignItems: "center",
+    justifyContent: "center",
   },
   itemInfo: {
     flex: 1,

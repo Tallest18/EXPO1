@@ -99,7 +99,8 @@ export async function createProductWithImage(
     "/products/items/",
     formData,
     {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: { "Content-Type": undefined },
+      transformRequest: [(data: any) => data],
     },
   );
   return response.data;

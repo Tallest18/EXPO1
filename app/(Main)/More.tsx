@@ -7,6 +7,7 @@ import {
     ActivityIndicator,
     Alert,
     Dimensions,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -92,24 +93,39 @@ const More = () => {
     },
   ];
 
-  const handleLogout = async () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
+  const proceedLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Remote logout failed, clearing local session:", error);
+    } finally {
+      await clearTokens();
+      router.replace("/(Auth)/WelcomeScreen");
+    }
+  };
+
+  const handleLogout = () => {
+    if (Platform.OS === "web") {
+      const confirmed =
+        typeof window !== "undefined"
+          ? window.confirm("Do you want to log out?")
+          : true;
+      if (confirmed) {
+        void proceedLogout();
+      }
+      return;
+    }
+
+    Alert.alert("Log out", "Do you want to log out?", [
       {
-        text: "Cancel",
+        text: "No",
         style: "cancel",
       },
       {
-        text: "Logout",
+        text: "Yes",
         style: "destructive",
-        onPress: async () => {
-          try {
-            await logout();
-            await clearTokens();
-            router.replace("/(Anboarding)/Onboarding1");
-          } catch (error) {
-            console.error("Error during logout:", error);
-            Alert.alert("Error", "Failed to logout. Please try again.");
-          }
+        onPress: () => {
+          void proceedLogout();
         },
       },
     ]);

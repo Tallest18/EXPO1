@@ -6,24 +6,23 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const Profile = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [profileImage, setProfileImage] = useState(
-    "https://via.placeholder.com/150",
-  );
+  const [profileImage, setProfileImage] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [businessType, setBusinessType] = useState("");
@@ -43,9 +42,7 @@ const Profile = () => {
         setBusinessName(userData.name || userData.business_name || "");
         setPhoneNumber(userData.phone || "");
         setBusinessType(userData.business_type || "");
-        setProfileImage(
-          userData.profile_image || "https://via.placeholder.com/150",
-        );
+        setProfileImage(userData.profile_image || "");
       } catch (error) {
         console.error("Error fetching user data:", error);
         Alert.alert("Error", "Could not fetch profile data.");
@@ -56,7 +53,9 @@ const Profile = () => {
     fetchUserData();
   }, []);
   // ✅ Upload image + save to Firestore
-  const uploadImage = async (uri: string) => {
+  const uploadImage = async (image: ImagePicker.ImagePickerAsset) => {
+    const previousImage = profileImage;
+    setProfileImage(image.uri);
     setImageUploading(true);
     try {
       const updated = await updateProfile(
@@ -65,13 +64,14 @@ const Profile = () => {
           business_name: businessName,
           business_type: businessType || undefined,
         },
-        uri,
+        image as any,
       );
-      setProfileImage(updated.profile_image || uri);
+      setProfileImage(updated.profile_image || image.uri);
 
       Alert.alert("Success", "Profile picture updated successfully.");
     } catch (error) {
       console.error("Image upload error:", error);
+      setProfileImage(previousImage);
       Alert.alert("Error", "Failed to upload image.");
     } finally {
       setImageUploading(false);
@@ -79,6 +79,20 @@ const Profile = () => {
   };
   // ✅ Handle picking image
   const handlePickImage = async (useCamera: boolean) => {
+    if (Platform.OS === "web" && !useCamera) {
+      const webPickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: "images",
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (!webPickerResult.canceled) {
+        uploadImage(webPickerResult.assets[0]);
+      }
+      return;
+    }
+
     const permissionResult = useCamera
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -91,7 +105,7 @@ const Profile = () => {
     }
 
     const pickerOptions = {
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: "images" as const,
       allowsEditing: true,
       aspect: [1, 1] as [number, number],
       quality: 0.7,
@@ -102,7 +116,7 @@ const Profile = () => {
       : await ImagePicker.launchImageLibraryAsync(pickerOptions);
 
     if (!pickerResult.canceled) {
-      uploadImage(pickerResult.assets[0].uri);
+      uploadImage(pickerResult.assets[0]);
     }
   };
   // ✅ Save name + keep image in Firestore
@@ -128,6 +142,11 @@ const Profile = () => {
     setLoading(false);
   };
   const showImagePickerOptions = () => {
+    if (Platform.OS === "web") {
+      handlePickImage(false);
+      return;
+    }
+
     Alert.alert(
       "Change Profile Picture",
       "How would you like to select a new photo?",
@@ -160,7 +179,14 @@ const Profile = () => {
             onPress={showImagePickerOptions}
             style={styles.profileImageContainer}
           >
-            <Image source={{ uri: profileImage }} style={styles.profileImage} />
+            <Image
+              source={
+                profileImage
+                  ? { uri: profileImage }
+                  : require("../../assets/images/icon.png")
+              }
+              style={styles.profileImage}
+            />
             {imageUploading && (
               <View style={styles.uploadingOverlay}>
                 <ActivityIndicator size="small" color="#fff" />
