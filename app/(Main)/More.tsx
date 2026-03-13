@@ -4,15 +4,14 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -39,6 +38,8 @@ const More = () => {
   const [userName, setUserName] = useState<string>("Guest User");
   const [userPhone, setUserPhone] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   // Fetch user data when component mounts
   useEffect(() => {
@@ -105,30 +106,21 @@ const More = () => {
   };
 
   const handleLogout = () => {
-    if (Platform.OS === "web") {
-      const confirmed =
-        typeof window !== "undefined"
-          ? window.confirm("Do you want to log out?")
-          : true;
-      if (confirmed) {
-        void proceedLogout();
-      }
+    setShowLogoutModal(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    if (loggingOut) {
       return;
     }
 
-    Alert.alert("Log out", "Do you want to log out?", [
-      {
-        text: "No",
-        style: "cancel",
-      },
-      {
-        text: "Yes",
-        style: "destructive",
-        onPress: () => {
-          void proceedLogout();
-        },
-      },
-    ]);
+    setLoggingOut(true);
+    try {
+      await proceedLogout();
+    } finally {
+      setLoggingOut(false);
+      setShowLogoutModal(false);
+    }
   };
 
   const renderOption = (option: Option) => (
@@ -203,6 +195,47 @@ const More = () => {
           </Text>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconWrap}>
+              <Ionicons name="log-out-outline" size={24} color="#E74C3C" />
+            </View>
+            <Text style={styles.modalTitle}>Log out of Inventra?</Text>
+            <Text style={styles.modalSubtitle}>
+              You will be signed out from this device and redirected to the
+              welcome screen.
+            </Text>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.cancelAction}
+                onPress={() => setShowLogoutModal(false)}
+                disabled={loggingOut}
+              >
+                <Text style={styles.cancelActionText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmAction}
+                onPress={() => void handleConfirmLogout()}
+                disabled={loggingOut}
+              >
+                {loggingOut ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.confirmActionText}>Yes, log out</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -347,6 +380,77 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(13),
     color: "#8E8E93",
     fontFamily: "Poppins-Regular",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(13, 30, 66, 0.45)",
+    justifyContent: "center",
+    paddingHorizontal: scale(24),
+  },
+  modalCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: moderateScale(18),
+    paddingHorizontal: scale(20),
+    paddingVertical: verticalScale(20),
+    borderWidth: 1,
+    borderColor: "#E4EAF7",
+  },
+  modalIconWrap: {
+    width: scale(50),
+    height: verticalScale(50),
+    borderRadius: moderateScale(25),
+    backgroundColor: "#FDEBE9",
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "center",
+    marginBottom: verticalScale(12),
+  },
+  modalTitle: {
+    fontSize: moderateScale(18),
+    color: "#1A1A1A",
+    fontFamily: "Poppins-Bold",
+    textAlign: "center",
+    marginBottom: verticalScale(6),
+  },
+  modalSubtitle: {
+    fontSize: moderateScale(14),
+    color: "#5F6778",
+    fontFamily: "Poppins-Regular",
+    textAlign: "center",
+    lineHeight: moderateScale(22),
+    marginBottom: verticalScale(16),
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: scale(10),
+  },
+  cancelAction: {
+    flex: 1,
+    borderRadius: moderateScale(12),
+    paddingVertical: verticalScale(13),
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F1F4FB",
+    borderWidth: 1,
+    borderColor: "#D8E2F6",
+  },
+  cancelActionText: {
+    color: "#2046AE",
+    fontSize: moderateScale(14),
+    fontFamily: "Poppins-SemiBold",
+  },
+  confirmAction: {
+    flex: 1,
+    borderRadius: moderateScale(12),
+    paddingVertical: verticalScale(13),
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#E74C3C",
+  },
+  confirmActionText: {
+    color: "#FFFFFF",
+    fontSize: moderateScale(14),
+    fontFamily: "Poppins-SemiBold",
   },
 });
 

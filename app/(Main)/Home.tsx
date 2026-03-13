@@ -1,30 +1,28 @@
 // app/(Main)/Home.tsx
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    FlatList,
-    Image,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import {
-    ApiProduct,
-    ApiSale,
-    ApiSaleItem,
-    getDashboardOverview,
-    getProfile,
-    listNotifications,
-    listProducts,
-    listSales,
+  ApiProduct,
+  ApiSale,
+  ApiSaleItem,
+  getDashboardOverview,
+  getProfile,
+  listNotifications,
+  listProducts,
+  listSales,
 } from "@/src/api";
 import AddProductFlow from "../(Routes)/AddProductFlow";
 
@@ -142,12 +140,6 @@ const Home = () => {
     transactions: 0,
     stockLeft: 0,
     salesSummary: [] as SalesSummaryItem[],
-  });
-
-  const [fontsLoaded] = useFonts({
-    "Poppins-Regular": require("../../assets/fonts/Poppins-Regular.ttf"),
-    "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
-    "Poppins-Light": require("../../assets/fonts/Poppins-Light.ttf"),
   });
 
   const mapApiProduct = (product: ApiProduct): Product => ({
@@ -354,64 +346,63 @@ const Home = () => {
     return `₦${(value || 0).toFixed(2)}`;
   };
 
-  if (!fontsLoaded) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#1155CC" />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   const renderHeader = () => (
     <>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.hello}>Hello,</Text>
+        <Text style={styles.hello}>Hello,</Text>
+        <View
+          style={{
+            display: "flex",
+            width: "100%",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: scale(12),
+          }}
+        >
           <Text style={styles.username} numberOfLines={1}>
+            {" "}
             {userData.name}
           </Text>
-        </View>
+          <View style={styles.headerIcons}>
+            <TouchableOpacity
+              onPress={() => router.push("/(Routes)/NotificationsScreen")}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="notifications-outline"
+                size={moderateScale(24)}
+                color="black"
+              />
+            </TouchableOpacity>
 
-        <View style={styles.headerIcons}>
-          <TouchableOpacity
-            onPress={() => router.push("/(Routes)/NotificationsScreen")}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="notifications-outline"
-              size={moderateScale(24)}
-              color="black"
-            />
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push("/(Routes)/MessagesScreen")}
+              activeOpacity={0.7}
+            >
+              <Feather
+                name="message-square"
+                size={moderateScale(24)}
+                color="black"
+              />
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => router.push("/(Routes)/MessagesScreen")}
-            activeOpacity={0.7}
-          >
-            <Feather
-              name="message-square"
-              size={moderateScale(24)}
-              color="black"
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => {
-              router.push("/(Routes)/Profile");
-            }}
-            activeOpacity={0.7}
-          >
-            <Image
-              source={
-                userData.profileImage
-                  ? { uri: userData.profileImage }
-                  : require("../../assets/images/icon.png")
-              }
-              style={styles.avatar}
-            />
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                router.push("/(Routes)/Profile");
+              }}
+              activeOpacity={0.7}
+            >
+              <Image
+                source={
+                  userData.profileImage
+                    ? { uri: userData.profileImage }
+                    : require("../../assets/images/icon.png")
+                }
+                style={styles.avatar}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -688,9 +679,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#E7EEFA",
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "column",
+    justifyContent: "flex-start",
+    alignItems: "flex-start",
+    textAlign: "left",
+    width: "100%",
     paddingHorizontal: scale(20),
     marginTop: verticalScale(20),
   },
@@ -715,9 +708,9 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(50),
   },
   avatar: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: moderateScale(20),
+    width: scale(32),
+    height: scale(32),
+    borderRadius: moderateScale(100),
     backgroundColor: "#eee",
   },
   salesBox: {

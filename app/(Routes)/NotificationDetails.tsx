@@ -2,15 +2,15 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Dimensions,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { getProduct, markNotificationRead } from "@/src/api";
@@ -212,7 +212,9 @@ const NotificationDetails = () => {
               <Text style={styles.notificationType}>
                 {parsedNotification.title}
               </Text>
-              <Text style={styles.productName}>
+              <Text
+                style={[styles.productName, { fontSize: moderateScale(20) }]}
+              >
                 {productData?.name || parsedNotification.message}
               </Text>
             </View>
@@ -305,7 +307,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E7EEFA",
   },
   headerTitle: {
-    fontSize: moderateScale(26),
+    fontSize: moderateScale(20),
     fontWeight: "bold",
     color: "#111827",
     fontFamily: "Poppins-Bold",

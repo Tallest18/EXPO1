@@ -1,28 +1,26 @@
 // components/ui/Text.tsx
-import React from 'react';
-import { Text as RNText, TextProps as RNTextProps, StyleSheet } from 'react-native';
+import React from "react";
+import {
+    Text as RNText,
+    TextProps as RNTextProps,
+    StyleSheet,
+} from "react-native";
+
+import { AppFontWeight, FONT_FAMILY } from "@/constants/fonts";
 
 interface TextProps extends RNTextProps {
-  fontWeight?: 'regular' | 'medium' | 'semibold' | 'bold';
+  fontWeight?: AppFontWeight;
 }
 
-export const Text: React.FC<TextProps> = ({ 
-  style, 
-  fontWeight = 'regular',
-  ...props 
+export const Text: React.FC<TextProps> = ({
+  style,
+  fontWeight = "regular",
+  ...props
 }) => {
-  const fontFamily = {
-    regular: 'Poppins-Regular',
-    medium: 'Poppins-Medium',
-    semibold: 'Poppins-SemiBold',
-    bold: 'Poppins-Bold',
-  }[fontWeight];
+  const fontFamily = FONT_FAMILY[fontWeight];
 
   return (
-    <RNText 
-      style={StyleSheet.flatten([{ fontFamily }, style])} 
-      {...props} 
-    />
+    <RNText style={StyleSheet.flatten([{ fontFamily }, style])} {...props} />
   );
 };
 

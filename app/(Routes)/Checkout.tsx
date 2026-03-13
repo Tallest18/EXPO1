@@ -1,19 +1,20 @@
 import { Feather } from "@expo/vector-icons";
-import { useFonts } from "expo-font";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Dimensions,
+  Easing,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { createSale, getProduct } from "@/src/api";
@@ -78,12 +79,41 @@ const Checkout: React.FC = () => {
   const [phoneNumber, setPhoneNumber] = useState<string>("");
   const [amountOwed, setAmountOwed] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const [toastMessage, setToastMessage] = useState<string>("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
+  const [showToast, setShowToast] = useState<boolean>(false);
+  const [toastAnim] = useState(() => new Animated.Value(0));
 
-  const [fontsLoaded] = useFonts({
-    "Poppins-Regular": require("../../assets/fonts/Poppins-Regular.ttf"),
-    "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
-    "Poppins-Light": require("../../assets/fonts/Poppins-Light.ttf"),
-  });
+  const showAppToast = (
+    message: string,
+    type: "success" | "error" = "success",
+  ) => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+
+    toastAnim.setValue(0);
+
+    Animated.sequence([
+      Animated.parallel([
+        Animated.timing(toastAnim, {
+          toValue: 1,
+          duration: 320,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.delay(1200),
+      Animated.timing(toastAnim, {
+        toValue: 0,
+        duration: 260,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowToast(false);
+    });
+  };
 
   // Fetch product details for cart items
   useEffect(() => {
@@ -212,23 +242,18 @@ const Checkout: React.FC = () => {
       });
 
       setProcessing(false);
-
-      Alert.alert(
-        "Sale Completed!",
-        `Successfully processed ₦${calculateTotal().toLocaleString()} via ${selectedPayment}`,
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              // Navigate back to Sell page and clear cart
-              router.push("/(Main)/Sell" as any);
-            },
-          },
-        ],
+      showAppToast(
+        `Checkout successful: ₦${calculateTotal().toLocaleString()} via ${selectedPayment}`,
+        "success",
       );
+
+      setTimeout(() => {
+        router.replace("/(Main)/Sell" as any);
+      }, 900);
     } catch (error) {
       console.error("Error processing sale:", error);
       setProcessing(false);
+      showAppToast("Failed to process sale. Please try again.", "error");
       Alert.alert("Error", "Failed to process sale. Please try again.", [
         { text: "OK" },
       ]);
@@ -298,7 +323,7 @@ const Checkout: React.FC = () => {
     );
   }
 
-  if (loading || !fontsLoaded) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -458,6 +483,35 @@ const Checkout: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      {showToast && (
+        <Animated.View
+          style={[
+            styles.toastContainer,
+            toastType === "error" ? styles.toastError : styles.toastSuccess,
+            {
+              opacity: toastAnim,
+              transform: [
+                {
+                  translateY: toastAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-24, 0],
+                  }),
+                },
+                {
+                  scale: toastAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.95, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+          pointerEvents="none"
+        >
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 };
@@ -676,6 +730,33 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(16),
     fontWeight: "600",
     fontFamily: "Poppins-Regular",
+  },
+  toastContainer: {
+    position: "absolute",
+    top: verticalScale(10),
+    left: scale(20),
+    right: scale(20),
+    borderRadius: moderateScale(14),
+    paddingVertical: verticalScale(13),
+    paddingHorizontal: scale(16),
+    elevation: 7,
+    shadowColor: "#000",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    zIndex: 999,
+  },
+  toastSuccess: {
+    backgroundColor: "#16A34A",
+  },
+  toastError: {
+    backgroundColor: "#DC2626",
+  },
+  toastText: {
+    color: "#FFFFFF",
+    fontFamily: "Poppins-SemiBold",
+    fontSize: moderateScale(13),
+    textAlign: "center",
   },
 });
 

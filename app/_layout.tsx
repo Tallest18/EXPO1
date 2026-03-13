@@ -3,26 +3,76 @@ import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useCallback, useEffect, useState } from "react";
+import { Platform, Text, TextInput } from "react-native";
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import { clearTokens, getAccessToken, getProfile } from "@/src/api";
+import { FONT_ASSETS, FONT_FAMILY } from "../constants/fonts";
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
 export default function AppLayout() {
+  return (
+    <SafeAreaProvider>
+      <AppContent />
+    </SafeAreaProvider>
+  );
+}
+
+function AppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [queryClient] = useState(() => new QueryClient());
   const router = useRouter();
   const segments = useSegments();
+  const insets = useSafeAreaInsets();
 
   // Load Poppins fonts
-  const [fontsLoaded, fontError] = useFonts({
-    "Poppins-Regular": require("../assets/fonts/Poppins-Regular.ttf"),
-    "Poppins-Medium": require("../assets/fonts/Poppins-Medium.ttf"),
-    "Poppins-SemiBold": require("../assets/fonts/Poppins-SemiBold.ttf"),
-    "Poppins-Bold": require("../assets/fonts/Poppins-Bold.ttf"),
-    "Poppins-Light": require("../assets/fonts/Poppins-Light.ttf"),
-  });
+  const [fontsLoaded, fontError] = useFonts(FONT_ASSETS);
+
+  useEffect(() => {
+    if (!fontsLoaded && !fontError) {
+      return;
+    }
+
+    const textComponent = Text as typeof Text & {
+      defaultProps?: {
+        style?: unknown;
+        allowFontScaling?: boolean;
+        maxFontSizeMultiplier?: number;
+      };
+    };
+    const textInputComponent = TextInput as typeof TextInput & {
+      defaultProps?: {
+        style?: unknown;
+        allowFontScaling?: boolean;
+        maxFontSizeMultiplier?: number;
+      };
+    };
+
+    textComponent.defaultProps = {
+      ...textComponent.defaultProps,
+      allowFontScaling: false,
+      maxFontSizeMultiplier: 1,
+      style: [
+        { fontFamily: FONT_FAMILY.regular },
+        textComponent.defaultProps?.style,
+      ],
+    };
+
+    textInputComponent.defaultProps = {
+      ...textInputComponent.defaultProps,
+      allowFontScaling: false,
+      maxFontSizeMultiplier: 1,
+      style: [
+        { fontFamily: FONT_FAMILY.regular },
+        textInputComponent.defaultProps?.style,
+      ],
+    };
+  }, [fontError, fontsLoaded]);
 
   // Bootstrap session from JWT token + profile probe
   useEffect(() => {
@@ -106,7 +156,14 @@ export default function AppLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: {
+            paddingTop: Platform.OS === "android" ? insets.top : 0,
+          },
+        }}
+      >
         {/* Onboarding flow */}
         <Stack.Screen name="(Anboarding)" options={{ headerShown: false }} />
 

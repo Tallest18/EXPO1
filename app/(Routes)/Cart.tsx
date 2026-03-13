@@ -1,5 +1,4 @@
 import { Feather } from "@expo/vector-icons";
-import { useFonts } from "expo-font";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -66,12 +65,6 @@ const Cart: React.FC = () => {
   const params = useLocalSearchParams();
   const [loading, setLoading] = useState<boolean>(true);
   const [cart, setCart] = useState<CartItem[]>([]);
-
-  const [fontsLoaded] = useFonts({
-    "Poppins-Regular": require("../../assets/fonts/Poppins-Regular.ttf"),
-    "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
-    "Poppins-Light": require("../../assets/fonts/Poppins-Light.ttf"),
-  });
 
   useEffect(() => {
     loadCartProducts();
@@ -322,7 +315,7 @@ const Cart: React.FC = () => {
     </View>
   );
 
-  if (loading || !fontsLoaded) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>

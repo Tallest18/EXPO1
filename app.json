@@ -13,7 +13,7 @@
       "hideAsync": true
     },
     "updates": {
-      "url": "https://u.expo.dev/a3a734b6-9f27-4308-b090-5f7524398726",
+      "url": "https://u.expo.dev/7273a755-63cd-4cbb-8f40-8a5855b129bf",
       "fallbackToCacheTimeout": 0
     },
     "userInterfaceStyle": "automatic",
@@ -48,6 +48,8 @@
       "package": "INVENTRA2.W",
       "googleServicesFile": "./google-services.json",
       "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ],

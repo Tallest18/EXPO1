@@ -2,7 +2,6 @@
 import { resendOtp, saveAuthTokens, verifyOtp } from "@/src/api";
 import { Ionicons } from "@expo/vector-icons";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
-import { useFonts } from "expo-font";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -51,11 +50,6 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<AppStackParamList, "VerificationScreen">>();
   const params = route?.params;
-  const [fontsLoaded] = useFonts({
-    "Poppins-Regular": require("../../assets/fonts/Poppins-Regular.ttf"),
-    "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
-    "Poppins-Light": require("../../assets/fonts/Poppins-Light.ttf"),
-  });
 
   // Use props first, then route params, then defaults
   const phoneNumber = propPhoneNumber || params?.phoneNumber || "";

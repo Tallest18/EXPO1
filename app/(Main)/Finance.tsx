@@ -7,7 +7,6 @@ import {
     listProducts,
 } from "@/src/api";
 import { Ionicons } from "@expo/vector-icons";
-import { useFonts } from "expo-font";
 import * as Print from "expo-print";
 import { useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
@@ -106,14 +105,6 @@ interface SeasonalInsight {
 const Finance = () => {
   const router = useRouter();
 
-  // ── CRITICAL: load ALL Poppins variants before anything renders ──
-  const [fontsLoaded] = useFonts({
-    "Poppins-Regular": require("../../assets/fonts/Poppins-Regular.ttf"),
-    "Poppins-Medium": require("../../assets/fonts/Poppins-Medium.ttf"),
-    "Poppins-SemiBold": require("../../assets/fonts/Poppins-SemiBold.ttf"),
-    "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
-  });
-
   // Keep data loading SEPARATE from font loading so there is no race condition
   const [dataLoading, setDataLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -186,7 +177,6 @@ const Finance = () => {
   };
 
   const fetchFinancialData = useCallback(async () => {
-    if (!fontsLoaded) return;
     setDataLoading(true);
 
     try {
@@ -369,11 +359,10 @@ const Finance = () => {
     } finally {
       setDataLoading(false);
     }
-  }, [selectedPeriod, fontsLoaded]);
+  }, [selectedPeriod]);
 
-  // ── Only fetch AFTER fonts are confirmed loaded ──────────────────────────
   useEffect(() => {
-    if (fontsLoaded) fetchFinancialData();
+    fetchFinancialData();
   }, [fetchFinancialData]);
 
   const formatCurrency = (amount: number): string =>
@@ -467,16 +456,7 @@ const Finance = () => {
 
   const handleDatePress = () => router.push("/(Routes)/TotalSummaryScreen");
 
-  // ── GUARD 1: fonts not yet loaded → blank spinner, NO Text rendered ───────
-  if (!fontsLoaded) {
-    return (
-      <SafeAreaView style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#2046AE" />
-      </SafeAreaView>
-    );
-  }
-
-  // ── GUARD 2: fonts loaded, data still fetching → Poppins spinner ──────────
+  // ── Data loading guard ──────────
   if (dataLoading) {
     return (
       <SafeAreaView style={[styles.container, styles.centered]}>
@@ -486,7 +466,7 @@ const Finance = () => {
     );
   }
 
-  // ── Main UI: guaranteed Poppins on every Text below this point ────────────
+  // ── Main UI ────────────
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView

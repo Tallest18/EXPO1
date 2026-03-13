@@ -1,5 +1,4 @@
 import { Feather } from "@expo/vector-icons";
-import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -121,14 +120,6 @@ const Inventory: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [showAddProduct, setShowAddProduct] = useState<boolean>(false);
-
-  const [fontsLoaded] = useFonts({
-    "Poppins-Regular": require("../../assets/fonts/Poppins-Regular.ttf"),
-    "Poppins-Medium": require("../../assets/fonts/Poppins-Medium.ttf"),
-    "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
-    "Poppins-SemiBold": require("../../assets/fonts/Poppins-SemiBold.ttf"),
-    "Poppins-Light": require("../../assets/fonts/Poppins-Light.ttf"),
-  });
 
   const [filterCounts, setFilterCounts] = useState<FilterCounts>({
     all: 0,
@@ -396,7 +387,7 @@ const Inventory: React.FC = () => {
     </View>
   );
 
-  if (loading || !fontsLoaded) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>

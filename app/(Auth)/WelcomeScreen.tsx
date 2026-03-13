@@ -1,6 +1,5 @@
 // app/(routes)/WelcomeScreen.tsx
 import { requestOtp } from "@/src/api";
-import { useFonts } from "expo-font";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -41,15 +40,8 @@ interface WelcomeScreenProps {
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onNavigateToVerification,
 }) => {
-  const [fontsLoaded] = useFonts({
-    "Poppins-Regular": require("../../assets/fonts/Poppins-Regular.ttf"),
-    "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
-    "Poppins-Light": require("../../assets/fonts/Poppins-Light.ttf"),
-  });
   const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
-
-  if (!fontsLoaded) return null;
 
   // --- Phone helpers ---
   const formatPhoneNumber = (phone: string): string => {

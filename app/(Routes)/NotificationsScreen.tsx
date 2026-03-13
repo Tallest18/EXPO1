@@ -1,6 +1,5 @@
 // app/(Routes)/NotificationsScreen.tsx
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { useFonts } from "expo-font";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -98,12 +97,6 @@ const NotificationsScreen = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
-  const [fontsLoaded] = useFonts({
-    "Poppins-Regular": require("../../assets/fonts/Poppins-Regular.ttf"),
-    "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
-    "Poppins-Light": require("../../assets/fonts/Poppins-Light.ttf"),
-  });
 
   useEffect(() => {
     const getTimeAgo = (dateString?: string): string => {
@@ -290,7 +283,7 @@ const NotificationsScreen = () => {
     );
   };
 
-  if (loading || !fontsLoaded) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>

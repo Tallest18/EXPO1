@@ -1,22 +1,21 @@
 // app/(Main)/Profile.tsx
 import { getProfile, updateProfile } from "@/src/api";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { useFonts } from "expo-font";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 const Profile = () => {
@@ -27,11 +26,6 @@ const Profile = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [businessType, setBusinessType] = useState("");
   const [imageUploading, setImageUploading] = useState(false);
-
-  const [fontsLoaded] = useFonts({
-    "Poppins-Regular": require("../../assets/fonts/Poppins-Regular.ttf"),
-    "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
-  });
 
   // ✅ Fetch user data when screen loads
   useEffect(() => {
@@ -157,9 +151,6 @@ const Profile = () => {
       ],
     );
   };
-  if (!fontsLoaded) {
-    return null;
-  }
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>

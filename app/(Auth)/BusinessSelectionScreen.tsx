@@ -2,7 +2,6 @@
 import { updateProfile } from "@/src/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
-import { useFonts } from "expo-font";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -69,17 +68,6 @@ const BusinessSelectionScreen: React.FC<BusinessSelectionExtraProps> = ({
   const navigation = useNavigation<any>();
   const [selectedType, setSelectedType] = useState<string>("retail");
   const [loading, setLoading] = useState(false);
-
-  const [fontsLoaded] = useFonts({
-    "Poppins-Regular": require("../../assets/fonts/Poppins-Regular.ttf"),
-    "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
-    "Poppins-Light": require("../../assets/fonts/Poppins-Light.ttf"),
-  });
-
-  // wait for fonts to load
-  if (!fontsLoaded) {
-    return null;
-  }
 
   const handleFinish = async () => {
     if (loading) return;

@@ -1,7 +1,6 @@
 // screens/QuickSellScreen.tsx
 import { createSale, listProducts } from "@/src/api";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -49,11 +48,6 @@ const QuickSellScreen = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [showProductList, setShowProductList] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-
-  const [fontsLoaded] = useFonts({
-    "Poppins-Regular": require("../../assets/fonts/Poppins-Regular.ttf"),
-    "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
-  });
 
   // Fetch products
   useEffect(() => {
