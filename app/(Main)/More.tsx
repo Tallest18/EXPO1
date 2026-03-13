@@ -1,26 +1,30 @@
-import { auth, db } from "@/app/config/firebaseConfig";
+import { clearTokens, getProfile, logout } from "@/src/api";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
+
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width, height } = Dimensions.get("window");
 
 // Responsive sizing functions
-const scale = (size: number) => (width / 375) * size;
-const verticalScale = (size: number) => (height / 812) * size;
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+const scale = (size: number) =>
+  clamp((width / 375) * size, size * 0.76, size * 1.3);
+const verticalScale = (size: number) =>
+  clamp((height / 812) * size, size * 0.62, size * 1.2);
 const moderateScale = (size: number, factor = 0.5) =>
   size + (scale(size) - size) * factor;
 
@@ -38,45 +42,18 @@ const More = () => {
 
   // Fetch user data when component mounts
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        await fetchUserData(user.uid);
-      } else {
-        setUserName("Guest User");
-        setUserPhone("");
-        setLoading(false);
-      }
-    });
-
-    return () => unsubscribe();
+    fetchUserData();
   }, []);
 
-  const fetchUserData = async (userId: string) => {
+  const fetchUserData = async () => {
     try {
-      // Fetch user document from Firestore
-      const userDoc = await getDoc(doc(db, "users", userId));
-
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        console.log("User data from Firestore:", userData);
-
-        setUserName(
-          userData.name ||
-            userData.businessName ||
-            userData.displayName ||
-            "Guest User",
-        );
-        setUserPhone(
-          userData.phone || userData.phoneNumber || userData.mobile || "",
-        );
-      } else {
-        console.log("No user document found in Firestore");
-        if (auth.currentUser?.displayName) {
-          setUserName(auth.currentUser.displayName);
-        }
-      }
+      const userData = await getProfile();
+      setUserName(userData.name || "Guest User");
+      setUserPhone(userData.phone || "");
     } catch (error) {
       console.error("Error fetching user data:", error);
+      setUserName("Guest User");
+      setUserPhone("");
     } finally {
       setLoading(false);
     }
@@ -116,23 +93,39 @@ const More = () => {
     },
   ];
 
-  const handleLogout = async () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
+  const proceedLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Remote logout failed, clearing local session:", error);
+    } finally {
+      await clearTokens();
+      router.replace("/(Auth)/WelcomeScreen");
+    }
+  };
+
+  const handleLogout = () => {
+    if (Platform.OS === "web") {
+      const confirmed =
+        typeof window !== "undefined"
+          ? window.confirm("Do you want to log out?")
+          : true;
+      if (confirmed) {
+        void proceedLogout();
+      }
+      return;
+    }
+
+    Alert.alert("Log out", "Do you want to log out?", [
       {
-        text: "Cancel",
+        text: "No",
         style: "cancel",
       },
       {
-        text: "Logout",
+        text: "Yes",
         style: "destructive",
-        onPress: async () => {
-          try {
-            await signOut(auth);
-            router.replace("/(Anboarding)/Onboarding1");
-          } catch (error) {
-            console.error("Error during logout:", error);
-            Alert.alert("Error", "Failed to logout. Please try again.");
-          }
+        onPress: () => {
+          void proceedLogout();
         },
       },
     ]);

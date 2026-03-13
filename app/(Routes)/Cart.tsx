@@ -1,27 +1,31 @@
 import { Feather } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { db } from "../config/firebaseConfig";
+
+import { getProduct } from "@/src/api";
 
 const { width, height } = Dimensions.get("window");
 
 // Responsive sizing functions
-const scale = (size: number) => (width / 375) * size;
-const verticalScale = (size: number) => (height / 812) * size;
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+const scale = (size: number) =>
+  clamp((width / 375) * size, size * 0.76, size * 1.3);
+const verticalScale = (size: number) =>
+  clamp((height / 812) * size, size * 0.62, size * 1.2);
 const moderateScale = (size: number, factor = 0.5) =>
   size + (scale(size) - size) * factor;
 
@@ -111,20 +115,39 @@ const Cart: React.FC = () => {
             console.log(
               `Loading product ${item.productId} with quantity ${item.quantity}`,
             );
-            const productDoc = await getDoc(
-              doc(db, "products", item.productId),
-            );
-            if (productDoc.exists()) {
-              const productData = productDoc.data();
+            const productData = await getProduct(item.productId);
+            if (productData) {
               console.log("Product loaded:", productData.name);
               return {
                 ...item,
-                product: { id: productDoc.id, ...productData } as Product,
+                product: {
+                  id: String(productData.id),
+                  name: productData.name,
+                  category: productData.category_name || "",
+                  barcode: productData.barcode || "",
+                  image: productData.image ? { uri: productData.image } : null,
+                  quantityType: productData.quantity_type || "Single Items",
+                  unitsInStock:
+                    productData.quantity_left ?? productData.quantity,
+                  costPrice: Number(productData.buying_price || 0),
+                  sellingPrice: Number(productData.selling_price || 0),
+                  lowStockThreshold: productData.low_stock_threshold ?? 0,
+                  expiryDate: productData.expiry_date || "",
+                  supplier: {
+                    name:
+                      productData.supplier_name ||
+                      productData.supplier_obj_name ||
+                      "",
+                    phone: productData.supplier_phone || "",
+                  },
+                  dateAdded: productData.created_at || new Date().toISOString(),
+                  userId: "api-user",
+                } as Product,
               };
-            } else {
-              console.warn("Product not found:", item.productId);
-              return item;
             }
+
+            console.warn("Product not found:", item.productId);
+            return item;
           } catch (error) {
             console.error("Error loading product:", error);
             return item;
@@ -229,7 +252,7 @@ const Cart: React.FC = () => {
           source={
             item.product.image?.uri
               ? { uri: item.product.image.uri }
-              : { uri: "https://via.placeholder.com/60" }
+              : require("../../assets/images/icon.png")
           }
           style={styles.productImage}
         />

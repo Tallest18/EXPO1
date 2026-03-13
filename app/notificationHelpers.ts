@@ -1,71 +1,44 @@
-// app/utils/notificationHelpers.ts
-import { addDoc, collection, getDocs, query, Timestamp, where } from "firebase/firestore";
-import { db } from "./config/firebaseConfig";
+import { createNotification, listProducts, listSales } from "@/src/api";
 
-// Helper to create notification
-export const createNotification = async (
-  userId: string,
+export const createAppNotification = async (
   type: string,
   title: string,
   message: string,
-  productId?: string
+  productId?: string | number,
 ) => {
   try {
-    await addDoc(collection(db, "notifications"), {
-      userId,
+    await createNotification({
       type,
       title,
       message,
-      time: getTimeAgo(Date.now()),
-      isRead: false,
-      productId: productId || null,
-      dateAdded: Date.now(),
-      createdAt: Timestamp.now(),
+      product: productId ? Number(productId) : null,
     });
-    console.log(`✅ Notification created: ${title}`);
   } catch (error) {
     console.error("Error creating notification:", error);
   }
 };
 
-// Format time ago
-const getTimeAgo = (timestamp: number): string => {
-  const now = Date.now();
-  const diff = now - timestamp;
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}min ago`;
-  if (hours < 24) return `${hours}hr ago`;
-  return `${days}d ago`;
-};
-
-// Check and notify for low stock
 export const checkLowStock = async (
-  userId: string,
+  _userId: string,
   productId: string,
   productName: string,
   unitsInStock: number,
-  lowStockThreshold: number
+  lowStockThreshold: number,
 ) => {
   try {
     if (unitsInStock === 0) {
-      await createNotification(
-        userId,
+      await createAppNotification(
         "out_of_stock",
         "Out of Stock Alert",
         `${productName} is out of stock!`,
-        productId
+        productId,
       );
     } else if (unitsInStock <= lowStockThreshold) {
-      await createNotification(
-        userId,
+      await createAppNotification(
         "low_stock",
         "Low Stock Alert",
         `${productName} is low (${unitsInStock} left)`,
-        productId
+        productId,
       );
     }
   } catch (error) {
@@ -73,56 +46,40 @@ export const checkLowStock = async (
   }
 };
 
-// Notify when product is added
 export const notifyProductAdded = async (
-  userId: string,
+  _userId: string,
   productId: string,
-  productName: string
+  productName: string,
 ) => {
-  await createNotification(
-    userId,
+  await createAppNotification(
     "product_added",
     "Product Added",
     `${productName} has been added to inventory`,
-    productId
+    productId,
   );
 };
 
-// Check for high-selling products
 export const checkHighSelling = async (
-  userId: string,
+  _userId: string,
   productId: string,
-  productName: string
+  productName: string,
 ) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const sales = await listSales();
+    const productIdNum = Number(productId);
+    const totalSold = sales.reduce((acc, sale) => {
+      const qty = sale.items
+        .filter((item) => item.product === productIdNum)
+        .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+      return acc + qty;
+    }, 0);
 
-    const salesQuery = query(
-      collection(db, "sales"),
-      where("productId", "==", productId),
-      where("userId", "==", userId)
-    );
-
-    const salesSnapshot = await getDocs(salesQuery);
-    let totalSoldToday = 0;
-
-    salesSnapshot.forEach((doc) => {
-      const sale = doc.data();
-      const saleDate = sale.createdAt?.toDate ? sale.createdAt.toDate() : new Date(sale.createdAt);
-      if (saleDate >= today) {
-        totalSoldToday += sale.quantity || 0;
-      }
-    });
-
-    // If sold 20+ units today, create high-selling notification
-    if (totalSoldToday >= 20) {
-      await createNotification(
-        userId,
+    if (totalSold >= 20) {
+      await createAppNotification(
         "high_selling",
         "High-Selling Item Alert",
-        `${productName} sold ${totalSoldToday} units today! 🔥`,
-        productId
+        `${productName} sold ${totalSold} units today!`,
+        productId,
       );
     }
   } catch (error) {
@@ -130,36 +87,24 @@ export const checkHighSelling = async (
   }
 };
 
-// Check for expiring products
-export const checkExpiringProducts = async (userId: string) => {
+export const checkExpiringProducts = async (_userId: string) => {
   try {
-    const productsQuery = query(
-      collection(db, "products"),
-      where("userId", "==", userId)
-    );
-
-    const productsSnapshot = await getDocs(productsQuery);
+    const products = await listProducts();
     const threeDaysFromNow = new Date();
     threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
 
-    for (const productDoc of productsSnapshot.docs) {
-      const product = productDoc.data();
-      
-      if (!product.expiryDate) continue;
-
-      const expiryDate = new Date(product.expiryDate);
-
+    for (const product of products) {
+      if (!product.expiry_date) continue;
+      const expiryDate = new Date(product.expiry_date);
       if (expiryDate <= threeDaysFromNow && expiryDate > new Date()) {
         const daysLeft = Math.ceil(
-          (expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+          (expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
         );
-
-        await createNotification(
-          userId,
+        await createAppNotification(
           "expiry",
           "Stock Expiry Alert",
           `${product.name} expires in ${daysLeft} days!`,
-          productDoc.id
+          product.id,
         );
       }
     }
@@ -168,62 +113,14 @@ export const checkExpiringProducts = async (userId: string) => {
   }
 };
 
-// Generate daily summary
-export const generateDailySummary = async (userId: string) => {
-  try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const salesQuery = query(
-      collection(db, "sales"),
-      where("userId", "==", userId)
-    );
-
-    const salesSnapshot = await getDocs(salesQuery);
-    let totalProfit = 0;
-    let totalSales = 0;
-    let todayTransactions = 0;
-
-    salesSnapshot.forEach((doc) => {
-      const sale = doc.data();
-      const saleDate = sale.createdAt?.toDate ? sale.createdAt.toDate() : new Date(sale.createdAt);
-      if (saleDate >= today) {
-        totalProfit += sale.profit || 0;
-        totalSales += sale.amount || 0;
-        todayTransactions++;
-      }
-    });
-
-    if (todayTransactions > 0) {
-      await createNotification(
-        userId,
-        "daily_summary",
-        "Daily Summary Report",
-        `You made ₦${totalProfit.toFixed(0)} in profit today.`
-      );
-    } else {
-      await createNotification(
-        userId,
-        "zero_sales",
-        "Zero Sales Alert",
-        "No sales recorded today – check your..."
-      );
-    }
-  } catch (error) {
-    console.error("Error generating daily summary:", error);
-  }
-};
-
-// Notify when sale is completed
 export const notifySaleCompleted = async (
-  userId: string,
+  _userId: string,
   totalAmount: number,
-  itemCount: number
+  itemCount: number,
 ) => {
-  await createNotification(
-    userId,
+  await createAppNotification(
     "sale",
     "Sale Completed",
-    `Successfully sold ${itemCount} items for ₦${totalAmount.toFixed(0)}`
+    `Successfully sold ${itemCount} items for ₦${totalAmount.toFixed(0)}`,
   );
 };

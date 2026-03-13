@@ -1,35 +1,31 @@
 // app/(Routes)/TotalSummaryScreen.tsx
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import {
-  DocumentData,
-  QueryDocumentSnapshot,
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  where,
-} from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Dimensions,
-  FlatList,
-  Image,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Dimensions,
+    FlatList,
+    Image,
+    SafeAreaView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { auth, db } from "../config/firebaseConfig";
+
+import { listSales } from "@/src/api";
 
 const { width, height } = Dimensions.get("window");
 
 // Responsive sizing functions
-const scale = (size: number) => (width / 375) * size;
-const verticalScale = (size: number) => (height / 812) * size;
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+const scale = (size: number) =>
+  clamp((width / 375) * size, size * 0.76, size * 1.3);
+const verticalScale = (size: number) =>
+  clamp((height / 812) * size, size * 0.62, size * 1.2);
 const moderateScale = (size: number, factor = 0.5) =>
   size + (scale(size) - size) * factor;
 
@@ -53,50 +49,79 @@ const TotalSummaryScreen = () => {
   const [totalTransactions, setTotalTransactions] = useState(0);
 
   useEffect(() => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      router.back();
-      return;
-    }
+    const loadSales = async () => {
+      try {
+        const response = await listSales();
 
-    const salesQuery = query(
-      collection(db, "sales"),
-      where("userId", "==", currentUser.uid),
-      orderBy("date", "desc"),
-    );
+        let salesTotal = 0;
+        let profitTotal = 0;
+        const salesData: SalesSummaryItem[] = [];
 
-    const unsubscribe = onSnapshot(salesQuery, (querySnapshot) => {
-      let salesTotal = 0;
-      let profitTotal = 0;
-      const salesData: SalesSummaryItem[] = [];
+        response.forEach((sale) => {
+          const items = Array.isArray(sale.items) ? sale.items : [];
 
-      querySnapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
-        const saleData = doc.data();
-        const sale = {
-          id: doc.id,
-          ...saleData,
-          amount: saleData.amount || 0,
-          profit: saleData.profit || 0,
-          quantity: saleData.quantity || 1,
-          name: saleData.name || "Unknown Product",
-          date: saleData.date || new Date().toISOString(),
-          image: saleData.image || "https://via.placeholder.com/40",
-        } as SalesSummaryItem;
+          if (items.length === 0) {
+            salesData.push({
+              id: String(sale.id),
+              image: undefined,
+              name: "Sale",
+              quantity: 1,
+              date:
+                sale.sale_date || sale.created_at || new Date().toISOString(),
+              amount: Number(sale.total_amount || 0),
+              profit: Number(sale.total_profit || 0),
+              productId: undefined,
+            });
 
-        salesTotal += sale.amount;
-        profitTotal += sale.profit;
-        salesData.push(sale);
-      });
+            salesTotal += Number(sale.total_amount || 0);
+            profitTotal += Number(sale.total_profit || 0);
+            return;
+          }
 
-      setSales(salesData);
-      setTotalSales(salesTotal);
-      setTotalProfit(profitTotal);
-      setTotalTransactions(salesData.length);
-      setLoading(false);
-    });
+          items.forEach((item, index) => {
+            const amount = Number(item.subtotal || 0);
+            const profit = Number(item.profit || 0);
 
-    return () => unsubscribe();
-  }, []);
+            salesData.push({
+              id: `${sale.id}-${item.product}-${index}`,
+              image: undefined,
+              name: item.product_name || "Unknown Product",
+              quantity: Number(item.quantity || 1),
+              date:
+                sale.sale_date || sale.created_at || new Date().toISOString(),
+              amount,
+              profit,
+              productId: String(item.product),
+            });
+
+            salesTotal += amount;
+            profitTotal += profit;
+          });
+        });
+
+        salesData.sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        );
+
+        setSales(salesData);
+        setTotalSales(salesTotal);
+        setTotalProfit(profitTotal);
+        setTotalTransactions(response.length);
+      } catch (error) {
+        console.error("Error loading sales summary:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSales();
+
+    const interval = setInterval(() => {
+      loadSales();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [router]);
 
   const formatCurrency = (value: number) => {
     return `₦${(value || 0).toFixed(2)}`;
@@ -126,10 +151,13 @@ const TotalSummaryScreen = () => {
         })
       }
     >
-      <Image
-        source={{ uri: item.image || "https://via.placeholder.com/40" }}
-        style={styles.image}
-      />
+      {item.image ? (
+        <Image source={{ uri: item.image }} style={styles.image} />
+      ) : (
+        <View style={[styles.image, styles.imageFallback]}>
+          <Feather name="image" size={18} color="#94A3B8" />
+        </View>
+      )}
       <View style={styles.itemInfo}>
         <Text style={styles.name}>
           {item.name} ×{item.quantity}
@@ -346,6 +374,10 @@ const styles = StyleSheet.create({
     height: verticalScale(48),
     borderRadius: moderateScale(8),
     backgroundColor: "#f0f0f0",
+  },
+  imageFallback: {
+    alignItems: "center",
+    justifyContent: "center",
   },
   itemInfo: {
     flex: 1,

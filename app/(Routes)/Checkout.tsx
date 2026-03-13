@@ -1,36 +1,32 @@
 import { Feather } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  increment,
-  serverTimestamp,
-  updateDoc,
-} from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { auth, db } from "../config/firebaseConfig";
+
+import { createSale, getProduct } from "@/src/api";
 
 const { width, height } = Dimensions.get("window");
 
 // Responsive sizing functions
-const scale = (size: number) => (width / 375) * size;
-const verticalScale = (size: number) => (height / 812) * size;
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+const scale = (size: number) =>
+  clamp((width / 375) * size, size * 0.76, size * 1.3);
+const verticalScale = (size: number) =>
+  clamp((height / 812) * size, size * 0.62, size * 1.2);
 const moderateScale = (size: number, factor = 0.5) =>
   size + (scale(size) - size) * factor;
 
@@ -105,15 +101,30 @@ const Checkout: React.FC = () => {
         // Fetch product details for each cart item
         const cartWithProducts = await Promise.all(
           cartData.map(async (item) => {
-            const productRef = doc(db, "products", item.productId);
-            const productSnap = await getDoc(productRef);
+            const product = await getProduct(item.productId);
 
-            if (productSnap.exists()) {
+            if (product) {
               return {
                 ...item,
                 product: {
-                  id: productSnap.id,
-                  ...productSnap.data(),
+                  id: String(product.id),
+                  name: product.name,
+                  category: product.category_name || "",
+                  barcode: product.barcode || "",
+                  image: product.image ? { uri: product.image } : null,
+                  quantityType: product.quantity_type || "Single Items",
+                  unitsInStock: product.quantity_left ?? product.quantity,
+                  costPrice: Number(product.buying_price || 0),
+                  sellingPrice: Number(product.selling_price || 0),
+                  lowStockThreshold: product.low_stock_threshold ?? 0,
+                  expiryDate: product.expiry_date || "",
+                  supplier: {
+                    name:
+                      product.supplier_name || product.supplier_obj_name || "",
+                    phone: product.supplier_phone || "",
+                  },
+                  dateAdded: product.created_at || new Date().toISOString(),
+                  userId: "api-user",
                 } as Product,
               };
             }
@@ -172,55 +183,33 @@ const Checkout: React.FC = () => {
     setProcessing(true);
 
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        Alert.alert("Error", "You must be logged in to complete this sale");
-        setProcessing(false);
-        return;
-      }
-
-      // Create sale record
-      const saleData = {
-        userId: currentUser.uid,
-        items: cartItems.map((item) => ({
-          productId: item.productId,
-          productName: item.product?.name || "",
-          quantity: item.quantity,
-          unitPrice: item.product?.sellingPrice || 0,
-          costPrice: item.product?.costPrice || 0,
-          totalPrice: (item.product?.sellingPrice || 0) * item.quantity,
-          profit:
-            ((item.product?.sellingPrice || 0) -
-              (item.product?.costPrice || 0)) *
-            item.quantity,
-        })),
-        totalAmount: calculateTotal(),
-        paymentMethod: selectedPayment,
-        timestamp: serverTimestamp(),
-        date: new Date().toISOString(),
-        // Add debtor details if payment method is Credit (Debtor)
-        ...(selectedPayment === "Credit (Debtor)" && {
-          debtorDetails: {
-            customerName,
-            phoneNumber,
-            amountOwed: parseFloat(amountOwed) || 0,
-            notes,
-          },
-        }),
+      const paymentMethodMap: Record<PaymentMethod, string> = {
+        Cash: "cash",
+        Transfer: "transfer",
+        POS: "pos",
+        "Credit (Debtor)": "credit",
       };
 
-      // Add sale to Firestore
-      await addDoc(collection(db, "sales"), saleData);
+      const total = calculateTotal();
 
-      // Update inventory quantities
-      for (const item of cartItems) {
-        if (item.product) {
-          const productRef = doc(db, "products", item.productId);
-          await updateDoc(productRef, {
-            unitsInStock: increment(-item.quantity),
-          });
-        }
-      }
+      await createSale({
+        payment_method: paymentMethodMap[selectedPayment],
+        notes: notes || undefined,
+        customer_name:
+          selectedPayment === "Credit (Debtor)" ? customerName : undefined,
+        customer_phone:
+          selectedPayment === "Credit (Debtor)" ? phoneNumber : undefined,
+        amount_owed:
+          selectedPayment === "Credit (Debtor)"
+            ? String(parseFloat(amountOwed) || 0)
+            : undefined,
+        amount_paid:
+          selectedPayment === "Credit (Debtor)" ? "0" : String(total),
+        items: cartItems.map((item) => ({
+          product: Number(item.productId),
+          quantity: item.quantity,
+        })),
+      });
 
       setProcessing(false);
 

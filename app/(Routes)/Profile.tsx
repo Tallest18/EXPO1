@@ -1,15 +1,15 @@
 // app/(Main)/Profile.tsx
+import { getProfile, updateProfile } from "@/src/api";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -18,14 +18,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { auth, db, storage } from "../config/firebaseConfig";
 
 const Profile = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [profileImage, setProfileImage] = useState(
-    "https://via.placeholder.com/150",
-  );
+  const [profileImage, setProfileImage] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [businessType, setBusinessType] = useState("");
@@ -40,32 +37,15 @@ const Profile = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       setLoading(true);
-      const user = auth.currentUser;
-      if (user) {
-        try {
-          const docRef = doc(db, "users", user.uid);
-          const docSnap = await getDoc(docRef);
-
-          if (docSnap.exists()) {
-            const userData = docSnap.data();
-            setBusinessName(userData.name || userData.businessName || "");
-            setPhoneNumber(userData.phone || userData.phoneNumber || "");
-            setBusinessType(userData.businessType || "");
-            setProfileImage(
-              userData.profileImage || "https://via.placeholder.com/150",
-            );
-          } else {
-            // Create doc if it doesn't exist
-            await setDoc(docRef, {
-              name: "Business Name",
-              profileImage: "https://via.placeholder.com/150",
-            });
-            setBusinessName("Business Name");
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-          Alert.alert("Error", "Could not fetch profile data.");
-        }
+      try {
+        const userData = await getProfile();
+        setBusinessName(userData.name || userData.business_name || "");
+        setPhoneNumber(userData.phone || "");
+        setBusinessType(userData.business_type || "");
+        setProfileImage(userData.profile_image || "");
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        Alert.alert("Error", "Could not fetch profile data.");
       }
       setLoading(false);
     };
@@ -73,26 +53,25 @@ const Profile = () => {
     fetchUserData();
   }, []);
   // ✅ Upload image + save to Firestore
-  const uploadImage = async (uri: string) => {
+  const uploadImage = async (image: ImagePicker.ImagePickerAsset) => {
+    const previousImage = profileImage;
+    setProfileImage(image.uri);
     setImageUploading(true);
     try {
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const user = auth.currentUser;
-      if (!user) throw new Error("User not authenticated.");
-      const fileRef = ref(storage, `profile_pictures/${user.uid}`);
-      await uploadBytes(fileRef, blob);
-
-      const downloadURL = await getDownloadURL(fileRef);
-      setProfileImage(downloadURL);
-
-      // Update Firestore immediately
-      const userDocRef = doc(db, "users", user.uid);
-      await updateDoc(userDocRef, { profileImage: downloadURL });
+      const updated = await updateProfile(
+        {
+          name: businessName,
+          business_name: businessName,
+          business_type: businessType || undefined,
+        },
+        image as any,
+      );
+      setProfileImage(updated.profile_image || image.uri);
 
       Alert.alert("Success", "Profile picture updated successfully.");
     } catch (error) {
       console.error("Image upload error:", error);
+      setProfileImage(previousImage);
       Alert.alert("Error", "Failed to upload image.");
     } finally {
       setImageUploading(false);
@@ -100,6 +79,20 @@ const Profile = () => {
   };
   // ✅ Handle picking image
   const handlePickImage = async (useCamera: boolean) => {
+    if (Platform.OS === "web" && !useCamera) {
+      const webPickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: "images",
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (!webPickerResult.canceled) {
+        uploadImage(webPickerResult.assets[0]);
+      }
+      return;
+    }
+
     const permissionResult = useCamera
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -112,7 +105,7 @@ const Profile = () => {
     }
 
     const pickerOptions = {
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: "images" as const,
       allowsEditing: true,
       aspect: [1, 1] as [number, number],
       quality: 0.7,
@@ -123,7 +116,7 @@ const Profile = () => {
       : await ImagePicker.launchImageLibraryAsync(pickerOptions);
 
     if (!pickerResult.canceled) {
-      uploadImage(pickerResult.assets[0].uri);
+      uploadImage(pickerResult.assets[0]);
     }
   };
   // ✅ Save name + keep image in Firestore
@@ -133,27 +126,27 @@ const Profile = () => {
       return;
     }
     setLoading(true);
-    const user = auth.currentUser;
-    if (user) {
-      try {
-        const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, {
-          name: businessName,
-          businessName: businessName,
-          profileImage: profileImage,
-          updatedAt: new Date().toISOString(),
-        });
+    try {
+      await updateProfile({
+        name: businessName,
+        business_name: businessName,
+        business_type: businessType || undefined,
+      });
 
-        Alert.alert("Success", "Profile details saved!");
-        router.back();
-      } catch (error) {
-        console.error("Error saving profile:", error);
-        Alert.alert("Error", "Failed to save profile details.");
-      }
+      Alert.alert("Success", "Profile details saved!");
+      router.back();
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      Alert.alert("Error", "Failed to save profile details.");
     }
     setLoading(false);
   };
   const showImagePickerOptions = () => {
+    if (Platform.OS === "web") {
+      handlePickImage(false);
+      return;
+    }
+
     Alert.alert(
       "Change Profile Picture",
       "How would you like to select a new photo?",
@@ -186,7 +179,14 @@ const Profile = () => {
             onPress={showImagePickerOptions}
             style={styles.profileImageContainer}
           >
-            <Image source={{ uri: profileImage }} style={styles.profileImage} />
+            <Image
+              source={
+                profileImage
+                  ? { uri: profileImage }
+                  : require("../../assets/images/icon.png")
+              }
+              style={styles.profileImage}
+            />
             {imageUploading && (
               <View style={styles.uploadingOverlay}>
                 <ActivityIndicator size="small" color="#fff" />

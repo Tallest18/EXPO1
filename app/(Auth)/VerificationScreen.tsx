@@ -1,38 +1,35 @@
 // app/(routes)/VerificationScreen.tsx
+import { resendOtp, saveAuthTokens, verifyOtp } from "@/src/api";
 import { Ionicons } from "@expo/vector-icons";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
-import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
 import { useFonts } from "expo-font";
 import { router } from "expo-router";
-import {
-  ApplicationVerifier,
-  PhoneAuthProvider,
-  signInWithCredential,
-} from "firebase/auth";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import type { AppStackParamList } from "../../src/navigation/types";
-// ✅ import config along with auth
-import { auth, config } from "../config/firebaseConfig";
 
 const { width, height } = Dimensions.get("window");
 
 // Responsive sizing functions
-const scale = (size: number) => (width / 375) * size;
-const verticalScale = (size: number) => (height / 812) * size;
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+const scale = (size: number) =>
+  clamp((width / 375) * size, size * 0.76, size * 1.3);
+const verticalScale = (size: number) =>
+  clamp((height / 812) * size, size * 0.62, size * 1.2);
 const moderateScale = (size: number, factor = 0.5) =>
   size + (scale(size) - size) * factor;
 
@@ -41,6 +38,7 @@ export interface VerificationExtraProps {
   onGoBack?: () => void;
   phoneNumber?: string;
   verificationId?: string;
+  mockCode?: string;
 }
 
 const VerificationScreen: React.FC<VerificationExtraProps> = ({
@@ -48,6 +46,7 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
   onGoBack,
   phoneNumber: propPhoneNumber,
   verificationId: propVerificationId,
+  mockCode: propMockCode,
 }) => {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<AppStackParamList, "VerificationScreen">>();
@@ -63,13 +62,15 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
   const [verificationId, setVerificationId] = useState(
     propVerificationId || params?.verificationId || "",
   );
+  const [mockCode, setMockCode] = useState<string | null>(
+    propMockCode || params?.mockCode || null,
+  );
 
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(45);
   const [resendLoading, setResendLoading] = useState(false);
   const inputRefs = useRef<TextInput[]>([]);
-  const recaptchaVerifier = useRef<FirebaseRecaptchaVerifierModal>(null);
 
   useEffect(() => {
     if (resendTimer > 0) {
@@ -108,35 +109,26 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
     setLoading(true);
 
     try {
-      const credential = PhoneAuthProvider.credential(
-        verificationId,
-        verificationCode,
-      );
-      await signInWithCredential(auth, credential);
+      const result = await verifyOtp(verificationId, verificationCode);
+      await saveAuthTokens(result.tokens);
 
       setLoading(false);
       if (onSuccess) {
         onSuccess();
+      } else if (result.is_new_user) {
+        router.replace("/(Auth)/BusinessSelectionScreen");
       } else {
-        router.push("/(Main)/Home");
+        router.replace("/(Main)/Home");
       }
     } catch (error: any) {
       setLoading(false);
       console.error("Verification failed:", error);
 
-      let errorMessage = "Invalid verification code. Please try again.";
-      if (error.code === "auth/invalid-verification-code") {
-        errorMessage = "Invalid verification code. Please check and try again.";
-      } else if (error.code === "auth/code-expired") {
-        errorMessage =
-          "Verification code has expired. Please request a new one.";
-      } else if (error.code === "auth/session-expired") {
-        errorMessage = "Session expired. Please go back and try again.";
-      } else if (error.code === "auth/too-many-requests") {
-        errorMessage = "Too many failed attempts. Please try again later.";
-      }
-
-      Alert.alert("Verification Failed", errorMessage);
+      const message =
+        error?.response?.data?.error ||
+        error?.response?.data?.detail ||
+        "Invalid verification code. Please try again.";
+      Alert.alert("Verification Failed", message);
       setCode(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
     }
@@ -145,21 +137,12 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
   const resendCode = async () => {
     if (resendTimer > 0 || resendLoading || !phoneNumber) return;
 
-    if (!recaptchaVerifier.current) {
-      Alert.alert("Error", "Verification system not ready. Please try again.");
-      return;
-    }
-
     setResendLoading(true);
 
     try {
-      const phoneProvider = new PhoneAuthProvider(auth);
-      const newVerificationId = await phoneProvider.verifyPhoneNumber(
-        phoneNumber,
-        recaptchaVerifier.current as ApplicationVerifier,
-      );
-
-      setVerificationId(newVerificationId);
+      const resp = await resendOtp(verificationId);
+      setVerificationId(resp.verification_id);
+      setMockCode(resp.code || null);
       setResendTimer(45);
       setResendLoading(false);
       Alert.alert("Success", "Verification code resent successfully!");
@@ -167,17 +150,11 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
       setResendLoading(false);
       console.error("Error resending code:", error);
 
-      let errorMessage = "Failed to resend verification code.";
-      if (error.code === "auth/too-many-requests") {
-        errorMessage = "Too many attempts. Please try again later.";
-      } else if (error.code === "auth/invalid-phone-number") {
-        errorMessage =
-          "Invalid phone number. Please go back and check your number.";
-      } else if (error.code === "auth/quota-exceeded") {
-        errorMessage = "SMS quota exceeded. Please try again later.";
-      }
-
-      Alert.alert("Error", errorMessage);
+      const message =
+        error?.response?.data?.error ||
+        error?.response?.data?.detail ||
+        "Failed to resend verification code.";
+      Alert.alert("Error", message);
     }
   };
 
@@ -203,13 +180,6 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
       keyboardVerticalOffset={0}
     >
       <StatusBar barStyle="light-content" backgroundColor="#2046AE" />
-
-      <FirebaseRecaptchaVerifierModal
-        ref={recaptchaVerifier}
-        firebaseConfig={config}
-        attemptInvisibleVerification={true}
-        appVerificationDisabledForTesting={false}
-      />
 
       <View style={styles.topSection} />
 
@@ -253,6 +223,13 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
                 />
               ))}
             </View>
+
+            {mockCode ? (
+              <Text style={styles.mockCodeText}>
+                Test code (mock mode):{" "}
+                <Text style={styles.mockCodeValue}>{mockCode}</Text>
+              </Text>
+            ) : null}
 
             <TouchableOpacity
               style={[
@@ -369,8 +346,20 @@ const styles = StyleSheet.create({
   codeContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: verticalScale(24),
+    marginBottom: verticalScale(10),
     gap: scale(3),
+  },
+  mockCodeText: {
+    marginBottom: verticalScale(14),
+    fontSize: moderateScale(11),
+    fontFamily: "Poppins-Regular",
+    color: "#6B7280",
+    textAlign: "left",
+  },
+  mockCodeValue: {
+    fontFamily: "Poppins-Bold",
+    color: "#1155CC",
+    letterSpacing: 2,
   },
   codeInput: {
     width: scale(50),

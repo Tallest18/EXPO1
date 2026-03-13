@@ -1,25 +1,29 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Dimensions,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Dimensions,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { db } from "../config/firebaseConfig";
+
+import { getProduct, markNotificationRead } from "@/src/api";
 
 const { width, height } = Dimensions.get("window");
 
 // Responsive sizing functions
-const scale = (size: number) => (width / 375) * size;
-const verticalScale = (size: number) => (height / 812) * size;
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+const scale = (size: number) =>
+  clamp((width / 375) * size, size * 0.76, size * 1.3);
+const verticalScale = (size: number) =>
+  clamp((height / 812) * size, size * 0.62, size * 1.2);
 const moderateScale = (size: number, factor = 0.5) =>
   size + (scale(size) - size) * factor;
 
@@ -73,13 +77,14 @@ const NotificationDetails = () => {
       if (parsedNotification.productId) {
         setLoading(true);
         try {
-          const productDoc = await getDoc(
-            doc(db, "products", parsedNotification.productId),
-          );
-          if (productDoc.exists()) {
+          const product = await getProduct(parsedNotification.productId);
+          if (product) {
             setProductData({
-              id: productDoc.id,
-              ...productDoc.data(),
+              id: String(product.id),
+              name: product.name,
+              image: product.image ? { uri: product.image } : null,
+              unitsInStock: product.quantity_left ?? product.quantity,
+              lastRestocked: product.updated_at,
             } as Product);
           }
         } catch (error) {
@@ -98,9 +103,7 @@ const NotificationDetails = () => {
     const markAsRead = async () => {
       try {
         if (!parsedNotification.isRead) {
-          await updateDoc(doc(db, "notifications", parsedNotification.id), {
-            isRead: true,
-          });
+          await markNotificationRead(parsedNotification.id);
         }
       } catch (error) {
         console.error("Failed to mark notification as read:", error);

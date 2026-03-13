@@ -1,52 +1,72 @@
+import { listNotifications } from "@/src/api";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
-// Dummy data for the help topics - replace with your actual data
-const helpTopics = [
-  {
-    id: "1",
-    title: "Platforms are used",
-    icon: require("../../assets/images/image.png"), // Replace with your icon
-  },
-  {
-    id: "2",
-    title: "Usage question",
-    icon: require("../../assets/images/image 1776.png"), // Replace with your icon
-  },
-  {
-    id: "3",
-    title: "Application usage",
-    icon: require("../../assets/images/image 1776 (5).png"), // Replace with your icon
-  },
-  {
-    id: "4",
-    title: "Update Time App",
-    icon: require("../../assets/images/image 1776 (2).png"), // Replace with your icon
-  },
-  {
-    id: "5",
-    title: "Cross Platform App",
-    icon: require("../../assets/images/image 1776 (4).png"), // Replace with your icon
-  },
-  {
-    id: "6",
-    title: "Update reminder",
-    icon: require("../../assets/images/image 1776 (3).png"), // Replace with your icon
-  },
-];
+interface HelpTopic {
+  id: string;
+  title: string;
+  icon: any;
+}
+
+const iconByType: Record<string, any> = {
+  low_stock: require("../../assets/images/image.png"),
+  out_of_stock: require("../../assets/images/image 1776.png"),
+  sale: require("../../assets/images/image 1776 (5).png"),
+  product_added: require("../../assets/images/image 1776 (2).png"),
+  expiry: require("../../assets/images/image 1776 (4).png"),
+  general: require("../../assets/images/image 1776 (3).png"),
+};
 
 const HelpCenterScreen = () => {
+  const [topics, setTopics] = useState<HelpTopic[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState("");
+
+  useEffect(() => {
+    const loadTopics = async () => {
+      try {
+        const notifications = await listNotifications();
+        const mappedTopics = notifications
+          .map((item) => ({
+            id: String(item.id),
+            title: item.title || item.message || "Untitled",
+            icon: iconByType[item.type || "general"] || iconByType.general,
+          }))
+          .filter(
+            (item, index, self) =>
+              index === self.findIndex((x) => x.title === item.title),
+          );
+        setTopics(mappedTopics);
+      } catch (error) {
+        console.error("Error loading help topics:", error);
+        setTopics([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTopics();
+  }, []);
+
+  const filteredTopics = useMemo(() => {
+    if (!searchText.trim()) return topics;
+    return topics.filter((topic) =>
+      topic.title.toLowerCase().includes(searchText.trim().toLowerCase()),
+    );
+  }, [searchText, topics]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container}>
@@ -71,27 +91,38 @@ const HelpCenterScreen = () => {
             style={styles.searchInput}
             placeholder="Search Topic"
             placeholderTextColor="#777"
+            value={searchText}
+            onChangeText={setSearchText}
           />
         </View>
 
         {/* Help Topics */}
         <View style={styles.topicsGrid}>
-          {helpTopics.map((topic) => (
-            <TouchableOpacity
-              key={topic.id}
-              style={styles.topicCard}
-              onPress={() => console.log(`Open ${topic.title}`)}
-            >
-              <View style={styles.topicIconContainer}>
-                <Image
-                  source={topic.icon}
-                  style={styles.topicIcon}
-                  resizeMode="contain"
-                />
-              </View>
-              <Text style={styles.topicTitle}>{topic.title}</Text>
-            </TouchableOpacity>
-          ))}
+          {loading && (
+            <View style={styles.loadingWrap}>
+              <ActivityIndicator size="small" color="#24A19C" />
+            </View>
+          )}
+          {!loading &&
+            filteredTopics.map((topic) => (
+              <TouchableOpacity
+                key={topic.id}
+                style={styles.topicCard}
+                onPress={() => console.log(`Open ${topic.title}`)}
+              >
+                <View style={styles.topicIconContainer}>
+                  <Image
+                    source={topic.icon}
+                    style={styles.topicIcon}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Text style={styles.topicTitle}>{topic.title}</Text>
+              </TouchableOpacity>
+            ))}
+          {!loading && filteredTopics.length === 0 && (
+            <Text style={styles.emptyText}>No topics available from API</Text>
+          )}
         </View>
 
         {/* More Topics Button */}
@@ -150,6 +181,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+  },
+  loadingWrap: {
+    width: "100%",
+    paddingVertical: 20,
+    alignItems: "center",
+  },
+  emptyText: {
+    width: "100%",
+    textAlign: "center",
+    color: "#777",
+    paddingVertical: 20,
   },
   topicCard: {
     width: "48%", // Roughly two cards per row with some spacing

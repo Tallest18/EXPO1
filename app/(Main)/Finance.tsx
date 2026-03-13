@@ -1,40 +1,48 @@
+import {
+    getDashboardOverview,
+    getFinancialSummary,
+    getRevenueTrend,
+    getSlowMovingProducts,
+    getTopProducts,
+    listProducts,
+} from "@/src/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import * as Print from "expo-print";
 import { useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
-import { collection, getDocs, query, where } from "firebase/firestore";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { auth, db } from "../config/firebaseConfig";
 
 const { width, height } = Dimensions.get("window");
 
 const isSmallDevice = width < 375;
 const isTablet = width >= 768;
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
 
 const scale = (size: number) => {
   const ratio = width / 375;
   if (isTablet) return size * Math.min(ratio, 1.4);
-  return size * ratio;
+  return clamp(size * ratio, size * 0.76, size * 1.25);
 };
 
 const verticalScale = (size: number) => {
   const ratio = height / 812;
   if (isTablet) return size * Math.min(ratio, 1.4);
-  return size * ratio;
+  return clamp(size * ratio, size * 0.62, size * 1.2);
 };
 
 const moderateScale = (size: number, factor = 0.5) =>
@@ -178,170 +186,67 @@ const Finance = () => {
   };
 
   const fetchFinancialData = useCallback(async () => {
-    if (!fontsLoaded) return; // Never fetch before fonts are ready
+    if (!fontsLoaded) return;
     setDataLoading(true);
-    const user = auth.currentUser;
-    if (!user) {
-      setDataLoading(false);
-      return;
-    }
 
     try {
-      const { startDate, endDate } = getDateRange(selectedPeriod);
-
-      const salesSnapshot = await getDocs(
-        query(collection(db, "sales"), where("userId", "==", user.uid)),
-      );
-
-      let totalRevenue = 0;
-      let totalSales = 0;
-      let todayRevenue = 0;
-      let todayOrders = 0;
-
-      const productSales: {
-        [key: string]: {
-          quantity: number;
-          revenue: number;
-          imageUrl: string;
-          cost: number;
-        };
-      } = {};
-
-      const dailySalesData: {
-        [key: string]: { sales: number; profit: number };
-      } = {
-        Mon: { sales: 0, profit: 0 },
-        Tue: { sales: 0, profit: 0 },
-        Wed: { sales: 0, profit: 0 },
-        Thu: { sales: 0, profit: 0 },
-        Fri: { sales: 0, profit: 0 },
-        Sat: { sales: 0, profit: 0 },
-        Sun: { sales: 0, profit: 0 },
+      const periodMap: Record<"Today" | "Week" | "Month", string> = {
+        Today: "today",
+        Week: "week",
+        Month: "month",
       };
 
-      const monthlySales: { [key: string]: number } = {};
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const period = periodMap[selectedPeriod];
+      const [
+        overview,
+        summary,
+        topProductsResp,
+        slowMovingResp,
+        revenueTrend,
+        products,
+      ] = await Promise.all([
+        getDashboardOverview(),
+        getFinancialSummary(period),
+        getTopProducts(period),
+        getSlowMovingProducts(),
+        getRevenueTrend(7),
+        listProducts(),
+      ]);
 
-      salesSnapshot.forEach((doc) => {
-        const sale = doc.data();
-        const saleDate = sale.date?.toDate
-          ? sale.date.toDate()
-          : new Date(sale.date);
-        const amount = sale.totalAmount || 0;
-
-        const monthKey = saleDate.toLocaleDateString("en-US", {
-          month: "long",
-          year: "numeric",
-        });
-        monthlySales[monthKey] = (monthlySales[monthKey] || 0) + amount;
-
-        if (saleDate >= startDate && saleDate <= endDate) {
-          totalRevenue += amount;
-          totalSales++;
-          if (saleDate >= today) {
-            todayRevenue += amount;
-            todayOrders++;
-          }
-          if (selectedPeriod === "Week") {
-            const dayName = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
-              saleDate.getDay()
-            ];
-            dailySalesData[dayName].sales += amount;
-            dailySalesData[dayName].profit += amount * 0.3;
-          }
-          if (sale.items && Array.isArray(sale.items)) {
-            sale.items.forEach((item: any) => {
-              const productName = item.name || item.productName || "Unknown";
-              if (!productSales[productName]) {
-                productSales[productName] = {
-                  quantity: 0,
-                  revenue: 0,
-                  imageUrl: item.imageUrl || item.image || "",
-                  cost: 0,
-                };
-              }
-              productSales[productName].quantity += item.quantity || 0;
-              productSales[productName].revenue +=
-                (item.price || item.sellingPrice || 0) * (item.quantity || 0);
-              productSales[productName].cost +=
-                (item.costPrice || item.cost || 0) * (item.quantity || 0);
-            });
-          }
-        }
-      });
-
-      const expensesSnapshot = await getDocs(
-        query(collection(db, "expenses"), where("userId", "==", user.uid)),
-      );
-      let totalExpenses = 0;
-      expensesSnapshot.forEach((doc) => {
-        const expense = doc.data();
-        const expenseDate = expense.date?.toDate
-          ? expense.date.toDate()
-          : new Date(expense.date);
-        if (expenseDate >= startDate && expenseDate <= endDate)
-          totalExpenses += expense.amount || 0;
-      });
-
-      const totalProfit = totalRevenue - totalExpenses;
-
-      const topProductsArray = Object.entries(productSales)
-        .map(([name, data]) => ({
-          name,
-          quantity: data.quantity,
-          revenue: data.revenue,
-          imageUrl: data.imageUrl,
-          profit: data.revenue - data.cost,
+      const topProductsArray: TopProduct[] = (topProductsResp || [])
+        .map((item: any) => ({
+          name: item.name || "Unknown",
+          quantity: Number(item.total_sold || 0),
+          revenue: Number(item.total_revenue || 0),
+          imageUrl: item.image_url || "",
+          profit: Number(item.profit || 0),
         }))
-        .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 4);
 
-      const inventorySnapshot = await getDocs(
-        query(collection(db, "inventory"), where("userId", "==", user.uid)),
-      );
-      const slowMovingArray: SlowMovingProduct[] = [];
-      const allInventoryItems: any[] = [];
-
-      inventorySnapshot.forEach((doc) => {
-        const item = doc.data();
-        allInventoryItems.push(item);
-        const lastRestocked = item.lastRestocked?.toDate
-          ? item.lastRestocked.toDate()
-          : item.createdAt?.toDate
-            ? item.createdAt.toDate()
-            : new Date(
-                item.dateAdded ||
-                  item.createdDate ||
-                  Date.now() - 60 * 24 * 60 * 60 * 1000,
-              );
-        const daysInStock = Math.floor(
-          (Date.now() - lastRestocked.getTime()) / (1000 * 60 * 60 * 24),
-        );
-        if (daysInStock > 20) {
-          slowMovingArray.push({
-            name: item.name || item.productName || "Unknown Product",
-            daysInStock,
-            quantity: item.quantity || item.stock || 0,
-            imageUrl: item.imageUrl || item.image || "",
-          });
-        }
-      });
-      slowMovingArray.sort((a, b) => b.daysInStock - a.daysInStock);
+      const slowMovingArray: SlowMovingProduct[] = (slowMovingResp || [])
+        .map((item: any) => ({
+          name: item.name || "Unknown Product",
+          daysInStock: Number(item.days_in_stock || 0),
+          quantity: Number(item.quantity_left || item.quantity || 0),
+          imageUrl: item.image || item.image_url || "",
+        }))
+        .sort((a, b) => b.daysInStock - a.daysInStock)
+        .slice(0, 2);
 
       const recommendations: StockRecommendation[] = [];
-      allInventoryItems.forEach((item) => {
-        const quantity = item.quantity || item.stock || 0;
-        const minStock = item.minStock || item.reorderLevel || 10;
+      (products || []).forEach((item: any) => {
+        const quantity = Number(item.quantity_left ?? item.quantity ?? 0);
+        const minStock = Number(item.low_stock_threshold ?? 10);
         if (quantity < minStock && recommendations.length < 2) {
           recommendations.push({
             type: "warning",
             icon: "📦",
-            message: `You should restock ${item.name || item.productName}`,
+            message: `You should restock ${item.name || "a product"}`,
             detail: `Stock: ${quantity} units per week`,
           });
         }
       });
+
       if (topProductsArray.length > 0 && recommendations.length < 3) {
         recommendations.push({
           type: "info",
@@ -360,33 +265,69 @@ const Finance = () => {
       }
 
       const insights: SeasonalInsight[] = [];
-      const sortedMonths = Object.entries(monthlySales)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 2);
-      if (sortedMonths.length > 0) {
+      const monthLabel = new Date().toLocaleDateString("en-US", {
+        month: "long",
+      });
+      if (Number(summary.total_revenue || 0) > 0) {
         insights.push({
-          month: sortedMonths[0][0].split(" ")[0],
+          month: monthLabel,
           label: "Peak Season",
           performance: "+33%",
           description:
             "Festive period drives higher sales across all categories",
         });
       }
-      if (sortedMonths.length > 1) {
+      if (topProductsArray.length > 1) {
         insights.push({
-          month: sortedMonths[1][0].split(" ")[0],
+          month: monthLabel,
           label: "Good performance",
           performance: "+23%",
           description: "Back to school season boosts stationery and food items",
         });
       }
 
+      const trendMap: Record<string, { sales: number; profit: number }> = {
+        Mon: { sales: 0, profit: 0 },
+        Tue: { sales: 0, profit: 0 },
+        Wed: { sales: 0, profit: 0 },
+        Thu: { sales: 0, profit: 0 },
+        Fri: { sales: 0, profit: 0 },
+        Sat: { sales: 0, profit: 0 },
+        Sun: { sales: 0, profit: 0 },
+      };
+
+      (revenueTrend || []).forEach((entry: any) => {
+        const date = new Date(entry.date || entry.day || Date.now());
+        const day = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
+          date.getDay()
+        ];
+        trendMap[day] = {
+          sales: Number(entry.sales || entry.revenue || 0),
+          profit: Number(entry.profit || 0),
+        };
+      });
+
+      const periodMetrics =
+        selectedPeriod === "Today"
+          ? overview.today
+          : selectedPeriod === "Week"
+            ? overview.week
+            : overview.month;
+
+      const totalRevenue = Number(
+        summary.total_revenue || periodMetrics.sales || 0,
+      );
+      const totalExpenses = Number(summary.total_expenses || 0);
+      const totalProfit = Number(
+        summary.net_profit || summary.total_profit || 0,
+      );
+
       setFinancialSummary({ totalProfit, totalRevenue, totalExpenses });
       setDailySummary({
-        revenue: todayRevenue,
-        profit: todayRevenue * 0.3,
-        sales: totalSales,
-        orders: todayOrders,
+        revenue: Number(overview.today.sales || 0),
+        profit: Number(overview.today.profit || 0),
+        sales: Number(periodMetrics.transactions || 0),
+        orders: Number(overview.today.transactions || 0),
         date: new Date().toLocaleDateString("en-US", {
           month: "short",
           day: "numeric",
@@ -394,7 +335,7 @@ const Finance = () => {
         }),
       });
       setTopProducts(topProductsArray);
-      setSlowMovingStock(slowMovingArray.slice(0, 2));
+      setSlowMovingStock(slowMovingArray);
       setStockRecommendations(recommendations);
       setSeasonalInsights(insights);
       setMonthlyReport({
@@ -412,12 +353,12 @@ const Finance = () => {
         labels: days,
         datasets: [
           {
-            data: days.map((d) => dailySalesData[d].sales || 0.1),
+            data: days.map((d) => trendMap[d].sales || 0.1),
             color: (opacity = 1) => `rgba(32, 70, 174, ${opacity})`,
             strokeWidth: 3,
           },
           {
-            data: days.map((d) => dailySalesData[d].profit || 0.1),
+            data: days.map((d) => trendMap[d].profit || 0.1),
             color: (opacity = 1) => `rgba(251, 191, 36, ${opacity})`,
             strokeWidth: 3,
           },

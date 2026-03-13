@@ -108,11 +108,12 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "a3a734b6-9f27-4308-b090-5f7524398726"
+        "projectId": "7273a755-63cd-4cbb-8f40-8a5855b129bf"
       }
     },
     "runtimeVersion": {
       "policy": "appVersion"
-    }
+    },
+    "owner": "cyberiah"
   }
 }

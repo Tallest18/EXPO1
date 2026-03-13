@@ -2,33 +2,31 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-  addDoc,
-  collection,
-  doc,
-  DocumentData,
-  getDoc,
-  onSnapshot,
-  orderBy,
-  query,
-  QueryDocumentSnapshot,
-  where,
-} from "firebase/firestore";
-import React, { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  FlatList,
-  Image,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    FlatList,
+    Image,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
+
+import {
+    ApiProduct,
+    ApiSale,
+    ApiSaleItem,
+    getDashboardOverview,
+    getProfile,
+    listNotifications,
+    listProducts,
+    listSales,
+} from "@/src/api";
 import AddProductFlow from "../(Routes)/AddProductFlow";
-import { auth, db } from "../config/firebaseConfig";
 
 const { width, height } = Dimensions.get("window");
 
@@ -82,7 +80,9 @@ interface Notification {
     | "expense"
     | "expiry"
     | "backup"
-    | "app_update";
+    | "app_update"
+    | "sale"
+    | "product_added";
   title: string;
   message: string;
   time: string;
@@ -150,35 +150,134 @@ const Home = () => {
     "Poppins-Light": require("../../assets/fonts/Poppins-Light.ttf"),
   });
 
+  const mapApiProduct = (product: ApiProduct): Product => ({
+    id: String(product.id),
+    name: product.name,
+    category: product.category_name || "",
+    barcode: product.barcode || "",
+    image: product.image ? { uri: product.image } : null,
+    quantityType: product.quantity_type || "Single Items",
+    unitsInStock: product.quantity_left ?? product.quantity,
+    costPrice: Number(product.buying_price || 0),
+    sellingPrice: Number(product.selling_price || 0),
+    lowStockThreshold: product.low_stock_threshold ?? 0,
+    expiryDate: product.expiry_date || "",
+    supplier: {
+      name: product.supplier_name || product.supplier_obj_name || "",
+      phone: product.supplier_phone || "",
+    },
+    dateAdded: product.created_at || new Date().toISOString(),
+    userId: "api-user",
+  });
+
+  const toSalesSummary = (sales: ApiSale[]): SalesSummaryItem[] => {
+    const summary: SalesSummaryItem[] = [];
+
+    sales.forEach((sale) => {
+      const items = Array.isArray(sale.items) ? sale.items : [];
+
+      items.forEach((item: ApiSaleItem, index: number) => {
+        const quantity = Number(item.quantity || 0);
+        const amount = Number(item.subtotal || 0);
+        const profit = Number(item.profit || 0);
+
+        summary.push({
+          id: `${sale.id}-${item.product}-${index}`,
+          image: "",
+          name: item.product_name || "Unknown Product",
+          quantity,
+          date: sale.sale_date || sale.created_at || new Date().toISOString(),
+          amount,
+          profit,
+        });
+      });
+    });
+
+    return summary.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    );
+  };
+
+  const getTimeAgo = (dateString?: string): string => {
+    if (!dateString) return "Just now";
+
+    const date = new Date(dateString).getTime();
+    const diff = Math.max(0, Date.now() - date);
+    const minute = 60 * 1000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+
+    if (diff < minute) return "Just now";
+    if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
+    if (diff < day) return `${Math.floor(diff / hour)}h ago`;
+    return `${Math.floor(diff / day)}d ago`;
+  };
+
+  const loadHomeData = useCallback(async () => {
+    try {
+      const [
+        profile,
+        overview,
+        productsResponse,
+        salesResponse,
+        notificationsRes,
+      ] = await Promise.all([
+        getProfile(),
+        getDashboardOverview(),
+        listProducts(),
+        listSales(),
+        listNotifications(),
+      ]);
+
+      const mappedProducts = productsResponse.map(mapApiProduct);
+      const salesSummary = toSalesSummary(salesResponse);
+      const mappedNotifications: Notification[] = notificationsRes.map((n) => ({
+        id: String(n.id),
+        type: (n.type as Notification["type"]) || "daily_summary",
+        title: n.title,
+        message: n.message,
+        time: getTimeAgo(n.created_at),
+        isRead: n.is_read,
+        productId: n.product ? String(n.product) : undefined,
+        dateAdded: n.created_at ? new Date(n.created_at).getTime() : Date.now(),
+      }));
+
+      setInventory(mappedProducts);
+      setNotifications(mappedNotifications);
+
+      setUserData((prev) => ({
+        ...prev,
+        name: profile?.name || profile?.phone || "User",
+        profileImage: profile?.profile_image || "",
+        todaySales: Number(overview.today?.sales || 0),
+        profit: Number(overview.today?.profit || 0),
+        transactions: Number(overview.today?.transactions || 0),
+        stockLeft: mappedProducts.reduce(
+          (sum, p) => sum + (p.unitsInStock || 0),
+          0,
+        ),
+        salesSummary,
+      }));
+    } catch (error) {
+      console.error("Error loading home data:", error);
+    }
+  }, []);
+
   const handleAddProduct = async (productData: Omit<Product, "id">) => {
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        Alert.alert("Error", "Please log in to add products");
-        return;
-      }
-
-      // 1. Prepare the data for Firestore
-      const newProductData = {
+      const newProductWithId: Product = {
         ...productData,
-        userId: currentUser.uid,
-        dateAdded: new Date().toISOString(),
-        createdAt: new Date(),
+        id: `temp-${Date.now()}`,
       };
-
-      // 2. Add document to Firestore
-      const docRef = await addDoc(collection(db, "products"), newProductData);
-
-      // 3. Update local state with the new product including the generated ID
-      const newProductWithId: Product = { ...newProductData, id: docRef.id };
       setInventory((prev: Product[]) => [...prev, newProductWithId]);
 
       setUserData((prev) => ({
         ...prev,
-        stockLeft: prev.stockLeft + (newProductData.unitsInStock || 0),
+        stockLeft: prev.stockLeft + (productData.unitsInStock || 0),
       }));
 
       Alert.alert("Success", "Product added successfully!");
+      await loadHomeData();
     } catch (error) {
       console.error("Error adding product:", error);
       Alert.alert("Error", "Failed to add product. Please try again.");
@@ -186,140 +285,14 @@ const Home = () => {
   };
 
   useEffect(() => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return;
+    loadHomeData();
 
-    // Fetch user profile data
-    const fetchUserData = async () => {
-      const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-      if (userDoc.exists()) {
-        const profile = userDoc.data();
-        setUserData((prev) => ({
-          ...prev,
-          name: profile?.name || currentUser.phoneNumber || "User",
-          profileImage:
-            profile?.profileImage || "https://via.placeholder.com/40",
-        }));
-      }
-    };
-    fetchUserData();
+    const interval = setInterval(() => {
+      loadHomeData();
+    }, 15000);
 
-    // Set up real-time listener for sales summary
-    const salesQuery = query(
-      collection(db, "sales"),
-      where("userId", "==", currentUser.uid),
-    );
-    const unsubscribeSales = onSnapshot(salesQuery, (querySnapshot) => {
-      let totalSales = 0;
-      let totalProfit = 0;
-      const salesSummary: SalesSummaryItem[] = [];
-
-      querySnapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
-        const saleData = doc.data();
-
-        // Process each sale's items to create individual summary entries
-        if (saleData.items && Array.isArray(saleData.items)) {
-          saleData.items.forEach((item: any) => {
-            const sale = {
-              id: doc.id + "_" + item.productId, // Unique ID for each item in the sale
-              image: item.image || item.imageUrl || "",
-              name: item.productName || item.name || "Unknown Product",
-              quantity: item.quantity || 1,
-              date: saleData.date || new Date().toISOString(),
-              amount: item.totalPrice || item.unitPrice * item.quantity || 0,
-              profit:
-                ((item.unitPrice || 0) - (item.costPrice || 0)) *
-                (item.quantity || 0),
-            } as SalesSummaryItem;
-
-            totalSales += sale.amount;
-            totalProfit += sale.profit;
-            salesSummary.push(sale);
-          });
-        } else {
-          // Fallback for old data structure
-          const sale = {
-            id: doc.id,
-            image: saleData.image || "",
-            name: saleData.productName || saleData.name || "Unknown Product",
-            quantity: saleData.quantity || 1,
-            date: saleData.date || new Date().toISOString(),
-            amount: saleData.totalAmount || saleData.amount || 0,
-            profit: saleData.profit || 0,
-          } as SalesSummaryItem;
-
-          totalSales += sale.amount;
-          totalProfit += sale.profit;
-          salesSummary.push(sale);
-        }
-      });
-
-      // Sort by date (most recent first)
-      salesSummary.sort((a, b) => {
-        const dateA = new Date(a.date).getTime();
-        const dateB = new Date(b.date).getTime();
-        return dateB - dateA;
-      });
-
-      setUserData((prev) => ({
-        ...prev,
-        todaySales: totalSales,
-        profit: totalProfit,
-        transactions: querySnapshot.size, // Count actual number of sales transactions
-        salesSummary,
-      }));
-    });
-
-    // Set up real-time listener for inventory/stock
-    const productsQuery = query(
-      collection(db, "products"),
-      where("userId", "==", currentUser.uid),
-    );
-    const unsubscribeProducts = onSnapshot(productsQuery, (productsSnap) => {
-      let totalStock = 0;
-      const inventoryProducts: Product[] = [];
-
-      productsSnap.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
-        const productData = { id: doc.id, ...doc.data() } as Product;
-        totalStock += productData.unitsInStock || 0;
-        inventoryProducts.push(productData);
-      });
-
-      setInventory(inventoryProducts);
-      setUserData((prev) => ({
-        ...prev,
-        stockLeft: totalStock,
-      }));
-    });
-
-    // Set up real-time listener for notifications
-    const notificationsQuery = query(
-      collection(db, "notifications"),
-      orderBy("dateAdded", "desc"),
-    );
-    const unsubscribeNotifications = onSnapshot(
-      notificationsQuery,
-      (snapshot) => {
-        const fetchedNotifications: Notification[] = [];
-        snapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
-          fetchedNotifications.push({
-            id: doc.id,
-            ...doc.data(),
-          } as Notification);
-        });
-        setNotifications(fetchedNotifications);
-      },
-      (error) => {
-        console.error("Firestore error:", error);
-      },
-    );
-
-    return () => {
-      unsubscribeSales();
-      unsubscribeProducts();
-      unsubscribeNotifications();
-    };
-  }, []);
+    return () => clearInterval(interval);
+  }, [loadHomeData]);
 
   // Helper function to get the correct icon based on notification type
   const getNotificationIcon = (type: Notification["type"]) => {
@@ -426,16 +399,16 @@ const Home = () => {
 
           <TouchableOpacity
             onPress={() => {
-              if (auth.currentUser) {
-                router.push("/(Routes)/Profile");
-              }
+              router.push("/(Routes)/Profile");
             }}
             activeOpacity={0.7}
           >
             <Image
-              source={{
-                uri: userData.profileImage || "https://via.placeholder.com/40",
-              }}
+              source={
+                userData.profileImage
+                  ? { uri: userData.profileImage }
+                  : require("../../assets/images/icon.png")
+              }
               style={styles.avatar}
             />
           </TouchableOpacity>

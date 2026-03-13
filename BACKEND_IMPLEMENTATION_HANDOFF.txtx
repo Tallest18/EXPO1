@@ -1,0 +1,1008 @@
+================================================================================
+INVENTRA BACKEND API DOCUMENTATION (MOBILE INTEGRATION CONTRACT)
+================================================================================
+Generated:    March 12, 2026
+Last Updated: March 13, 2026
+Backend: Django + Django REST Framework + JWT (SimpleJWT)
+Format: Plain text contract for direct mobile consumption (no Swagger required)
+
+CHANGELOG (March 13, 2026):
+  [DOCS]    Clarified create payload rules for auto-generated/read-only fields (do not send id/system fields)
+  [API]     OpenAPI request-shape fixed so POST create endpoints no longer require path id
+  [QA]      Automated dummy-data smoke tests added for auth and products domains (single-command test run)
+
+CHANGELOG (March 12, 2026 — all items from BACKEND_IMPLEMENTATION_HANDOFF.txt):
+  [AUTH]    OTP auth flow added: /request-otp/, /verify-otp/, /resend-otp/ (mock mode active)
+  [AUTH]    business_type saveable via PATCH /api/auth/profile/ (was already working)
+  [PRODUCTS] supplier is now optional on product create (no longer required)
+  [SALES]   DELETE /api/products/sales/{id}/ now restores product stock
+  [NOTIF]   POST /api/products/notifications/ is now enabled for client-side events
+  [ANALYTICS] top-products response shape updated: id, name, total_revenue, total_sold, profit, image_url
+  [ANALYTICS] slow-moving response now includes days_in_stock per product
+  [DATA]    seed_data management command added for categories + default supplier
+
+
+================================================================================
+1) QUICK START FOR MOBILE DEVELOPER
+================================================================================
+
+1.1 Base URL
+- Set one configurable base URL in mobile config:
+  BASE_URL = https://your-domain.com
+
+- Every endpoint below is relative to BASE_URL.
+- If backend host changes, only BASE_URL should change.
+
+1.2 Authentication Type
+- JWT Bearer Token
+- Header for protected routes:
+  Authorization: Bearer <access_token>
+
+1.3 Token Lifecycle
+- Access token and refresh token are returned on register/login.
+- Use /api/token/refresh/ when access token expires.
+- Logout blacklists refresh token.
+
+1.4 Content Types
+- JSON for most requests.
+- multipart/form-data when uploading image fields (product image, profile image).
+
+1.5 Date/Time Formats
+- Date: YYYY-MM-DD
+- DateTime: ISO 8601 (example: 2026-03-12T10:30:15.123Z)
+
+1.6 Numeric Types
+- Integer fields are standard numbers.
+- Decimal fields may come as numbers (often serialized from Decimal). Treat monetary values as decimal-safe in client logic.
+
+1.7 Auto-generated Fields Rule (IMPORTANT)
+- For create requests (POST), DO NOT send `id`.
+- Also do not send computed/system-managed fields unless explicitly documented as writable.
+- If sent, backend may ignore them or validation/schema tools may mark them read-only.
+
+
+================================================================================
+2) STANDARD RESPONSE/ERROR BEHAVIOR
+================================================================================
+
+2.1 Success Codes
+- 200 OK: fetch/update success
+- 201 Created: create success
+- 204 No Content: delete success
+
+2.2 Common Error Codes
+- 400 Bad Request: validation or malformed payload
+- 401 Unauthorized: missing/invalid/expired token
+- 403 Forbidden: authenticated but not allowed
+- 404 Not Found: resource does not exist
+
+2.3 Validation Error Shape (typical DRF)
+Examples:
+{
+  "field_name": ["This field is required."]
+}
+
+or custom errors, e.g. sale stock validation:
+{
+  "error": "Insufficient stock",
+  "message": "Cannot sell 20 units of 'Rice'. Only 5 units available.",
+  "product": "Rice",
+  "product_id": 12,
+  "requested_quantity": 20,
+  "available_stock": 5
+}
+
+
+================================================================================
+3) AUTHENTICATION ENDPOINTS
+================================================================================
+
+--------------------------------------------------------------------------------
+3.1 Register User (password-based, kept for admin/dev use)
+--------------------------------------------------------------------------------
+- Method: POST
+- Path: /api/auth/register/
+- Auth: Public
+- Body (JSON):
+{
+  "phone": "08012345678",
+  "name": "John Doe",
+  "password": "secret123",
+  "confirm_password": "secret123"
+}
+
+Validation:
+- phone: required, unique
+- name: required
+- password: required, min length 6
+- confirm_password: must match password
+
+- Success 201:
+{
+  "user": {
+    "id": 1,
+    "phone": "08012345678",
+    "name": "John Doe"
+  },
+  "tokens": {
+    "refresh": "<jwt_refresh>",
+    "access": "<jwt_access>"
+  }
+}
+
+- Error 400 examples:
+{
+  "phone": ["A user with this phone number already exists."]
+}
+{
+  "confirm_password": "Passwords do not match."
+}
+
+--------------------------------------------------------------------------------
+3.2 Login (password-based JWT pair — kept for admin/dev use)
+--------------------------------------------------------------------------------
+- Method: POST
+- Path: /api/token/
+- Auth: Public
+- Body (JSON):
+{
+  "phone": "08012345678",
+  "password": "secret123"
+}
+
+- Success 200:
+{
+  "refresh": "<jwt_refresh>",
+  "access": "<jwt_access>"
+}
+
+- Error 401:
+{
+  "detail": "No active account found with the given credentials"
+}
+
+--------------------------------------------------------------------------------
+3.3 OTP Auth — Step 1: Request OTP  ← PRIMARY MOBILE FLOW
+--------------------------------------------------------------------------------
+- Method: POST
+- Path: /api/auth/request-otp/
+- Auth: Public
+- Body:
+{
+  "phone": "08012345678"
+}
+
+- Success 200:
+{
+  "verification_id": "a1b2c3d4-e5f6-...",   // UUID — pass to step 2 and resend
+  "expires_in": 600,                          // seconds until code expires
+  "message": "OTP sent to 08012345678",
+  "code": "482910"                            // MOCK MODE ONLY — remove from UI in production
+}
+
+Note: In production (OTP_MOCK_MODE=False in settings) the "code" field is NOT returned.
+The code will be sent by SMS. Until an SMS provider is configured, leave OTP_MOCK_MODE=True.
+
+--------------------------------------------------------------------------------
+3.4 OTP Auth — Step 2: Verify OTP  ← PRIMARY MOBILE FLOW
+--------------------------------------------------------------------------------
+- Method: POST
+- Path: /api/auth/verify-otp/
+- Auth: Public
+- Body:
+{
+  "verification_id": "a1b2c3d4-e5f6-...",
+  "code": "482910"
+}
+
+- Success 200:
+{
+  "user": {
+    "id": 1,
+    "phone": "08012345678",
+    "name": "08012345678",       // placeholder name for new users; prompt them to update via PATCH /profile/
+    "business_name": null,
+    "business_type": null,
+    "profile_image": null
+  },
+  "tokens": {
+    "refresh": "<jwt_refresh>",
+    "access": "<jwt_access>"
+  },
+  "is_new_user": true            // true = just registered, false = existing account signed in
+}
+
+- Error 400:
+{
+  "error": "Invalid OTP code."
+}
+// also: "OTP has expired. Please request a new one." | "This OTP has already been used." | "Invalid verification ID."
+
+Behavior:
+- If the phone does not exist in the database, a new User is created automatically (name = phone as placeholder).
+- If the phone already exists, the existing user is signed in.
+- is_new_user allows the frontend to branch into onboarding vs home.
+
+--------------------------------------------------------------------------------
+3.5 OTP Auth — Resend OTP
+--------------------------------------------------------------------------------
+- Method: POST
+- Path: /api/auth/resend-otp/
+- Auth: Public
+- Body:
+{
+  "verification_id": "a1b2c3d4-e5f6-..."   // the ORIGINAL verification_id from step 1
+}
+
+- Success 200:
+{
+  "verification_id": "f7g8h9i0-...",    // NEW verification_id — update client storage
+  "expires_in": 600,
+  "message": "New OTP sent to 08012345678",
+  "code": "751830"                      // MOCK MODE ONLY
+}
+
+Note: resend invalidates the old code and returns a new verification_id.
+The client MUST replace its stored verification_id with the new one.
+
+--------------------------------------------------------------------------------
+3.6 Refresh Access Token
+--------------------------------------------------------------------------------
+- Method: POST
+- Path: /api/token/refresh/
+- Auth: Public
+- Body:
+{
+  "refresh": "<jwt_refresh>"
+}
+
+- Success 200:
+{
+  "access": "<new_jwt_access>",
+  "refresh": "<new_jwt_refresh>"   // present because refresh rotation is enabled
+}
+
+--------------------------------------------------------------------------------
+3.7 Logout (Blacklist Refresh Token)
+--------------------------------------------------------------------------------
+- Method: POST
+- Path: /api/auth/logout/
+- Auth: Bearer access token required
+- Body:
+{
+  "refresh": "<jwt_refresh>"
+}
+
+- Success 200 or 205 (framework dependent)
+- Error 400 if refresh missing/invalid
+
+--------------------------------------------------------------------------------
+3.8 Profile (Current User)
+--------------------------------------------------------------------------------
+- Method: GET
+- Path: /api/auth/profile/
+- Auth: Bearer
+- Success 200:
+{
+  "id": 1,
+  "phone": "08012345678",
+  "name": "John Doe",
+  "business_name": "John Stores",
+  "business_type": "retail",
+  "profile_image": "https://.../media/profile_pictures/file.jpg"  // nullable
+}
+
+- Method: PUT or PATCH
+- Path: /api/auth/profile/
+- Auth: Bearer
+- Updatable fields:
+  - name (string)
+  - business_name (string|null)
+  - business_type (string|null)
+  - profile_image (file|null)
+- Read-only fields:
+  - id
+  - phone
+
+
+================================================================================
+4) PRODUCTS MODULE
+================================================================================
+Base path: /api/products/items/
+Auth: Bearer required on all endpoints in this module.
+Scope: User-specific records only (created_by = current user), except categories/suppliers.
+
+Product Object (response shape):
+{
+  "id": 10,
+  "name": "Rice",
+  "code": "PROD-20260312-0001",              // auto-generated if omitted on create
+  "barcode": "1234567890",                    // nullable
+  "description": "50kg bag",                  // nullable
+  "category": 2,                               // integer FK
+  "category_name": "Food",
+  "supplier": 3,                               // integer FK
+  "supplier_obj_name": "ACME Supplies",
+  "buying_price": "12000.00",
+  "selling_price": "13500.00",
+  "profit_per_unit": "1500.00",
+  "quantity": 25,
+  "quantity_sold": 5,
+  "quantity_left": 20,
+  "quantity_type": "Single Items",            // default: Single Items
+  "low_stock_threshold": 10,
+  "supplier_name": "ACME Supplies",           // optional direct text field
+  "supplier_phone": "08011111111",            // optional direct text field
+  "date_arrived": "2026-03-11",               // nullable
+  "expiry_date": "2026-12-31",                // nullable
+  "image": "https://.../media/products/x.jpg",// nullable
+  "is_deleted": false,
+  "created_at": "2026-03-12T09:10:11.100Z",
+  "updated_at": "2026-03-12T09:10:11.100Z"
+}
+
+Field rules on create:
+- Required: name, category, buying_price, selling_price, quantity
+- supplier: optional (nullable)
+- quantity min: 0
+- Validation: selling_price must be greater than buying_price
+- Do not send these on create (auto/computed/read-only):
+  - id
+  - code (auto-generated if omitted)
+  - quantity_sold
+  - quantity_left
+  - profit_per_unit
+  - is_deleted
+  - created_at
+  - updated_at
+
+--------------------------------------------------------------------------------
+4.1 List Products
+--------------------------------------------------------------------------------
+- Method: GET
+- Path: /api/products/items/
+- Query params:
+  - search: string (matches name, barcode, supplier_name)
+  - filter: inStock | outOfStock | expiring
+
+- Success 200: array of Product Object
+
+--------------------------------------------------------------------------------
+4.2 Create Product
+--------------------------------------------------------------------------------
+- Method: POST
+- Path: /api/products/items/
+- Body: Product fields (without computed fields)
+- Supports image upload with multipart/form-data
+- Success 201: Product Object
+
+Example JSON body (no image):
+{
+  "name": "Rice",
+  "category": 2,
+  "supplier": 3,
+  "buying_price": "12000.00",
+  "selling_price": "13500.00",
+  "quantity": 25,
+  "quantity_type": "Single Items",
+  "low_stock_threshold": 10,
+  "barcode": "1234567890",
+  "description": "50kg bag",
+  "date_arrived": "2026-03-11",
+  "expiry_date": "2026-12-31"
+}
+
+--------------------------------------------------------------------------------
+4.3 Retrieve Product
+--------------------------------------------------------------------------------
+- Method: GET
+- Path: /api/products/items/{id}/
+- Success 200: Product Object
+
+--------------------------------------------------------------------------------
+4.4 Update Product
+--------------------------------------------------------------------------------
+- Method: PUT/PATCH
+- Path: /api/products/items/{id}/
+- Success 200: Product Object
+
+--------------------------------------------------------------------------------
+4.5 Delete Product (Soft Delete)
+--------------------------------------------------------------------------------
+- Method: DELETE
+- Path: /api/products/items/{id}/
+- Behavior: sets is_deleted = true
+- Success 204 (no body)
+
+--------------------------------------------------------------------------------
+4.6 Product Action Endpoints
+--------------------------------------------------------------------------------
+- GET /api/products/items/low_stock/
+  - Returns products where quantity_left < 10
+
+- GET /api/products/items/out_of_stock/
+  - Returns products where quantity_left <= 0
+
+- GET /api/products/items/expiring/
+  - Returns products with expiry date within next 10 days
+
+All return: 200 + array of Product Object
+
+
+================================================================================
+5) CATEGORIES AND SUPPLIERS (READ-ONLY APIs)
+================================================================================
+
+These records are global/read-only through API and usually managed through Django Admin.
+
+--------------------------------------------------------------------------------
+5.1 Categories
+--------------------------------------------------------------------------------
+- GET /api/products/categories/
+- GET /api/products/categories/{id}/
+
+Category Object:
+{
+  "id": 2,
+  "name": "Food",
+  "description": "Food items",   // nullable
+  "created_at": "2026-03-10T10:00:00Z",
+  "updated_at": "2026-03-11T11:00:00Z"
+}
+
+--------------------------------------------------------------------------------
+5.2 Suppliers
+--------------------------------------------------------------------------------
+- GET /api/products/suppliers/
+- GET /api/products/suppliers/{id}/
+
+Supplier Object:
+{
+  "id": 3,
+  "name": "ACME Supplies",
+  "email": "support@acme.com",   // nullable
+  "phone": "08011111111",
+  "address": "Lagos",            // nullable
+  "created_at": "2026-03-10T10:00:00Z",
+  "updated_at": "2026-03-11T11:00:00Z"
+}
+
+
+================================================================================
+6) SALES MODULE
+================================================================================
+Base path: /api/products/sales/
+Auth: Bearer
+Scope: user-specific (sold_by = current user)
+
+Sale Item Object:
+{
+  "id": 1,
+  "product": 10,
+  "product_name": "Rice",
+  "product_code": "PROD-20260312-0001",
+  "quantity": 2,
+  "unit_price": "13500.00",
+  "cost_price": "12000.00",
+  "subtotal": "27000.00",
+  "profit": "3000.00"
+}
+
+Sale Object:
+{
+  "id": 5,
+  "sale_date": "2026-03-12T12:10:00Z",
+  "payment_method": "cash",      // cash | transfer | pos | credit
+  "notes": "Walk-in customer",    // nullable
+  "customer_name": "Jane",        // nullable
+  "customer_phone": "08099999999",// nullable
+  "amount_owed": "0.00",          // nullable
+  "amount_paid": "27000.00",      // nullable
+  "total_amount": "27000.00",
+  "total_profit": "3000.00",
+  "sold_by": 1,
+  "sold_by_name": "John Doe",
+  "items": [Sale Item Object],
+  "created_at": "2026-03-12T12:10:00Z"
+}
+
+Create Sale Request:
+{
+  "payment_method": "cash",
+  "notes": "Optional",
+  "customer_name": "Optional",
+  "customer_phone": "Optional",
+  "amount_owed": "0.00",
+  "amount_paid": "27000.00",
+  "items": [
+    {
+      "product": 10,
+      "quantity": 2
+    }
+  ]
+}
+
+Do not send these on create (read-only/computed):
+- id
+- sale_date
+- total_amount
+- total_profit
+- sold_by
+- sold_by_name
+- created_at
+
+Validation highlights:
+- items required and cannot be empty
+- each item.quantity >= 1
+- stock availability enforced per item
+- insufficient stock returns detailed 400 payload
+
+--------------------------------------------------------------------------------
+6.1 Sales CRUD
+--------------------------------------------------------------------------------
+- GET /api/products/sales/
+- POST /api/products/sales/
+- GET /api/products/sales/{id}/
+- PUT /api/products/sales/{id}/
+- PATCH /api/products/sales/{id}/
+- DELETE /api/products/sales/{id}/
+  Note: deleting a sale RESTORES product stock for every item in that sale.
+
+--------------------------------------------------------------------------------
+6.2 Sales Actions
+--------------------------------------------------------------------------------
+- GET /api/products/sales/today/
+- GET /api/products/sales/this_week/
+- GET /api/products/sales/debtors/
+
+All return: 200 + array of Sale Object
+
+- PATCH /api/products/sales/{id}/record_payment/
+Body:
+{
+  "amount": 5000
+}
+Behavior:
+- amount required
+- amount must be numeric and > 0
+- decreases amount_owed, increases amount_paid
+- returns updated Sale Object
+
+
+================================================================================
+7) RESTOCK MODULE
+================================================================================
+Base path: /api/products/restocks/
+Auth: Bearer
+Scope: user-specific (restocked_by = current user)
+
+Restock Object:
+{
+  "id": 7,
+  "product": 10,
+  "product_name": "Rice",
+  "product_code": "PROD-20260312-0001",
+  "quantity_added": 5,
+  "buying_price": "12000.00",   // nullable input, auto-filled from product if omitted
+  "supplier": 3,                   // nullable input, auto-filled from product supplier if omitted
+  "supplier_name": "ACME Supplies",
+  "total_cost": "60000.00",
+  "date_arrived": "2026-03-12",  // nullable
+  "expiry_date": "2026-12-31",   // nullable
+  "notes": "New batch",           // nullable
+  "restocked_by": 1,
+  "restocked_by_name": "John Doe",
+  "restocked_at": "2026-03-12T13:00:00Z"
+}
+
+Behavior:
+- On create, product.quantity is increased by quantity_added.
+- On delete, product.quantity is decreased by quantity_added.
+
+Validation:
+- product required
+- quantity_added required, >= 1
+- optional supplier consistency check with product default supplier
+
+Do not send these on create (read-only/computed):
+- id
+- product_name
+- product_code
+- supplier_name
+- total_cost
+- restocked_by
+- restocked_by_name
+- restocked_at
+
+Endpoints:
+- GET /api/products/restocks/
+- POST /api/products/restocks/
+- GET /api/products/restocks/{id}/
+- PUT /api/products/restocks/{id}/
+- PATCH /api/products/restocks/{id}/
+- DELETE /api/products/restocks/{id}/
+- GET /api/products/restocks/recent/         (last 30 days)
+- GET /api/products/restocks/{id}/by_product/ (id = product id)
+
+
+================================================================================
+8) NOTIFICATIONS MODULE
+================================================================================
+Base path: /api/products/notifications/
+Auth: Bearer
+Scope: user-specific
+
+Notification Object:
+{
+  "id": 20,
+  "type": "low_stock",
+  "title": "Low stock alert",
+  "message": "Rice is running low",
+  "is_read": false,
+  "product": 10,                 // nullable
+  "product_name": "Rice",       // nullable
+  "created_at": "2026-03-12T14:00:00Z"
+}
+
+Allowed HTTP methods on base resource:
+- GET, POST, PATCH, DELETE
+
+POST body (create notification from client):
+{
+  "type": "general",           // required — see valid types below
+  "title": "Custom alert",    // required
+  "message": "Details here",  // required
+  "product": 10               // optional — product FK
+}
+
+Do not send these on create:
+- id
+- product_name
+- created_at
+
+Valid notification types:
+  low_stock | out_of_stock | high_selling | expiry | product_added |
+  sale | daily_summary | zero_sales | expense | weekly_summary |
+  backup | app_update | general
+
+Note: most notifications are generated automatically server-side (on product create,
+sale create, low stock detection). The POST endpoint is available for client-side
+events the backend cannot observe directly.
+
+Endpoints:
+- GET /api/products/notifications/
+- GET /api/products/notifications/{id}/
+- PATCH /api/products/notifications/{id}/
+- DELETE /api/products/notifications/{id}/
+- PATCH /api/products/notifications/{id}/mark_read/
+- PATCH /api/products/notifications/mark_all_read/
+- GET /api/products/notifications/unread_count/
+
+Unread count response:
+{
+  "unread_count": 4
+}
+
+Mark all read response:
+{
+  "status": "all notifications marked as read"
+}
+
+
+================================================================================
+9) EXPENSES MODULE
+================================================================================
+Base path: /api/products/expenses/
+Auth: Bearer
+Scope: user-specific
+
+Expense Object:
+{
+  "id": 15,
+  "category": "Transport",
+  "amount": "1500.00",
+  "description": "Delivery",     // nullable
+  "date": "2026-03-12",
+  "created_at": "2026-03-12T10:00:00Z",
+  "updated_at": "2026-03-12T10:30:00Z"
+}
+
+Validation:
+- category required
+- amount required, >= 0
+- date required
+
+Do not send these on create:
+- id
+- created_at
+- updated_at
+
+Endpoints:
+- GET /api/products/expenses/
+- POST /api/products/expenses/
+- GET /api/products/expenses/{id}/
+- PUT /api/products/expenses/{id}/
+- PATCH /api/products/expenses/{id}/
+- DELETE /api/products/expenses/{id}/
+
+
+================================================================================
+10) DASHBOARD + ANALYTICS ENDPOINTS
+================================================================================
+Auth: Bearer
+
+--------------------------------------------------------------------------------
+10.1 Dashboard Overview
+--------------------------------------------------------------------------------
+- GET /api/products/dashboard/overview/
+
+Response:
+{
+  "total_products": 100,
+  "total_inventory_value": 350000.0,
+  "today": {
+    "sales": 45000.0,
+    "profit": 7000.0,
+    "transactions": 4
+  },
+  "week": {
+    "sales": 120000.0,
+    "profit": 21000.0,
+    "transactions": 12
+  },
+  "month": {
+    "sales": 500000.0,
+    "profit": 86000.0,
+    "transactions": 41
+  },
+  "all_time": {
+    "sales": 1200000.0,
+    "profit": 250000.0,
+    "transactions": 120
+  }
+}
+
+--------------------------------------------------------------------------------
+10.2 Top Products by Revenue
+--------------------------------------------------------------------------------
+- GET /api/products/analytics/top-products/
+- Query:
+  - period=today|week|month|all (default month)
+
+Response (array):
+[
+  {
+    "id": 10,
+    "name": "Rice",
+    "total_revenue": "54000.00",
+    "total_sold": 4,
+    "profit": "6000.00",
+    "image_url": "https://.../media/products/rice.jpg"  // nullable
+  }
+]
+
+--------------------------------------------------------------------------------
+10.3 Slow Moving Products
+--------------------------------------------------------------------------------
+- GET /api/products/analytics/slow-moving/
+- Logic: products with units sold < 5 in last 30 days
+- Response: array of Product Object with extra field:
+  - days_in_stock: integer (days since date_arrived, or since created_at if no arrival date)
+
+--------------------------------------------------------------------------------
+10.4 Revenue Trend
+--------------------------------------------------------------------------------
+- GET /api/products/analytics/revenue-trend/
+- Query:
+  - days=<int> (default 7)
+
+Response (array in ascending date order):
+[
+  {
+    "date": "2026-03-06",
+    "revenue": 0.0,
+    "profit": 0.0
+  },
+  {
+    "date": "2026-03-07",
+    "revenue": 25000.0,
+    "profit": 4000.0
+  }
+]
+
+--------------------------------------------------------------------------------
+10.5 Financial Summary
+--------------------------------------------------------------------------------
+- GET /api/products/analytics/financial-summary/
+- Query:
+  - period=today|week|month|all (default month)
+
+Response:
+{
+  "period": "month",
+  "total_revenue": 500000.0,
+  "total_profit": 86000.0,
+  "total_expenses": 22000.0,
+  "net_profit": 64000.0
+}
+
+
+================================================================================
+11) ROUTING TABLE (COPY-PASTE READY)
+================================================================================
+
+PUBLIC:
+- POST  /api/auth/register/
+- POST  /api/token/
+- POST  /api/token/refresh/
+- POST  /api/auth/request-otp/
+- POST  /api/auth/verify-otp/
+- POST  /api/auth/resend-otp/
+
+AUTH REQUIRED:
+- POST  /api/auth/logout/
+- GET   /api/auth/profile/
+- PUT   /api/auth/profile/
+- PATCH /api/auth/profile/
+
+- GET   /api/products/items/
+- POST  /api/products/items/
+- GET   /api/products/items/{id}/
+- PUT   /api/products/items/{id}/
+- PATCH /api/products/items/{id}/
+- DELETE /api/products/items/{id}/
+- GET   /api/products/items/low_stock/
+- GET   /api/products/items/out_of_stock/
+- GET   /api/products/items/expiring/
+
+- GET   /api/products/categories/
+- GET   /api/products/categories/{id}/
+
+- GET   /api/products/suppliers/
+- GET   /api/products/suppliers/{id}/
+
+- GET   /api/products/sales/
+- POST  /api/products/sales/
+- GET   /api/products/sales/{id}/
+- PUT   /api/products/sales/{id}/
+- PATCH /api/products/sales/{id}/
+- DELETE /api/products/sales/{id}/
+- GET   /api/products/sales/today/
+- GET   /api/products/sales/this_week/
+- GET   /api/products/sales/debtors/
+- PATCH /api/products/sales/{id}/record_payment/
+
+- GET   /api/products/restocks/
+- POST  /api/products/restocks/
+- GET   /api/products/restocks/{id}/
+- PUT   /api/products/restocks/{id}/
+- PATCH /api/products/restocks/{id}/
+- DELETE /api/products/restocks/{id}/
+- GET   /api/products/restocks/recent/
+- GET   /api/products/restocks/{id}/by_product/
+
+- GET   /api/products/notifications/
+- GET   /api/products/notifications/{id}/
+- PATCH /api/products/notifications/{id}/
+- DELETE /api/products/notifications/{id}/
+- PATCH /api/products/notifications/{id}/mark_read/
+- PATCH /api/products/notifications/mark_all_read/
+- GET   /api/products/notifications/unread_count/
+
+- GET   /api/products/expenses/
+- POST  /api/products/expenses/
+- GET   /api/products/expenses/{id}/
+- PUT   /api/products/expenses/{id}/
+- PATCH /api/products/expenses/{id}/
+- DELETE /api/products/expenses/{id}/
+
+- GET   /api/products/dashboard/overview/
+- GET   /api/products/analytics/top-products/
+- GET   /api/products/analytics/slow-moving/
+- GET   /api/products/analytics/revenue-trend/
+- GET   /api/products/analytics/financial-summary/
+
+
+================================================================================
+12) MOBILE IMPLEMENTATION NOTES (IMPORTANT)
+================================================================================
+
+1) Keep all route paths exactly as documented.
+2) Do not hardcode host/domain in multiple places; use one BASE_URL constant.
+3) Add an auth interceptor:
+   - attach access token to protected requests
+   - on 401, call refresh endpoint once
+   - retry original request with new access token
+4) If refresh fails, clear session and force re-login.
+5) Use multipart/form-data only for image uploads.
+6) Product delete is soft delete; deleted products will disappear from list queries.
+7) Categories and suppliers are API read-only.
+8) Notification creation is partially server-driven (product add, sale, stock alerts
+   fire automatically). Client can also POST notifications for events it detects.
+9) There is no pagination configured by default; list endpoints return arrays.
+10) Treat decimal money values carefully to avoid floating-point display errors.
+
+
+================================================================================
+13) ADMIN LOGIN NOTE (NOT FOR MOBILE AUTH FLOW)
+================================================================================
+- Django admin panel login is configured for email + password (staff/superusers).
+- Mobile app primary authentication: OTP via /api/auth/request-otp/ → /api/auth/verify-otp/.
+- Legacy phone + password login still available at /api/token/ for dev/admin use.
+
+
+================================================================================
+14) DEFAULT DATA SEEDING
+================================================================================
+Run once on the server after deployment to seed required categories and a default supplier:
+
+  python manage.py seed_data
+
+This creates the following categories (skips any that already exist):
+  Foodstuffs, Soft Drinks, Beverages, Noodles & Pasta, Snacks & Biscuits,
+  Toiletries, Household Items, Electronics, Clothing, Stationery, General
+
+And one default supplier: "General Supplier" (phone: 08000000000).
+This ensures the mobile app can always create products even without a specific supplier.
+
+
+================================================================================
+15) OTP PRODUCTION CHECKLIST (WHATSAPP DELIVERY)
+================================================================================
+When ready to enable real OTP delivery over WhatsApp:
+
+1. Pick a WhatsApp provider:
+   - Twilio WhatsApp (recommended quick start)
+   - Meta WhatsApp Cloud API
+
+2. In settings.py, set:
+   OTP_MOCK_MODE = False
+
+3. Configure provider via environment variables:
+   OTP_WHATSAPP_PROVIDER=twilio
+
+   For Twilio:
+   TWILIO_ACCOUNT_SID=...
+   TWILIO_AUTH_TOKEN=...
+   TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+
+   For Meta:
+   OTP_WHATSAPP_PROVIDER=meta
+   META_WHATSAPP_API_TOKEN=...
+   META_WHATSAPP_PHONE_NUMBER_ID=...
+
+4. Keep phone numbers in international format where possible (+234...).
+   Local 0XXXXXXXXXX format is normalized to +234XXXXXXXXXX automatically.
+
+5. On delivery failure, backend now returns:
+   503 {"error": "Unable to deliver OTP right now. Please try again shortly."}
+
+OTP expiry and other timing is controlled by OTP_EXPIRY_MINUTES in settings.py (default: 10).
+
+
+================================================================================
+16) AUTOMATED API TESTING (ONE COMMAND)
+================================================================================
+Automated smoke tests now exist for core auth and products flows using dummy data.
+
+Run all smoke tests:
+
+  python manage.py test accounts products
+
+What this validates in one run:
+- Auth: register, token login, profile get/patch
+- OTP: request, verify, resend (mock mode)
+- Products: create/list/retrieve/update/delete and item actions
+- Sales: create/list/today/week/debtors/record_payment/delete with stock restore check
+- Restocks: create/list/recent/by_product
+- Notifications: create/list/mark_read/mark_all_read/unread_count
+- Expenses: create/list
+- Dashboard + analytics endpoints
+
+Notes:
+- Tests use a temporary test database and dummy records only.
+- No production data is modified.
+
+
+END OF DOCUMENT
+================================================================================

@@ -3,12 +3,23 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Dimensions,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
+
+const { width, height } = Dimensions.get("window");
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+const scale = (size: number) =>
+  clamp((width / 375) * size, size * 0.76, size * 1.3);
+const verticalScale = (size: number) =>
+  clamp((height / 812) * size, size * 0.62, size * 1.2);
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
 const AccountScreen = () => {
   const router = useRouter(); // Use useRouter for Expo Router navigation
@@ -63,33 +74,33 @@ const AccountScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: scale(20),
     backgroundColor: "#fff",
   },
   headerText: {
-    fontSize: 24,
+    fontSize: moderateScale(22),
     fontWeight: "bold",
-    marginTop: 50,
+    marginTop: verticalScale(42),
     alignSelf: "center",
   },
   tagline: {
-    fontSize: 16,
+    fontSize: moderateScale(15),
     color: "#aaa",
-    marginBottom: 40,
+    marginBottom: verticalScale(32),
     alignSelf: "center",
   },
   label: {
-    fontSize: 16,
+    fontSize: moderateScale(15),
     fontWeight: "bold",
-    marginBottom: 5,
+    marginBottom: verticalScale(5),
   },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 15,
-    fontSize: 16,
-    marginBottom: 20,
+    borderRadius: moderateScale(8),
+    padding: moderateScale(14),
+    fontSize: moderateScale(15),
+    marginBottom: verticalScale(18),
     backgroundColor: "#F6F7F9",
   },
   passwordContainer: {
@@ -97,26 +108,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 20,
+    borderRadius: moderateScale(8),
+    padding: moderateScale(10),
+    marginBottom: verticalScale(18),
   },
   passwordInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: moderateScale(15),
   },
   signUpButton: {
     backgroundColor: "#24A19C",
-    padding: 15,
-    borderRadius: 8,
+    padding: moderateScale(14),
+    borderRadius: moderateScale(8),
     width: "100%",
     alignSelf: "center",
     marginTop: "auto",
-    marginBottom: 30,
+    marginBottom: verticalScale(24),
   },
   signUpButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: moderateScale(15),
     fontWeight: "bold",
     textAlign: "center",
   },

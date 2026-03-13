@@ -1,32 +1,32 @@
 // app/(routes)/WelcomeScreen.tsx
-import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
+import { requestOtp } from "@/src/api";
 import { useFonts } from "expo-font";
 import { router } from "expo-router";
-import { ApplicationVerifier, PhoneAuthProvider } from "firebase/auth";
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
-
-// ✅ Import both auth and config from firebaseConfig
-import { auth, config } from "../config/firebaseConfig";
 
 const { width, height } = Dimensions.get("window");
 
-// Responsive sizing functions
-const scale = (size: number) => (width / 375) * size;
-const verticalScale = (size: number) => (height / 812) * size;
+// Clamped responsive sizing — safe on all screen sizes including tiny phones
+const clamp = (val: number, min: number, max: number) =>
+  Math.min(Math.max(val, min), max);
+const scale = (size: number) =>
+  clamp((width / 375) * size, size * 0.76, size * 1.3);
+const verticalScale = (size: number) =>
+  clamp((height / 812) * size, size * 0.62, size * 1.2);
 const moderateScale = (size: number, factor = 0.5) =>
   size + (scale(size) - size) * factor;
 
@@ -34,6 +34,7 @@ interface WelcomeScreenProps {
   onNavigateToVerification?: (
     phoneNumber: string,
     verificationId: string,
+    mockCode?: string,
   ) => void;
 }
 
@@ -47,7 +48,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   });
   const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
-  const recaptchaVerifier = useRef<FirebaseRecaptchaVerifierModal>(null);
+
+  if (!fontsLoaded) return null;
 
   // --- Phone helpers ---
   const formatPhoneNumber = (phone: string): string => {
@@ -81,49 +83,31 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
       return;
     }
 
-    if (!recaptchaVerifier.current) {
-      Alert.alert("Error", "Verification system not ready. Please try again.");
-      return;
-    }
-
     try {
       setLoading(true);
-      const phoneProvider = new PhoneAuthProvider(auth);
-
-      const verificationId = await phoneProvider.verifyPhoneNumber(
-        formattedPhone,
-        recaptchaVerifier.current as ApplicationVerifier,
-      );
+      const resp = await requestOtp(formattedPhone);
+      const verificationId = resp.verification_id;
+      const returnedCode = resp.code;
 
       if (onNavigateToVerification) {
-        onNavigateToVerification(formattedPhone, verificationId);
+        onNavigateToVerification(formattedPhone, verificationId, returnedCode);
       } else {
         router.push({
           pathname: "./VerificationScreen",
           params: {
             phoneNumber: formattedPhone,
             verificationId: verificationId,
+            mockCode: returnedCode,
           },
         });
       }
     } catch (error: any) {
       console.error("Error sending OTP:", error);
-      let errorMessage = "Failed to send verification code.";
-
-      if (error.code === "auth/too-many-requests") {
-        errorMessage = "Too many attempts. Please try again later.";
-      } else if (error.code === "auth/invalid-phone-number") {
-        errorMessage = "Invalid phone number. Please check and try again.";
-      } else if (error.code === "auth/quota-exceeded") {
-        errorMessage = "SMS quota exceeded. Please try again later.";
-      } else if (error.code === "auth/app-not-authorized") {
-        errorMessage =
-          "App not authorized to use Firebase Authentication with this API key.";
-      } else if (error.code === "auth/web-storage-unsupported") {
-        errorMessage = "Web storage is not supported or disabled.";
-      }
-
-      Alert.alert("Error", errorMessage);
+      const message =
+        error?.response?.data?.error ||
+        error?.response?.data?.detail ||
+        "Failed to send verification code. Please try again.";
+      Alert.alert("Error", message);
     } finally {
       setLoading(false);
     }
@@ -136,13 +120,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
       keyboardVerticalOffset={0}
     >
       <StatusBar barStyle="light-content" backgroundColor="#2046AE" />
-
-      <FirebaseRecaptchaVerifierModal
-        ref={recaptchaVerifier}
-        firebaseConfig={config}
-        attemptInvisibleVerification={true}
-        appVerificationDisabledForTesting={false}
-      />
 
       <View style={styles.topSection}>
         <Text style={styles.greeting}>Hello!</Text>
@@ -201,27 +178,30 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: scale(40),
+    paddingHorizontal: scale(32),
+    paddingVertical: verticalScale(16),
   },
   greeting: {
-    fontSize: moderateScale(68),
+    fontSize: moderateScale(52),
     fontFamily: "Poppins-Bold",
     color: "#FFFFFF",
-    marginBottom: verticalScale(0),
+    lineHeight: moderateScale(64),
   },
   subtitle: {
-    fontSize: moderateScale(30),
+    fontSize: moderateScale(22),
     color: "#FFFFFF",
-    marginBottom: verticalScale(0),
     fontFamily: "Poppins-Regular",
+    lineHeight: moderateScale(32),
+    textAlign: "center",
   },
   description: {
-    fontSize: moderateScale(20),
+    fontSize: moderateScale(14),
     fontFamily: "Poppins-Regular",
     color: "#E3F2FD",
     textAlign: "center",
-    lineHeight: 22,
+    lineHeight: moderateScale(22),
     opacity: 0.9,
+    marginTop: verticalScale(4),
   },
   bottomSection: {
     flex: 1,
@@ -236,11 +216,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#E5E7EB",
     borderRadius: moderateScale(2),
     alignSelf: "center",
-    marginBottom: verticalScale(32),
+    marginBottom: verticalScale(24),
   },
   scrollContent: {
     paddingHorizontal: scale(24),
-    paddingBottom: verticalScale(40),
+    paddingBottom: verticalScale(32),
     flexGrow: 1,
     justifyContent: "center",
   },
@@ -249,34 +229,35 @@ const styles = StyleSheet.create({
     borderColor: "#D1D5DB",
     borderRadius: moderateScale(12),
     paddingHorizontal: scale(16),
-    paddingVertical: verticalScale(16),
-    fontSize: moderateScale(18),
+    paddingVertical: verticalScale(14),
+    fontSize: moderateScale(16),
     fontFamily: "Poppins-Regular",
     color: "#111827",
-    marginBottom: verticalScale(16),
+    marginBottom: verticalScale(14),
     backgroundColor: "#FFFFFF",
   },
   inputDisabled: { opacity: 0.6 },
   infoText: {
-    fontSize: moderateScale(16),
+    fontSize: moderateScale(13),
     fontFamily: "Poppins-Regular",
     color: "#6B7280",
     textAlign: "left",
-    marginBottom: verticalScale(32),
-    lineHeight: 20,
+    marginBottom: verticalScale(28),
+    lineHeight: moderateScale(20),
   },
   continueButton: {
     backgroundColor: "#1155CC",
     borderRadius: moderateScale(25),
-    paddingVertical: verticalScale(16),
+    paddingVertical: verticalScale(14),
     alignItems: "center",
-    marginBottom: verticalScale(16),
+    marginBottom: verticalScale(12),
   },
   disabledButton: { opacity: 0.6 },
   continueButtonText: {
     color: "#FFFFFF",
-    fontSize: moderateScale(20),
+    fontSize: moderateScale(17),
     fontFamily: "Poppins-Bold",
+    lineHeight: moderateScale(24),
   },
 });
 
