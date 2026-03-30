@@ -30,7 +30,7 @@ const MainLayout = () => {
           fontSize: 16,
           fontWeight: "500",
           marginTop: 4,
-          fontFamily: "Poppins-Regular",
+          fontFamily: "DMSans_400Regular",
         },
         tabBarIconStyle: {
           marginTop: 2,

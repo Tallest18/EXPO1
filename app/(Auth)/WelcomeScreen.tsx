@@ -19,7 +19,7 @@ import {
 
 const { width, height } = Dimensions.get("window");
 
-// Clamped responsive sizing — safe on all screen sizes including tiny phones
+// Clamped responsive sizing  safe on all screen sizes including tiny phones
 const clamp = (val: number, min: number, max: number) =>
   Math.min(Math.max(val, min), max);
 const scale = (size: number) =>
@@ -175,20 +175,20 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: moderateScale(52),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#FFFFFF",
     lineHeight: moderateScale(64),
   },
   subtitle: {
     fontSize: moderateScale(22),
     color: "#FFFFFF",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     lineHeight: moderateScale(32),
     textAlign: "center",
   },
   description: {
     fontSize: moderateScale(14),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     color: "#E3F2FD",
     textAlign: "center",
     lineHeight: moderateScale(22),
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(16),
     paddingVertical: verticalScale(14),
     fontSize: moderateScale(16),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     color: "#111827",
     marginBottom: verticalScale(14),
     backgroundColor: "#FFFFFF",
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   inputDisabled: { opacity: 0.6 },
   infoText: {
     fontSize: moderateScale(13),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     color: "#6B7280",
     textAlign: "left",
     marginBottom: verticalScale(28),
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
   continueButtonText: {
     color: "#FFFFFF",
     fontSize: moderateScale(17),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     lineHeight: moderateScale(24),
   },
 });

@@ -308,9 +308,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: moderateScale(20),
-    fontWeight: "bold",
     color: "#111827",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
   },
   backButton: {
     backgroundColor: "#fff",
@@ -350,13 +349,14 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14),
     color: "rgba(255,255,255,0.8)",
     marginBottom: verticalScale(4),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   productName: {
-    fontSize: moderateScale(22),
-    fontWeight: "600",
-    color: "#fff",
-    fontFamily: "Poppins-Bold",
+    fontSize: 20,
+    color: "#FFFFFF",
+    fontFamily: "DMSans_700Bold",
+    lineHeight: 20,
+    letterSpacing: 0,
   },
   actionButtons: {
     flexDirection: "row",
@@ -381,18 +381,16 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: "#fff",
     fontSize: moderateScale(16),
-    fontWeight: "600",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   detailsSection: {
     marginTop: verticalScale(20),
   },
   detailsTitle: {
     fontSize: moderateScale(16),
-    fontWeight: "600",
     color: "#111827",
     marginBottom: verticalScale(12),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
   },
   detailsCard: {
     backgroundColor: "#fff",
@@ -409,19 +407,17 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: moderateScale(15),
     color: "#9CA3AF",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   detailValue: {
     fontSize: moderateScale(15),
     color: "#111827",
-    fontWeight: "500",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     textAlign: "right",
     maxWidth: "60%",
   },
   stockValue: {
     color: "#F59E0B",
-    fontWeight: "600",
   },
   tipCard: {
     backgroundColor: "#fff",
@@ -434,16 +430,15 @@ const styles = StyleSheet.create({
   },
   tipTitle: {
     fontSize: moderateScale(18),
-    fontWeight: "600",
     color: "#111827",
     marginBottom: verticalScale(8),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
   },
   tipMessage: {
     fontSize: moderateScale(15),
     color: "#6B7280",
     lineHeight: 22,
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   loadingOverlay: {
     position: "absolute",

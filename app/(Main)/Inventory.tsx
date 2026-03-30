@@ -2,18 +2,18 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { styles } from "./Inventory.styles";
 
 import { ApiProduct, listProducts } from "@/src/api";
 import AddProductFlow from "../(Routes)/AddProductFlow";
@@ -306,12 +306,9 @@ const Inventory: React.FC = () => {
               source={
                 product.image?.uri
                   ? { uri: product.image.uri }
-                  : require("../../assets/images/icon.png")
+                  : require("../../assets/images/noImg.jpg")
               }
-              style={[
-                styles.productImage,
-                { width: imageSize, height: imageSize },
-              ]}
+              style={[styles.productImage]}
             />
 
             <View style={styles.infoBoxesContainer}>
@@ -463,277 +460,5 @@ const Inventory: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#E7EEFA",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#E7EEFA",
-  },
-  loadingText: {
-    marginTop: verticalScale(10),
-    fontSize: getFontSize(moderateScale(16)),
-    color: "#666",
-    fontFamily: "Poppins-Regular",
-  },
-
-  // ── Header ────────────────────────────────────────────────────────────────
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    // Safe horizontal padding that never hugs the edge on any device
-    paddingHorizontal: H_PAD,
-    paddingTop: verticalScale(isTablet ? 20 : 14),
-    paddingBottom: verticalScale(isTablet ? 16 : 12),
-    backgroundColor: "#E7EEFA",
-  },
-  headerTitle: {
-    // Capped so it never overflows on small screens beside the button
-    fontSize: getFontSize(
-      moderateScale(isSmallDevice ? 22 : isTablet ? 32 : 26),
-    ),
-    fontWeight: "700",
-    color: "#000",
-    fontFamily: "Poppins-Bold",
-    // Flex shrink so the button is never pushed off screen
-    flexShrink: 1,
-    marginRight: scale(10),
-  },
-  newProductButton: {
-    backgroundColor: "#1155CC",
-    borderRadius: moderateScale(8),
-    // Horizontal padding scales with device width
-    paddingHorizontal: isSmallDevice ? scale(10) : scale(16),
-    paddingVertical: verticalScale(isSmallDevice ? 8 : 10),
-    flexDirection: "row",
-    alignItems: "center",
-    gap: scale(6),
-    // Don't let button shrink — it must always be readable
-    flexShrink: 0,
-  },
-  newProductButtonText: {
-    color: "white",
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 12 : 14)),
-    fontWeight: "600",
-    fontFamily: "Poppins-SemiBold",
-  },
-
-  // ── Search ────────────────────────────────────────────────────────────────
-  searchContainer: {
-    flexDirection: "row",
-    paddingHorizontal: H_PAD,
-    paddingBottom: verticalScale(12),
-    backgroundColor: "#E7EEFA",
-    alignItems: "center",
-    gap: scale(10),
-  },
-  searchInputContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: moderateScale(10),
-    paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(isSmallDevice ? 8 : 10),
-    gap: scale(8),
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: getFontSize(moderateScale(15)),
-    fontFamily: "Poppins-Regular",
-    color: "#000",
-    minHeight: verticalScale(20),
-  },
-  filterButton: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: moderateScale(10),
-    padding: scale(12),
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-  },
-
-  // ── Filters ───────────────────────────────────────────────────────────────
-  filtersContainer: {
-    backgroundColor: "#E7EEFA",
-    paddingVertical: verticalScale(8),
-    paddingBottom: verticalScale(12),
-  },
-  filtersContentContainer: {
-    paddingHorizontal: H_PAD,
-    gap: scale(8),
-  },
-  filterTab: {
-    paddingHorizontal: scale(isSmallDevice ? 12 : 16),
-    paddingVertical: verticalScale(8),
-    borderRadius: moderateScale(10),
-    marginRight: scale(8),
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-  },
-  activeFilterTab: {
-    backgroundColor: "#1155CC",
-    borderColor: "#1155CC",
-  },
-  filterText: {
-    fontSize: getFontSize(moderateScale(14)),
-    color: "#1C1C1C",
-    fontFamily: "Poppins-Regular",
-  },
-  activeFilterText: {
-    color: "#FFFFFF",
-    fontFamily: "Poppins-SemiBold",
-  },
-
-  // ── Products ──────────────────────────────────────────────────────────────
-  productsContainer: {
-    flex: 1,
-    backgroundColor: "#E7EEFA",
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: verticalScale(20),
-  },
-  productsGrid: {
-    paddingHorizontal: H_PAD,
-    paddingTop: verticalScale(8),
-    flexDirection: isTablet ? "row" : "column",
-    flexWrap: isTablet ? "wrap" : "nowrap",
-    gap: isTablet ? scale(16) : 0,
-  },
-  productCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: moderateScale(12),
-    marginBottom: verticalScale(16),
-    overflow: "hidden",
-  },
-  cardContent: {
-    padding: scale(isSmallDevice ? 12 : 16),
-  },
-  productName: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 17 : 20)),
-    fontWeight: "600",
-    color: "#000",
-    fontFamily: "Poppins-Bold",
-    marginBottom: verticalScale(12),
-    minHeight: verticalScale(isSmallDevice ? 38 : 48),
-  },
-  imageAndInfoRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: scale(12),
-  },
-  productImage: {
-    borderRadius: moderateScale(8),
-    backgroundColor: "#F0F0F0",
-  },
-  infoBoxesContainer: {
-    flex: 1,
-    gap: verticalScale(8),
-  },
-  unitPriceBox: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: moderateScale(8),
-    padding: scale(8),
-    borderWidth: 1,
-    borderColor: "#B5CAEF",
-    minHeight: verticalScale(isSmallDevice ? 42 : 50),
-    justifyContent: "center",
-  },
-  boxLabel: {
-    fontSize: getFontSize(moderateScale(11)),
-    color: "#D2D2D2",
-    marginBottom: verticalScale(4),
-    fontFamily: "Poppins-Regular",
-  },
-  largePrice: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 18 : 22)),
-    fontWeight: "700",
-    color: "#000",
-    fontFamily: "Poppins-Bold",
-  },
-  bottomBoxesRow: {
-    flexDirection: "row",
-    gap: scale(4),
-  },
-  smallInfoBox: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: moderateScale(8),
-    padding: scale(isSmallDevice ? 8 : 12),
-    borderWidth: 1,
-    borderColor: "#B5CAEF",
-    minHeight: verticalScale(isSmallDevice ? 42 : 50),
-    justifyContent: "center",
-  },
-  infoBoxValue: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 13 : 17)),
-    fontWeight: "700",
-    color: "#000",
-    fontFamily: "Poppins-Bold",
-  },
-
-  // ── Empty States ──────────────────────────────────────────────────────────
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: verticalScale(80),
-    paddingHorizontal: H_PAD,
-  },
-  emptyTitle: {
-    fontSize: getFontSize(moderateScale(20)),
-    fontWeight: "600",
-    color: "#666",
-    marginTop: verticalScale(16),
-    marginBottom: verticalScale(8),
-    fontFamily: "Poppins-SemiBold",
-  },
-  emptyDescription: {
-    fontSize: getFontSize(moderateScale(14)),
-    color: "#999",
-    textAlign: "center",
-    marginBottom: verticalScale(24),
-    paddingHorizontal: scale(isSmallDevice ? 10 : 30),
-    fontFamily: "Poppins-Regular",
-    lineHeight: getFontSize(moderateScale(22)),
-  },
-  addFirstProductButton: {
-    backgroundColor: "#1155CC",
-    borderRadius: moderateScale(12),
-    paddingHorizontal: scale(24),
-    paddingVertical: verticalScale(12),
-  },
-  addFirstProductButtonText: {
-    color: "#FFFFFF",
-    fontSize: getFontSize(moderateScale(16)),
-    fontWeight: "600",
-    fontFamily: "Poppins-SemiBold",
-  },
-  clearSearchButton: {
-    backgroundColor: "#F8F9FA",
-    borderRadius: moderateScale(12),
-    paddingHorizontal: scale(24),
-    paddingVertical: verticalScale(12),
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-  },
-  clearSearchText: {
-    color: "#666",
-    fontSize: getFontSize(moderateScale(16)),
-    fontFamily: "Poppins-Regular",
-  },
-  bottomPadding: {
-    height: verticalScale(20),
-  },
-});
 
 export default Inventory;

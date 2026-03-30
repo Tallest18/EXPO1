@@ -54,11 +54,11 @@ export interface BusinessSelectionExtraProps {
 }
 
 const CartIcon: React.FC<{ size?: number }> = ({ size = 60 }) => (
-  <Text style={{ fontSize: size }}>🛒</Text>
+  <Text style={{ fontSize: size }}>x:</Text>
 );
 
 const PeopleIcon: React.FC<{ size?: number }> = ({ size = 60 }) => (
-  <Text style={{ fontSize: size }}>🧍‍♂️</Text>
+  <Text style={{ fontSize: size }}>x⬍"️</Text>
 );
 
 const BusinessSelectionScreen: React.FC<BusinessSelectionExtraProps> = ({
@@ -253,11 +253,11 @@ const styles = StyleSheet.create({
     color: "#2046AE",
     textAlign: "center",
     marginBottom: verticalScale(8),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
   },
   title: {
     fontSize: moderateScale(26),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#111827",
     textAlign: "center",
     marginBottom: verticalScale(8),
@@ -268,11 +268,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: moderateScale(22),
     marginBottom: verticalScale(24),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   sectionTitle: {
     fontSize: moderateScale(19),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#111827",
     marginBottom: verticalScale(14),
   },
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   businessInfo: { flex: 1, paddingRight: scale(14) },
   businessTitle: {
     fontSize: moderateScale(16),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#111827",
     marginBottom: verticalScale(4),
   },
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(13),
     color: "#6B7280",
     lineHeight: moderateScale(18),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   businessIcon: {
     width: scale(62),
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   finishButtonText: {
     color: "#FFFFFF",
     fontSize: moderateScale(18),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
   },
   disabled: { opacity: 0.6 },
   loadingOverlay: {
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: verticalScale(10),
     fontSize: moderateScale(16),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     color: "#2046AE",
   },
   emoji: {

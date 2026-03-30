@@ -5,18 +5,18 @@ import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import type { AppStackParamList } from "../../src/navigation/types";
 
@@ -328,14 +328,14 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(22),
     color: "#111827",
     marginBottom: verticalScale(8),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   subtitle: {
     fontSize: moderateScale(18),
     color: "#6B7280",
     marginBottom: verticalScale(32),
     lineHeight: 24,
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   codeContainer: {
     flexDirection: "row",
@@ -346,12 +346,12 @@ const styles = StyleSheet.create({
   mockCodeText: {
     marginBottom: verticalScale(14),
     fontSize: moderateScale(11),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     color: "#6B7280",
     textAlign: "left",
   },
   mockCodeValue: {
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#1155CC",
     letterSpacing: 2,
   },
@@ -363,10 +363,9 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(8),
     textAlign: "center",
     fontSize: moderateScale(20),
-    fontWeight: "600",
     color: "#111827",
     backgroundColor: "#FFFFFF",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   codeInputFilled: { borderColor: "#10B981", backgroundColor: "#F0FDF4" },
   codeInputDisabled: { opacity: 0.6 },
@@ -379,9 +378,8 @@ const styles = StyleSheet.create({
   },
   verifyText: {
     fontSize: moderateScale(16),
-    fontWeight: "600",
     color: "#FFFFFF",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   actionsContainer: { marginBottom: verticalScale(32) },
   resendContainer: {
@@ -392,14 +390,14 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14),
     color: "#6B7280",
     textAlign: "left",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   clearButton: { paddingVertical: verticalScale(4) },
   clearText: {
     fontSize: moderateScale(14),
     color: "#EF4444",
     textAlign: "left",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   disabled: { opacity: 0.6 },
   disabledText: { color: "#9CA3AF" },
@@ -410,10 +408,9 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: moderateScale(16),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     color: "#1155CC",
     marginLeft: 8,
-    fontWeight: "500",
   },
   loadingOverlay: {
     position: "absolute",
@@ -429,8 +426,7 @@ const styles = StyleSheet.create({
     marginTop: verticalScale(12),
     fontSize: moderateScale(18),
     color: "#1155CC",
-    fontWeight: "500",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
 });
 

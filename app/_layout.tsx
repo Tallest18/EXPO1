@@ -9,10 +9,11 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
+import { AddProductContext } from "@/context/AddProductContext";
 import { clearTokens, getAccessToken, getProfile } from "@/src/api";
 import { FONT_ASSETS, FONT_FAMILY } from "../constants/fonts";
+import AddProductFlow from "./(Routes)/AddProductFlow";
 
-// Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
 export default function AppLayout() {
@@ -26,11 +27,11 @@ export default function AppLayout() {
 function AppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [queryClient] = useState(() => new QueryClient());
+  const [showAddProduct, setShowAddProduct] = useState(false);
   const router = useRouter();
   const segments = useSegments();
   const insets = useSafeAreaInsets();
 
-  // Load Poppins fonts
   const [fontsLoaded, fontError] = useFonts(FONT_ASSETS);
 
   useEffect(() => {
@@ -74,7 +75,6 @@ function AppContent() {
     };
   }, [fontError, fontsLoaded]);
 
-  // Bootstrap session from JWT token + profile probe
   useEffect(() => {
     let cancelled = false;
 
@@ -101,10 +101,8 @@ function AppContent() {
     };
   }, []);
 
-  // Navigation logic
   const handleNavigation = useCallback(() => {
     if ((fontsLoaded || fontError) && isAuthenticated !== null) {
-      // Hide splash screen immediately
       SplashScreen.hideAsync();
 
       const inProtectedGroup =
@@ -119,10 +117,8 @@ function AppContent() {
         !inAuthFlow &&
         !inOnboardingFlow
       ) {
-        // User is logged in, go to main app
         router.replace("/(Main)/Home");
       } else if (!isAuthenticated && inProtectedGroup) {
-        // Re-verify token in case user just completed OTP login (bootstrap ran before tokens were saved)
         getAccessToken().then((token) => {
           if (token) {
             setIsAuthenticated(true);
@@ -131,21 +127,17 @@ function AppContent() {
           }
         });
       } else if (!isAuthenticated && !hasSegments) {
-        // Initial load, user not authenticated, go to onboarding
         router.replace("/(Anboarding)/Onboarding1");
       } else if (isAuthenticated && !hasSegments) {
-        // Initial load, user authenticated, go to main app
         router.replace("/(Main)/Home");
       }
     }
   }, [fontsLoaded, fontError, isAuthenticated, segments, router]);
 
-  // Hide splash screen and navigate as soon as fonts are loaded
   useEffect(() => {
     handleNavigation();
   }, [handleNavigation]);
 
-  // Show nothing until fonts and auth are ready - this prevents any flash
   if (!fontsLoaded && !fontError) {
     return null;
   }
@@ -156,26 +148,34 @@ function AppContent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: {
-            paddingTop: Platform.OS === "android" ? insets.top : 0,
-          },
-        }}
+      <AddProductContext.Provider
+        value={{ openAddProduct: () => setShowAddProduct(true) }}
       >
-        {/* Onboarding flow */}
-        <Stack.Screen name="(Anboarding)" options={{ headerShown: false }} />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: {
+              paddingTop: Platform.OS === "android" ? insets.top : 0,
+              backgroundColor: "#E7EEFA",
+            },
+          }}
+        >
+          <Stack.Screen name="(Anboarding)" options={{ headerShown: false }} />
+          <Stack.Screen name="(Auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(Main)" options={{ headerShown: false }} />
+          <Stack.Screen name="(Routes)" options={{ headerShown: false }} />
+        </Stack>
 
-        {/* Authentication flow */}
-        <Stack.Screen name="(Auth)" options={{ headerShown: false }} />
-
-        {/* Main app flow (bottom tabs) */}
-        <Stack.Screen name="(Main)" options={{ headerShown: false }} />
-
-        {/* Routes */}
-        <Stack.Screen name="(Routes)" options={{ headerShown: false }} />
-      </Stack>
+        {/* Rendered outside Stack so it sits above the tab bar */}
+        <AddProductFlow
+          visible={showAddProduct}
+          onClose={() => setShowAddProduct(false)}
+          onSaveProduct={(product) => {
+            // handle save if needed at root level
+            setShowAddProduct(false);
+          }}
+        />
+      </AddProductContext.Provider>
     </QueryClientProvider>
   );
 }

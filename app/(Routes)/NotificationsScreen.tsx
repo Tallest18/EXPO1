@@ -3,21 +3,21 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Dimensions,
-    FlatList,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { listNotifications } from "@/src/api";
+import { getFontSize } from "../(Main)/scaling";
 
 const { width, height } = Dimensions.get("window");
 
-// Responsive sizing functions
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
 const scale = (size: number) =>
@@ -51,7 +51,6 @@ interface Notification {
   userId?: string;
 }
 
-// Helper function to group notifications by date
 const groupNotificationsByDate = (notifications: Notification[]) => {
   const today = new Date();
   const yesterday = new Date(today);
@@ -72,22 +71,14 @@ const groupNotificationsByDate = (notifications: Notification[]) => {
     const isYesterday = notifDate.toDateString() === yesterday.toDateString();
     const isThisWeek = notifDate > weekAgo && !isToday && !isYesterday;
 
-    if (isToday) {
-      groups.Today.push(notification);
-    } else if (isYesterday) {
-      groups.Yesterday.push(notification);
-    } else if (isThisWeek) {
-      groups["This Week"].push(notification);
-    } else {
-      groups["Older"].push(notification);
-    }
+    if (isToday) groups.Today.push(notification);
+    else if (isYesterday) groups.Yesterday.push(notification);
+    else if (isThisWeek) groups["This Week"].push(notification);
+    else groups["Older"].push(notification);
   });
 
-  // Remove empty groups
   Object.keys(groups).forEach((key) => {
-    if (groups[key].length === 0) {
-      delete groups[key];
-    }
+    if (groups[key].length === 0) delete groups[key];
   });
 
   return groups;
@@ -101,23 +92,21 @@ const NotificationsScreen = () => {
   useEffect(() => {
     const getTimeAgo = (dateString?: string): string => {
       if (!dateString) return "Just now";
-
       const date = new Date(dateString).getTime();
       const diff = Math.max(0, Date.now() - date);
       const minute = 60 * 1000;
       const hour = 60 * minute;
       const day = 24 * hour;
-
       if (diff < minute) return "Just now";
-      if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
-      if (diff < day) return `${Math.floor(diff / hour)}h ago`;
-      return `${Math.floor(diff / day)}d ago`;
+      if (diff < hour) return `${Math.floor(diff / minute)}min Ago`;
+      if (diff < day) return `${Math.floor(diff / hour)}h Ago`;
+      return `${Math.floor(diff / day)} Day${Math.floor(diff / day) > 1 ? "s" : ""} Ago`;
     };
 
     const loadNotifications = async () => {
       try {
         const response = await listNotifications();
-        const fetchedNotifications: Notification[] = response.map((n) => ({
+        const fetched: Notification[] = response.map((n) => ({
           id: String(n.id),
           type: (n.type as Notification["type"]) || "daily_summary",
           title: n.title,
@@ -130,11 +119,9 @@ const NotificationsScreen = () => {
             : Date.now(),
           userId: "api-user",
         }));
-
-        setNotifications(fetchedNotifications);
+        setNotifications(fetched);
         setError(null);
-      } catch (loadError) {
-        console.error("Notification load error:", loadError);
+      } catch (err) {
         setError("Failed to load notifications. Please try again.");
       } finally {
         setLoading(false);
@@ -142,11 +129,7 @@ const NotificationsScreen = () => {
     };
 
     loadNotifications();
-
-    const interval = setInterval(() => {
-      loadNotifications();
-    }, 15000);
-
+    const interval = setInterval(loadNotifications, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -154,59 +137,41 @@ const NotificationsScreen = () => {
     switch (type) {
       case "low_stock":
       case "out_of_stock":
-        return (
-          <View style={[styles.iconWrapper, { backgroundColor: "#E3F2FD" }]}>
-            <Ionicons name="basket-outline" size={24} color="#2196F3" />
-          </View>
-        );
-      case "high_selling":
-        return (
-          <View style={[styles.iconWrapper, { backgroundColor: "#E8F5E8" }]}>
-            <Ionicons name="trending-up" size={24} color="#4CAF50" />
-          </View>
-        );
-      case "zero_sales":
-        return (
-          <View style={[styles.iconWrapper, { backgroundColor: "#FFF3E0" }]}>
-            <Ionicons name="alert-circle-outline" size={24} color="#FF9800" />
-          </View>
-        );
       case "expiry":
         return (
-          <View style={[styles.iconWrapper, { backgroundColor: "#FFEBEE" }]}>
-            <Ionicons name="calendar-outline" size={24} color="#F44336" />
-          </View>
+          <Ionicons
+            name="folder-open-outline"
+            size={moderateScale(28)}
+            color="#1155CC"
+          />
+        );
+      case "high_selling":
+      case "zero_sales":
+      case "sale":
+        return (
+          <Ionicons
+            name="cart-outline"
+            size={moderateScale(28)}
+            color="#1155CC"
+          />
         );
       case "daily_summary":
       case "weekly_summary":
-        return (
-          <View style={[styles.iconWrapper, { backgroundColor: "#F3E5F5" }]}>
-            <Ionicons name="stats-chart-outline" size={24} color="#9C27B0" />
-          </View>
-        );
       case "expense":
         return (
-          <View style={[styles.iconWrapper, { backgroundColor: "#E8F5E8" }]}>
-            <Ionicons name="cash-outline" size={24} color="#4CAF50" />
-          </View>
-        );
-      case "backup":
-        return (
-          <View style={[styles.iconWrapper, { backgroundColor: "#E3F2FD" }]}>
-            <Ionicons name="cloud-upload-outline" size={24} color="#2196F3" />
-          </View>
-        );
-      case "app_update":
-        return (
-          <View style={[styles.iconWrapper, { backgroundColor: "#FFF3E0" }]}>
-            <Ionicons name="refresh-outline" size={24} color="#FF9800" />
-          </View>
+          <Ionicons
+            name="bar-chart-outline"
+            size={moderateScale(28)}
+            color="#1155CC"
+          />
         );
       default:
         return (
-          <View style={[styles.iconWrapper, { backgroundColor: "#E3F2FD" }]}>
-            <Ionicons name="notifications-outline" size={24} color="#2196F3" />
-          </View>
+          <Ionicons
+            name="notifications-outline"
+            size={moderateScale(28)}
+            color="#1155CC"
+          />
         );
     }
   };
@@ -240,95 +205,106 @@ const NotificationsScreen = () => {
     }
   };
 
-  const handleNotificationPress = (notification: Notification) => {
-    router.push({
-      pathname: "/(Routes)/NotificationDetails",
-      params: { notification: JSON.stringify(notification) },
-    });
-  };
-
-  const renderNotificationItem = ({ item }: { item: Notification }) => {
+  const renderNotificationItem = (item: Notification) => {
     const actions = getActionText(item.type);
 
     return (
       <TouchableOpacity
-        style={styles.notificationItem}
-        onPress={() => handleNotificationPress(item)}
+        key={item.id}
+        style={styles.notificationCard}
+        onPress={() =>
+          router.push({
+            pathname: "/(Routes)/NotificationDetails",
+            params: { notification: JSON.stringify(item) },
+          })
+        }
+        activeOpacity={0.7}
       >
-        <View style={styles.iconContainer}>
-          {getNotificationIcon(item.type)}
-        </View>
-        <View style={styles.textContainer}>
-          <View style={styles.headerRow}>
-            <Text style={styles.notificationTitle}>{item.title}</Text>
-            <Text style={styles.notificationTime}>{item.time}</Text>
+        {/* Icon */}
+        <View style={styles.iconBox}>{getNotificationIcon(item.type)}</View>
+
+        {/* Content */}
+        <View style={styles.cardContent}>
+          {/* Top row: small title + time */}
+          <View style={styles.cardTopRow}>
+            <Text style={styles.cardTitle} numberOfLines={1}>
+              {item.title}
+            </Text>
+            <Text style={styles.cardTime}>{item.time}</Text>
           </View>
-          <Text style={styles.notificationMessage}>{item.message}</Text>
-          {(actions.primary || actions.secondary) && (
-            <View style={styles.actionsRow}>
-              {actions.primary && (
-                <Text style={styles.actionText}>{actions.primary}</Text>
-              )}
-              {actions.secondary && (
+
+          {/* Bold message */}
+          <Text style={styles.cardMessage} numberOfLines={2}>
+            {item.message}
+          </Text>
+
+          {/* Action row: link(s) + New badge */}
+          <View style={styles.cardActionRow}>
+            <View style={styles.actionLinks}>
+              {actions.primary ? (
+                <Text style={styles.actionLink}>{actions.primary}</Text>
+              ) : null}
+              {actions.secondary ? (
                 <>
                   <Text style={styles.actionSeparator}> | </Text>
-                  <Text style={styles.actionText}>{actions.secondary}</Text>
+                  <Text style={styles.actionLink}>{actions.secondary}</Text>
                 </>
-              )}
+              ) : null}
             </View>
-          )}
+            {!item.isRead && (
+              <View style={styles.newBadge}>
+                <Text style={styles.newBadgeText}>New</Text>
+              </View>
+            )}
+          </View>
         </View>
-        {!item.isRead && <View style={styles.unreadDot} />}
       </TouchableOpacity>
     );
   };
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyContainer}>
+      {/* Sleeping bell illustration */}
+      <View style={styles.bellCircle}>
+        <Text style={styles.zText}> Z</Text>
+        <Text style={styles.zText}> Z</Text>
+        <Text style={styles.zText}> z</Text>
+        <Ionicons
+          name="notifications"
+          size={moderateScale(64)}
+          color="#FACC15"
+        />
+      </View>
+
+      <Text style={styles.emptyTitle}>All caught up!</Text>
+      <Text style={styles.emptySubtitle}>
+        You have no new notifications right now.
+      </Text>
+      <Text style={styles.emptyTip}>✅ Tips:</Text>
+      <Text style={styles.emptyTipText}>
+        You'll get low-stock alerts here, daily reports, payment reminders and
+        expense tips show up too
+      </Text>
+    </View>
+  );
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Ionicons name="notifications" size={24} color="#FACC15" />
+            <Ionicons name="notifications" size={30} color="#FACC15" />
             <Text style={styles.headerTitle}>Notifications</Text>
           </View>
           <TouchableOpacity onPress={() => router.back()}>
-            <Feather name="x" size={24} color="#000" />
+            <View style={styles.closeButton}>
+              <Feather name="x" size={24} color="#000" />
+            </View>
           </TouchableOpacity>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0056D2" />
           <Text style={styles.loadingText}>Loading notifications...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (error) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Ionicons name="notifications" size={24} color="#FACC15" />
-            <Text style={styles.headerTitle}>Notifications</Text>
-          </View>
-          <TouchableOpacity onPress={() => router.back()}>
-            <View style={styles.feather}>
-              <Feather name="x" size={24} color="#000" />
-            </View>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.emptyContainer}>
-          <Feather name="alert-circle" size={64} color="#E0E0E0" />
-          <Text style={styles.emptyText}>{error}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => {
-              setLoading(true);
-              setError(null);
-            }}
-          >
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -342,11 +318,11 @@ const NotificationsScreen = () => {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Ionicons name="notifications" size={24} color="#FACC15" />
+          <Ionicons name="notifications" size={30} color="#FACC15" />
           <Text style={styles.headerTitle}>Notifications</Text>
         </View>
         <TouchableOpacity onPress={() => router.back()}>
-          <View style={styles.feather}>
+          <View style={styles.closeButton}>
             <Feather name="x" size={24} color="#000" />
           </View>
         </TouchableOpacity>
@@ -358,23 +334,16 @@ const NotificationsScreen = () => {
         renderItem={({ item: sectionTitle }) => (
           <View style={styles.section}>
             <Text style={styles.sectionHeader}>{sectionTitle}</Text>
-            {groupedNotifications[sectionTitle].map((notification) => (
-              <View key={notification.id}>
-                {renderNotificationItem({ item: notification })}
-              </View>
-            ))}
+            {groupedNotifications[sectionTitle].map((n) =>
+              renderNotificationItem(n),
+            )}
           </View>
         )}
-        contentContainerStyle={styles.listContentContainer}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Feather name="inbox" size={64} color="#E0E0E0" />
-            <Text style={styles.emptyText}>No notifications yet</Text>
-            <Text style={styles.emptySubText}>
-              All your updates and alerts will show up here.
-            </Text>
-          </View>
-        }
+        contentContainerStyle={[
+          styles.listContent,
+          sections.length === 0 && { flex: 1 },
+        ]}
+        ListEmptyComponent={renderEmptyState()}
         showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>
@@ -386,17 +355,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#E7EEFA",
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: verticalScale(12),
-    fontSize: moderateScale(16),
-    color: "#666",
-    fontFamily: "Poppins-Regular",
-  },
+
+  // Header
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -404,131 +364,186 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(20),
     paddingVertical: verticalScale(16),
     backgroundColor: "#E7EEFA",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
   },
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: scale(12),
+    gap: scale(10),
   },
   headerTitle: {
-    fontSize: moderateScale(20),
-    fontWeight: "600",
-    fontFamily: "Poppins-Bold",
-    color: "#333",
+    fontSize: getFontSize(moderateScale(24)),
+    fontFamily: "DMSans_700Bold",
+    color: "#1C1C1C",
   },
-  listContentContainer: {
-    paddingHorizontal: scale(20),
-    paddingBottom: verticalScale(20),
+  closeButton: {
+    backgroundColor: "#fff",
+    padding: scale(10),
+    borderRadius: moderateScale(10),
+  },
+
+  // List
+  listContent: {
+    paddingHorizontal: scale(16),
+    paddingBottom: verticalScale(24),
   },
   section: {
-    marginBottom: verticalScale(20),
+    marginBottom: verticalScale(8),
   },
   sectionHeader: {
-    fontSize: moderateScale(16),
-    color: "#666",
-    fontFamily: "Poppins-Bold",
-    marginBottom: verticalScale(12),
-    marginTop: verticalScale(8),
+    fontSize: getFontSize(moderateScale(13)),
+    color: "#888",
+    fontFamily: "DMSans_400Regular",
+    marginTop: verticalScale(16),
+    marginBottom: verticalScale(8),
   },
-  notificationItem: {
+
+  // Notification card — matches the UI screenshot
+  notificationCard: {
     flexDirection: "row",
     alignItems: "flex-start",
-    padding: scale(16),
-    borderRadius: moderateScale(12),
-    marginBottom: verticalScale(8),
     backgroundColor: "#FFFFFF",
-    position: "relative",
+    borderRadius: moderateScale(14),
+    padding: scale(14),
+    marginBottom: verticalScale(10),
+    gap: scale(12),
   },
-  iconContainer: {
-    marginRight: 12,
-  },
-  iconWrapper: {
-    width: scale(48),
-    height: verticalScale(48),
-    borderRadius: moderateScale(8),
+  iconBox: {
+    borderRadius: moderateScale(10),
     justifyContent: "center",
     alignItems: "center",
+    display: "flex",
+    width: scale(40),
+    height: scale(40),
   },
-  textContainer: {
+  cardContent: {
     flex: 1,
+    gap: verticalScale(3),
   },
-  headerRow: {
+  cardTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: verticalScale(4),
+    alignItems: "center",
   },
-  notificationTitle: {
-    fontSize: moderateScale(16),
-    fontWeight: "600",
-    color: "#333",
-    fontFamily: "Poppins-Regular",
+  cardTitle: {
+    fontSize: getFontSize(moderateScale(12)),
+    color: "#888",
+    fontFamily: "DMSans_400Regular",
     flex: 1,
   },
-  notificationMessage: {
-    fontSize: moderateScale(14),
-    color: "#666",
-    fontFamily: "Poppins-Regular",
-    marginBottom: verticalScale(8),
-    lineHeight: 20,
+  cardTime: {
+    fontSize: getFontSize(moderateScale(11)),
+    color: "#888",
+    fontFamily: "DMSans_400Regular",
+    marginLeft: scale(8),
   },
-  notificationTime: {
-    fontSize: moderateScale(12),
-    color: "#999",
-    fontFamily: "Poppins-Regular",
-    marginLeft: 8,
+  cardMessage: {
+    fontSize: getFontSize(moderateScale(15)),
+    fontFamily: "DMSans_700Bold",
+    color: "#1C1C1C",
+    lineHeight: getFontSize(moderateScale(22)),
   },
-  actionsRow: {
+  cardActionRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: verticalScale(4),
+    justifyContent: "space-between",
+    marginTop: verticalScale(2),
   },
-  actionText: {
-    fontSize: moderateScale(12),
-    color: "#0056D2",
-    fontFamily: "Poppins-Regular",
+  actionLinks: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    flexWrap: "wrap",
+  },
+  actionLink: {
+    fontSize: getFontSize(moderateScale(12)),
+    color: "#1155CC",
+    fontFamily: "DMSans_400Regular",
   },
   actionSeparator: {
-    fontSize: moderateScale(12),
-    color: "#0056D2",
-    marginHorizontal: scale(4),
+    fontSize: getFontSize(moderateScale(12)),
+    color: "#1155CC",
+    marginHorizontal: scale(2),
   },
-  unreadDot: {
-    width: scale(8),
-    height: verticalScale(8),
-    borderRadius: moderateScale(4),
-    backgroundColor: "#FACC15",
-    position: "absolute",
-    top: verticalScale(16),
-    right: scale(16),
+  newBadge: {
+    backgroundColor: "#fff",
+    borderRadius: moderateScale(24),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(3),
+    borderWidth: 1,
+    borderColor: "#FACC15",
   },
-  feather: {
-    backgroundColor: "white",
-    padding: scale(10),
+  newBadgeText: {
+    fontSize: getFontSize(moderateScale(10)),
+    color: "#FACC15",
+    fontFamily: "DMSans_700Bold",
   },
+
+  // Empty state
   emptyContainer: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: verticalScale(60),
-    paddingHorizontal: scale(40),
+    paddingHorizontal: scale(32),
+    paddingTop: verticalScale(60),
   },
-  emptyText: {
-    fontSize: moderateScale(18),
-    fontWeight: "600",
-    color: "#666",
-    marginTop: verticalScale(16),
-    fontFamily: "Poppins-Bold",
+  bellCircle: {
+    width: scale(160),
+    height: scale(160),
+    borderRadius: scale(80),
+    backgroundColor: "#DDE6F5",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    paddingBottom: scale(20),
+    marginBottom: verticalScale(24),
+    overflow: "hidden",
   },
-  emptySubText: {
-    fontSize: moderateScale(14),
-    color: "#999",
+  zText: {
+    fontSize: getFontSize(moderateScale(20)),
+    fontFamily: "DMSans_700Bold",
+    color: "#111",
+    lineHeight: getFontSize(moderateScale(24)),
+  },
+  emptyTitle: {
+    fontSize: getFontSize(moderateScale(20)),
+    fontFamily: "DMSans_700Bold",
+    color: "#111",
+    marginBottom: verticalScale(8),
+  },
+  emptySubtitle: {
+    fontSize: getFontSize(moderateScale(14)),
+    fontFamily: "DMSans_400Regular",
+    color: "#555",
     textAlign: "center",
-    marginTop: verticalScale(8),
-    fontFamily: "Poppins-Regular",
-    lineHeight: 20,
+    marginBottom: verticalScale(12),
   },
+  emptyTip: {
+    fontSize: getFontSize(moderateScale(14)),
+    fontFamily: "DMSans_700Bold",
+    color: "#111",
+    marginBottom: verticalScale(6),
+  },
+  emptyTipText: {
+    fontSize: getFontSize(moderateScale(13)),
+    fontFamily: "DMSans_400Regular",
+    color: "#555",
+    textAlign: "center",
+    lineHeight: getFontSize(moderateScale(20)),
+  },
+
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: verticalScale(12),
+    fontSize: getFontSize(moderateScale(16)),
+    color: "#666",
+    fontFamily: "DMSans_400Regular",
+  },
+
+  // Retry
   retryButton: {
     marginTop: verticalScale(20),
     paddingVertical: verticalScale(12),
@@ -537,10 +552,9 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(8),
   },
   retryButtonText: {
-    color: "#FFFFFF",
-    fontSize: moderateScale(16),
-    fontWeight: "600",
-    fontFamily: "Poppins-Regular",
+    color: "#fff",
+    fontSize: getFontSize(moderateScale(16)),
+    fontFamily: "DMSans_700Bold",
   },
 });
 

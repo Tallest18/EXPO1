@@ -4,10 +4,10 @@
     "slug": "EXPO1",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/noImg.jpg",
     "scheme": "inventra",
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/splash-noImg.jpg",
       "resizeMode": "contain",
       "backgroundColor": "#1155CC",
       "hideAsync": true
@@ -58,7 +58,7 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favnoImg.jpg"
     },
     "plugins": [
       "expo-router",

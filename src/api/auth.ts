@@ -1,13 +1,19 @@
 import { apiClient } from "./client";
 import { getRefreshToken, saveTokens } from "./tokenStorage";
 import type {
-    LoginRequest,
-    LogoutRequest,
-    RegisterRequest,
-    RegisterResponse,
-    TokenPair,
-    UserProfile,
+  LoginRequest,
+  LogoutRequest,
+  RegisterRequest,
+  RegisterResponse,
+  TokenPair,
+  UserProfile,
 } from "./types";
+
+const resolveImageUrl = (url?: string): string => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  return `${process.env.EXPO_PUBLIC_API_BASE_URL}${url}`;
+};
 
 export async function register(
   payload: RegisterRequest,
@@ -34,16 +40,21 @@ export async function logout(): Promise<void> {
 
 export async function getProfile(): Promise<UserProfile> {
   const response = await apiClient.get<UserProfile>("/auth/profile/");
-  return response.data;
+  return {
+    ...response.data,
+    profile_image: resolveImageUrl(response.data.profile_image ?? undefined),
+  };
 }
 
 export interface UpdateProfilePayload {
   name?: string;
   business_name?: string;
   business_type?: string;
+  // NOTE: profile_image must NEVER be added here as a string.
+  // Images are always uploaded via the second argument as a file.
 }
 
-interface UploadableProfileImage {
+export interface UploadableProfileImage {
   uri: string;
   fileName?: string;
   mimeType?: string;
@@ -53,27 +64,23 @@ interface UploadableProfileImage {
 
 export async function updateProfile(
   payload: UpdateProfilePayload,
-  profileImage?: string | UploadableProfileImage,
+  profileImage?: UploadableProfileImage,
 ): Promise<UserProfile> {
   if (profileImage) {
     const formData = new FormData();
 
+    // Append only text fields — never append profile_image as a string
     Object.entries(payload).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         formData.append(key, String(value));
       }
     });
 
-    if (typeof profileImage === "string") {
-      if (!profileImage.startsWith("http")) {
-        formData.append("profile_image", {
-          uri: profileImage,
-          name: `profile-${Date.now()}.jpg`,
-          type: "image/jpeg",
-        } as any);
-      }
-    } else if (profileImage.file instanceof File) {
+    // Web: File object directly (e.g. from <input type="file">)
+    if (profileImage.file instanceof File) {
       formData.append("profile_image", profileImage.file);
+
+      // Web: blob: or data: URI — convert to File first
     } else if (
       profileImage.uri.startsWith("blob:") ||
       profileImage.uri.startsWith("data:")
@@ -89,11 +96,21 @@ export async function updateProfile(
           "image/jpeg",
       });
       formData.append("profile_image", file);
+
+      // Native (iOS/Android): local file:// URI
     } else {
+      const uri = profileImage.uri;
+      const fileName =
+        profileImage.fileName ||
+        uri.split("/").pop() ||
+        `profile-${Date.now()}.jpg`;
+      const mimeType =
+        profileImage.mimeType || profileImage.type || "image/jpeg";
+
       formData.append("profile_image", {
-        uri: profileImage.uri,
-        name: profileImage.fileName || `profile-${Date.now()}.jpg`,
-        type: profileImage.mimeType || profileImage.type || "image/jpeg",
+        uri,
+        name: fileName,
+        type: mimeType,
       } as any);
     }
 
@@ -105,14 +122,21 @@ export async function updateProfile(
         transformRequest: [(data: any) => data],
       },
     );
-    return response.data;
+    return {
+      ...response.data,
+      profile_image: resolveImageUrl(response.data.profile_image ?? undefined),
+    };
   }
 
+  // No new image — plain JSON, text fields only
   const response = await apiClient.patch<UserProfile>(
     "/auth/profile/",
     payload,
   );
-  return response.data;
+  return {
+    ...response.data,
+    profile_image: resolveImageUrl(response.data.profile_image ?? undefined),
+  };
 }
 
 export async function saveAuthTokens(tokens: TokenPair): Promise<void> {

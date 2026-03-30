@@ -1,5 +1,5 @@
 import { createStackNavigator } from "@react-navigation/stack";
-import React from "react";
+import React, { useEffect } from "react";
 import { AppStackParamList } from "./types";
 
 // Import all your screen components
@@ -21,7 +21,28 @@ import BottomTabNavigator from "./BottomTabNavigator";
 
 const Stack = createStackNavigator<AppStackParamList>();
 
-const AppNavigator = () => {
+const AppNavigator = ({ navigationRef }: { navigationRef?: any }) => {
+  useEffect(() => {
+    if (
+      !navigationRef ||
+      !navigationRef.isReady ||
+      typeof navigationRef.getRootState !== "function"
+    )
+      return;
+    if (navigationRef.isReady) {
+      const state = navigationRef.getRootState();
+      if (state && state.routes && state.routes.length === 1) {
+        const route = state.routes[0];
+        if (route.name !== "(Main)") {
+          navigationRef.reset({
+            index: 0,
+            routes: [{ name: "(Main)" }],
+          });
+        }
+      }
+    }
+  }, [navigationRef]);
+
   return (
     <Stack.Navigator
       screenOptions={{ headerShown: false }}

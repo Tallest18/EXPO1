@@ -4,10 +4,9 @@ import Inventory from "@/app/(Main)/Inventory";
 import More from "@/app/(Main)/More";
 import Sell from "@/app/(Main)/Sell";
 import { Ionicons } from "@expo/vector-icons";
+import Octicons from "@expo/vector-icons/Octicons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import React from "react";
-
-// Screens (must be PascalCase)
 
 const Tab = createBottomTabNavigator();
 
@@ -18,24 +17,25 @@ const BottomTabNavigator = () => {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarIcon: ({ color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap = "alert-circle-outline";
-
           if (route.name === "Home") {
-            iconName = "home-outline";
+            return <Octicons name="home-fill" size={size} color="black" />;
           } else if (route.name === "Inventory") {
-            iconName = "albums-outline";
+            return <Ionicons name="albums-outline" size={size} color={color} />;
           } else if (route.name === "Sell") {
-            iconName = "cart-outline";
+            return <Ionicons name="cart-outline" size={size} color={color} />;
           } else if (route.name === "Finance") {
-            iconName = "wallet-outline";
+            return <Ionicons name="wallet-outline" size={size} color={color} />;
           } else if (route.name === "More") {
-            iconName = "ellipsis-horizontal-circle-outline";
+            // Use Octicons for the "More" tab
+            return <Octicons name="gear" size={size} color={color} />;
           }
-
-          return <Ionicons name={iconName} size={size} color={color} />;
+          // Default fallback
+          return (
+            <Ionicons name="alert-circle-outline" size={size} color={color} />
+          );
         },
-        tabBarActiveTintColor: "black",
-        tabBarInactiveTintColor: "#3B82F6",
+        tabBarActiveTintColor: "#1155CC",
+        tabBarInactiveTintColor: "#9CA3AF",
       })}
     >
       <Tab.Screen name="Home" component={Home} />

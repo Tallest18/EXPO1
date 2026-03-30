@@ -103,7 +103,6 @@ const itemStyles = StyleSheet.create({
     fontSize: moderateScale(15),
     marginLeft: scale(14),
     color: "#1f2937",
-    fontWeight: "500",
   },
 });
 
@@ -340,7 +339,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: moderateScale(28),
-    fontWeight: "bold",
     color: "#fff",
   },
   profileSection: {
@@ -359,7 +357,6 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: moderateScale(22),
-    fontWeight: "bold",
     color: "#fff",
     marginBottom: verticalScale(4),
   },
@@ -377,7 +374,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: moderateScale(11),
-    fontWeight: "700",
     color: "#9ca3af",
     marginBottom: verticalScale(10),
     marginLeft: scale(4),
@@ -398,7 +394,6 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     fontSize: moderateScale(15),
-    fontWeight: "600",
     color: "#ef4444",
     marginLeft: scale(8),
   },

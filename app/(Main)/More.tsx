@@ -4,16 +4,17 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 
 import {
-  ActivityIndicator,
-  Dimensions,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Dimensions,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import ConfirmModal from "../../components/ui/ConfirmModal";
+import SuccessModal from "../../components/ui/SuccessModal";
 
 const { width, height } = Dimensions.get("window");
 
@@ -40,6 +41,7 @@ const More = () => {
   const [loading, setLoading] = useState(true);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Fetch user data when component mounts
   useEffect(() => {
@@ -101,7 +103,8 @@ const More = () => {
       console.error("Remote logout failed, clearing local session:", error);
     } finally {
       await clearTokens();
-      router.replace("/(Auth)/WelcomeScreen");
+      // Instead of navigating immediately, show success modal
+      setShowSuccessModal(true);
     }
   };
 
@@ -121,6 +124,11 @@ const More = () => {
       setLoggingOut(false);
       setShowLogoutModal(false);
     }
+  };
+
+  const handleSuccessClose = () => {
+    setShowSuccessModal(false);
+    router.replace("/(Auth)/WelcomeScreen");
   };
 
   const renderOption = (option: Option) => (
@@ -147,7 +155,11 @@ const More = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>More</Text>
@@ -196,46 +208,27 @@ const More = () => {
         </View>
       </ScrollView>
 
-      <Modal
+      <ConfirmModal
         visible={showLogoutModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowLogoutModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalIconWrap}>
-              <Ionicons name="log-out-outline" size={24} color="#E74C3C" />
-            </View>
-            <Text style={styles.modalTitle}>Log out of Inventra?</Text>
-            <Text style={styles.modalSubtitle}>
-              You will be signed out from this device and redirected to the
-              welcome screen.
-            </Text>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.cancelAction}
-                onPress={() => setShowLogoutModal(false)}
-                disabled={loggingOut}
-              >
-                <Text style={styles.cancelActionText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.confirmAction}
-                onPress={() => void handleConfirmLogout()}
-                disabled={loggingOut}
-              >
-                {loggingOut ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.confirmActionText}>Yes, log out</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        title="Log out of Inventra?"
+        subtitle="You will be signed out from this device and redirected to the welcome screen."
+        iconName="log-out-outline"
+        iconColor="#E74C3C"
+        confirmText="Yes, log out"
+        cancelText="Cancel"
+        loading={loggingOut}
+        onCancel={() => setShowLogoutModal(false)}
+        onConfirm={handleConfirmLogout}
+      />
+      <SuccessModal
+        visible={showSuccessModal}
+        title="Logged out successfully!"
+        subtitle="You have been signed out and will be redirected to the welcome screen."
+        iconName="checkmark-circle-outline"
+        iconColor="#1BC47D"
+        buttonText="Continue"
+        onClose={handleSuccessClose}
+      />
     </SafeAreaView>
   );
 };
@@ -251,8 +244,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   container: {
-    flex: 1,
     backgroundColor: "#E7EEFA",
+  },
+  contentContainer: {
+    flexGrow: 1,
   },
   header: {
     paddingHorizontal: scale(20),
@@ -261,15 +256,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: moderateScale(28),
-    fontWeight: "700",
     color: "#1a1a1a",
     marginBottom: verticalScale(4),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
   },
   headerSubtitle: {
     fontSize: moderateScale(15),
     color: "#8E8E93",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   profileCard: {
     flexDirection: "row",
@@ -294,27 +288,28 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontSize: moderateScale(16),
-    fontWeight: "600",
     color: "#fff",
     marginBottom: verticalScale(4),
-    fontFamily: "Poppins-SemiBold",
+    fontFamily: "DMSans_600SemiBold",
   },
   profilePhone: {
     fontSize: moderateScale(14),
     color: "rgba(255, 255, 255, 0.8)",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   section: {
     marginBottom: verticalScale(24),
+    display: "flex",
+    flexDirection: "column",
+    gap: verticalScale(3),
   },
   sectionTitle: {
     fontSize: moderateScale(12),
-    fontWeight: "600",
     color: "#8E8E93",
     paddingHorizontal: scale(20),
     marginBottom: verticalScale(8),
     letterSpacing: 0.5,
-    fontFamily: "Poppins-SemiBold",
+    fontFamily: "DMSans_600SemiBold",
   },
   optionItem: {
     flexDirection: "row",
@@ -337,7 +332,7 @@ const styles = StyleSheet.create({
     marginLeft: 16,
     fontSize: moderateScale(16),
     color: "#1a1a1a",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   logoutButton: {
     flexDirection: "row",
@@ -353,10 +348,9 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     fontSize: moderateScale(16),
-    fontWeight: "600",
     color: "#E74C3C",
     marginLeft: 8,
-    fontFamily: "Poppins-SemiBold",
+    fontFamily: "DMSans_600SemiBold",
   },
   footer: {
     alignItems: "center",
@@ -365,21 +359,20 @@ const styles = StyleSheet.create({
   },
   footerBrand: {
     fontSize: moderateScale(18),
-    fontWeight: "700",
     color: "#2046AE",
     marginBottom: verticalScale(4),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
   },
   footerTagline: {
     fontSize: moderateScale(13),
     color: "#8E8E93",
     marginBottom: verticalScale(4),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   footerCredit: {
     fontSize: moderateScale(13),
     color: "#8E8E93",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   modalOverlay: {
     flex: 1,
@@ -408,14 +401,14 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: moderateScale(18),
     color: "#1A1A1A",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     textAlign: "center",
     marginBottom: verticalScale(6),
   },
   modalSubtitle: {
     fontSize: moderateScale(14),
     color: "#5F6778",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     textAlign: "center",
     lineHeight: moderateScale(22),
     marginBottom: verticalScale(16),
@@ -437,7 +430,7 @@ const styles = StyleSheet.create({
   cancelActionText: {
     color: "#2046AE",
     fontSize: moderateScale(14),
-    fontFamily: "Poppins-SemiBold",
+    fontFamily: "DMSans_600SemiBold",
   },
   confirmAction: {
     flex: 1,
@@ -450,7 +443,7 @@ const styles = StyleSheet.create({
   confirmActionText: {
     color: "#FFFFFF",
     fontSize: moderateScale(14),
-    fontFamily: "Poppins-SemiBold",
+    fontFamily: "DMSans_600SemiBold",
   },
 });
 

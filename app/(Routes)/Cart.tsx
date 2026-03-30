@@ -2,16 +2,16 @@ import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { getProduct } from "@/src/api";
@@ -245,7 +245,7 @@ const Cart: React.FC = () => {
           source={
             item.product.image?.uri
               ? { uri: item.product.image.uri }
-              : require("../../assets/images/icon.png")
+              : require("../../assets/images/noImg.jpg")
           }
           style={styles.productImage}
         />
@@ -282,7 +282,7 @@ const Cart: React.FC = () => {
                 onPress={() => decrementQuantity(item.productId)}
                 style={styles.quantityButton}
               >
-                <Text style={styles.quantityButtonText}>−</Text>
+                <Text style={styles.quantityButtonText}></Text>
               </TouchableOpacity>
 
               <Text style={styles.quantityText}>{item.quantity}</Text>
@@ -330,18 +330,18 @@ const Cart: React.FC = () => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
+        <Text style={styles.headerTitle}>Shopping Cart</Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
         >
           <Feather name="arrow-left" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Shopping Cart</Text>
-        <View style={styles.headerRight}>
+        {/* <View style={styles.headerRight}>
           <Text style={styles.itemCount}>
             {getTotalItems()} {getTotalItems() === 1 ? "item" : "items"}
           </Text>
-        </View>
+        </View> */}
       </View>
 
       {cart.length === 0 ? (
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: verticalScale(30),
-    backgroundColor: "#D6E4F5",
+    backgroundColor: "#E7EEFA",
   },
   loadingContainer: {
     flex: 1,
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
     marginTop: verticalScale(10),
     fontSize: moderateScale(16),
     color: "#666",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   header: {
     flexDirection: "row",
@@ -403,13 +403,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(20),
     paddingTop: verticalScale(20),
     paddingBottom: verticalScale(15),
-    backgroundColor: "#D6E4F5",
+    backgroundColor: "#E7EEFA",
   },
   headerTitle: {
-    fontSize: moderateScale(20),
-    fontFamily: "Poppins-Bold",
+    fontSize: moderateScale(24),
+    fontFamily: "DMSans_700Bold",
     color: "#000",
-    flex: 1,
     textAlign: "center",
   },
   backButton: {
@@ -422,7 +421,7 @@ const styles = StyleSheet.create({
   },
   itemCount: {
     fontSize: moderateScale(14),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     color: "#666",
   },
   cartContainer: {
@@ -462,7 +461,7 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: moderateScale(16),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#000",
     flex: 1,
     marginRight: 8,
@@ -478,12 +477,12 @@ const styles = StyleSheet.create({
   },
   productPrice: {
     fontSize: moderateScale(15),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#000",
   },
   quantityLabel: {
     fontSize: moderateScale(14),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     color: "#666",
   },
   bottomRow: {
@@ -506,13 +505,13 @@ const styles = StyleSheet.create({
   },
   quantityButtonText: {
     fontSize: moderateScale(18),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     color: "#000",
     lineHeight: 20,
   },
   quantityText: {
     fontSize: moderateScale(16),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#000",
     marginHorizontal: scale(16),
     minWidth: 20,
@@ -520,7 +519,7 @@ const styles = StyleSheet.create({
   },
   itemTotal: {
     fontSize: moderateScale(16),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#007AFF",
   },
   footer: {
@@ -537,12 +536,12 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: moderateScale(18),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#000",
   },
   totalAmount: {
     fontSize: moderateScale(20),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#000",
   },
   checkoutButton: {
@@ -554,8 +553,7 @@ const styles = StyleSheet.create({
   checkoutButtonText: {
     color: "white",
     fontSize: moderateScale(16),
-    fontWeight: "600",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   emptyState: {
     flex: 1,
@@ -565,18 +563,17 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: moderateScale(20),
-    fontWeight: "600",
     color: "#666",
     marginTop: verticalScale(16),
     marginBottom: verticalScale(8),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   emptyDescription: {
     fontSize: moderateScale(14),
     color: "#999",
     textAlign: "center",
     marginBottom: verticalScale(24),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   shopButton: {
     backgroundColor: "#2563EB",
@@ -587,8 +584,7 @@ const styles = StyleSheet.create({
   shopButtonText: {
     color: "#FFF",
     fontSize: moderateScale(16),
-    fontWeight: "600",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
 });
 

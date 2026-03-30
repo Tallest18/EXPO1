@@ -10,9 +10,12 @@ export interface ApiSaleItem {
   cost_price?: string;
   subtotal?: string;
   profit?: string;
+  product_image?: string | null;
 }
 
 export interface ApiSale {
+  transaction_id?: string;
+  product_image: string | null;
   id: number;
   sale_date?: string;
   payment_method: string;

@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: height * 0.08, // Responsive font size
     color: "#fff",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     textAlign: "center",
     width: "100%",
     includeFontPadding: false,
@@ -81,8 +81,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: height * 0.03, // Responsive font size
     color: "#fff",
-    fontWeight: "300",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     textAlign: "center",
     width: "100%",
     marginTop: verticalScale(10),
@@ -98,7 +97,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: moderateScale(16),
     marginBottom: verticalScale(2),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   logoRow: {
     flexDirection: "row",
@@ -119,7 +118,7 @@ const styles = StyleSheet.create({
   logoText: {
     color: "#fff",
     fontSize: moderateScale(24),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     letterSpacing: 1,
     flexShrink: 1,
     includeFontPadding: false,
@@ -128,8 +127,8 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: moderateScale(14),
     letterSpacing: 4,
-    fontWeight: "300",
-    fontFamily: "Poppins-Regular",
+
+    fontFamily: "DMSans_400Regular",
     includeFontPadding: false,
     marginLeft: 28,
   },

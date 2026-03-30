@@ -3,12 +3,13 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import KeyboardWrapper from "./KeyboardWrapper";
 
 const MessagesScreen = () => {
   const [messages, setMessages] = useState<{ id: string; text: string }[]>([]);
@@ -24,7 +25,11 @@ const MessagesScreen = () => {
   };
 
   return (
-    <KeyboardWrapper>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+    >
       <View
         style={{ flex: 1, backgroundColor: "#fff", padding: 10, marginTop: 30 }}
       >
@@ -37,7 +42,13 @@ const MessagesScreen = () => {
           }}
         >
           <Ionicons name="chatbubbles-outline" size={24} color="#333" />
-          <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
+          <Text
+            style={{
+              fontSize: 18,
+              fontFamily: "DMSans_700Bold",
+              marginLeft: 10,
+            }}
+          >
             Messages
           </Text>
         </View>
@@ -84,6 +95,7 @@ const MessagesScreen = () => {
               paddingHorizontal: 15,
               paddingVertical: 8,
               marginRight: 8,
+              fontFamily: "DMSans_400Regular",
             }}
           />
           <TouchableOpacity onPress={sendMessage}>
@@ -91,7 +103,7 @@ const MessagesScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
-    </KeyboardWrapper>
+    </KeyboardAvoidingView>
   );
 };
 

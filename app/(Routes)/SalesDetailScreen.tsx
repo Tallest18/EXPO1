@@ -250,7 +250,7 @@ const SalesDetailScreen = () => {
               source={
                 sale.image
                   ? { uri: sale.image }
-                  : require("../../assets/images/icon.png")
+                  : require("../../assets/images/noImg.jpg")
               }
               style={styles.productImage}
             />
@@ -425,8 +425,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: moderateScale(18),
-    fontWeight: "600",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#333",
   },
   placeholder: {
@@ -452,7 +451,7 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: verticalScale(12),
     marginBottom: verticalScale(20),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   retryButton: {
     backgroundColor: "#1155CC",
@@ -463,8 +462,7 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: "#fff",
     fontSize: moderateScale(16),
-    fontWeight: "600",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   card: {
     backgroundColor: "#fff",
@@ -479,8 +477,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: moderateScale(16),
-    fontWeight: "600",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     marginLeft: 8,
     color: "#333",
   },
@@ -500,21 +497,20 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: moderateScale(16),
-    fontWeight: "600",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#333",
     marginBottom: verticalScale(4),
   },
   productQuantity: {
     fontSize: moderateScale(14),
     color: "#666",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     marginBottom: verticalScale(2),
   },
   productId: {
     fontSize: moderateScale(12),
     color: "#999",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   detailRow: {
     flexDirection: "row",
@@ -527,13 +523,12 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: moderateScale(14),
     color: "#666",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     marginBottom: verticalScale(4),
   },
   detailValue: {
     fontSize: moderateScale(16),
-    fontWeight: "600",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     color: "#333",
   },
   amountText: {
@@ -554,7 +549,7 @@ const styles = StyleSheet.create({
   notesText: {
     fontSize: moderateScale(14),
     color: "#666",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     lineHeight: 20,
   },
   actionButtons: {
@@ -583,8 +578,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: moderateScale(14),
-    fontWeight: "600",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     marginLeft: 8,
   },
   shareButtonText: {
@@ -600,7 +594,7 @@ const styles = StyleSheet.create({
   saleId: {
     fontSize: moderateScale(12),
     color: "#999",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
 });
 

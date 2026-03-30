@@ -72,9 +72,9 @@ export async function createProduct(
 
 export async function createProductWithImage(
   payload: ProductPayload,
-  imageUri?: string | null,
+  imageObj?: { uri: string; type?: string; fileName?: string } | null,
 ): Promise<ApiProduct> {
-  if (!imageUri) {
+  if (!imageObj || !imageObj.uri) {
     return createProduct(payload);
   }
 
@@ -85,15 +85,13 @@ export async function createProductWithImage(
     }
   });
 
-  if (imageUri.startsWith("http")) {
-    formData.append("image", imageUri);
-  } else {
-    formData.append("image", {
-      uri: imageUri,
-      name: `product-${Date.now()}.jpg`,
-      type: "image/jpeg",
-    } as any);
-  }
+  // Debug: log the image object before appending
+  console.log("Uploading image object:", imageObj);
+  formData.append("image", {
+    uri: imageObj.uri,
+    name: imageObj.fileName || `product-${Date.now()}.jpg`,
+    type: imageObj.type || "image/jpeg",
+  } as any);
 
   const response = await apiClient.post<ApiProduct>(
     "/products/items/",

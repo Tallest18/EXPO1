@@ -1076,7 +1076,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: moderateScale(18),
-    fontWeight: "600",
     color: "#000",
   },
   closeButton: {
@@ -1118,7 +1117,6 @@ const styles = StyleSheet.create({
   },
   stepText: {
     fontSize: moderateScale(12),
-    fontWeight: "500",
   },
   stepContent: {
     flex: 1,
@@ -1129,7 +1127,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: moderateScale(14),
-    fontWeight: "600",
     color: "#000",
     marginBottom: verticalScale(8),
   },
@@ -1222,7 +1219,6 @@ const styles = StyleSheet.create({
   removeButtonText: {
     color: "#FF3B30",
     fontSize: moderateScale(14),
-    fontWeight: "500",
   },
   imageUploadArea: {
     alignItems: "center",
@@ -1308,7 +1304,6 @@ const styles = StyleSheet.create({
   priceOptionText: {
     fontSize: moderateScale(14),
     color: "#007AFF",
-    fontWeight: "500",
   },
   dateInputs: {
     flexDirection: "row",
@@ -1352,7 +1347,6 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: moderateScale(16),
     color: "#666",
-    fontWeight: "500",
   },
   nextButton: {
     backgroundColor: "#007AFF",
@@ -1366,7 +1360,6 @@ const styles = StyleSheet.create({
   nextButtonText: {
     fontSize: moderateScale(16),
     color: "#FFF",
-    fontWeight: "600",
   },
   summaryContent: {
     flex: 1,
@@ -1374,7 +1367,6 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     fontSize: moderateScale(24),
-    fontWeight: "700",
     color: "#000",
     padding: scale(20),
     paddingBottom: verticalScale(10),
@@ -1397,7 +1389,6 @@ const styles = StyleSheet.create({
   },
   summaryHeader: {
     fontSize: moderateScale(14),
-    fontWeight: "700",
     color: "#000",
     marginBottom: verticalScale(15),
     letterSpacing: 0.5,
@@ -1416,7 +1407,6 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: moderateScale(14),
     color: "#000",
-    fontWeight: "500",
     flex: 1,
     textAlign: "right",
   },
@@ -1432,7 +1422,6 @@ const styles = StyleSheet.create({
   saveProductButtonText: {
     fontSize: moderateScale(16),
     color: "#FFF",
-    fontWeight: "600",
   },
   imagePickerModal: {
     flex: 1,
@@ -1447,7 +1436,6 @@ const styles = StyleSheet.create({
   },
   imagePickerTitle: {
     fontSize: moderateScale(18),
-    fontWeight: "600",
     textAlign: "center",
     marginBottom: verticalScale(20),
     color: "#000",
@@ -1465,7 +1453,6 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(16),
     color: "#FF3B30",
     textAlign: "center",
-    fontWeight: "500",
   },
   loadingOverlay: {
     position: "absolute",
@@ -1482,7 +1469,6 @@ const styles = StyleSheet.create({
     marginTop: verticalScale(12),
     fontSize: moderateScale(18),
     color: "#2046AE",
-    fontWeight: "500",
   },
   loadingContainer: {
     flex: 1,

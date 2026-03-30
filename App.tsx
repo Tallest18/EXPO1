@@ -1,49 +1,45 @@
 // App.tsx
-import { NavigationContainer } from "@react-navigation/native";
+import {
+    NavigationContainer,
+    useNavigationContainerRef,
+} from "@react-navigation/native";
 import React, { useEffect } from "react";
 import AppNavigator from "./src/navigation/AppNavigator";
 
-import {
-  Poppins_400Regular,
-  Poppins_500Medium,
-  Poppins_600SemiBold,
-  useFonts,
-} from "@expo-google-fonts/poppins";
+import * as Font from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 
 // Keep splash while fonts load (optional)
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-export default function App() {
-  const [fontsLoaded] = useFonts({
-    Poppins_400Regular,
-    Poppins_500Medium,
-    Poppins_600SemiBold,
-  });
+function App() {
+  const [fontsLoaded, setFontsLoaded] = React.useState(false);
+  const navigationRef = useNavigationContainerRef();
 
   useEffect(() => {
-    if (!fontsLoaded) return;
-
-    // Apply global defaults
-    const customTextProps = {
-      style: { fontFamily: "Poppins_400Regular" },
-      // allowFontScaling: false, // optional
-    };
-    const customTextInputProps = {
-      style: { fontFamily: "Poppins_400Regular" },
-    };
-
-    SplashScreen.hideAsync().catch(() => {});
-  }, [fontsLoaded]);
+    async function loadFonts() {
+      await Font.loadAsync({
+        DMSans_400Regular: require("./assets/fonts/DMSans-Regular.ttf"),
+        DMSans_500Medium: require("./assets/fonts/DMSans-Medium.ttf"),
+        DMSans_600SemiBold: require("./assets/fonts/DMSans-SemiBold.ttf"),
+        DMSans_700Bold: require("./assets/fonts/DMSans-Bold.ttf"),
+        DMSans_300Light: require("./assets/fonts/DMSans-Light.ttf"),
+      });
+      setFontsLoaded(true);
+      SplashScreen.hideAsync().catch(() => {});
+    }
+    loadFonts();
+  }, []);
 
   if (!fontsLoaded) {
-    // Let the splash screen show, or you can return a small loader
     return null;
   }
 
   return (
-    <NavigationContainer>
-      <AppNavigator />
+    <NavigationContainer ref={navigationRef}>
+      <AppNavigator navigationRef={navigationRef} />
     </NavigationContainer>
   );
 }
+
+export default App;

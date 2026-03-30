@@ -154,7 +154,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: "bold",
     color: "#333",
     paddingTop: 30,
   },
@@ -234,7 +233,6 @@ const styles = StyleSheet.create({
   },
   moreTopicsButtonText: {
     color: "white",
-    fontWeight: "bold",
     fontSize: 16,
   },
 });

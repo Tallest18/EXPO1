@@ -1,6 +1,6 @@
 // app/(Routes)/TotalSummaryScreen.tsx
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -42,6 +42,8 @@ interface SalesSummaryItem {
 
 const TotalSummaryScreen = () => {
   const router = useRouter();
+  const { date } = useLocalSearchParams();
+  const selectedDate = date ? new Date(date as string) : null;
   const [sales, setSales] = useState<SalesSummaryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalSales, setTotalSales] = useState(0);
@@ -103,6 +105,27 @@ const TotalSummaryScreen = () => {
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
         );
 
+        // Filter to selected date if one was passed
+        const filteredData = selectedDate
+          ? salesData.filter((item) => {
+              const itemDate = new Date(item.date);
+              return (
+                itemDate.getFullYear() === selectedDate.getFullYear() &&
+                itemDate.getMonth() === selectedDate.getMonth() &&
+                itemDate.getDate() === selectedDate.getDate()
+              );
+            })
+          : salesData;
+
+        setSales(filteredData);
+        setTotalSales(filteredData.reduce((sum, i) => sum + i.amount, 0));
+        setTotalProfit(filteredData.reduce((sum, i) => sum + i.profit, 0));
+        setTotalTransactions(
+          selectedDate
+            ? new Set(filteredData.map((i) => i.id.split("-")[0])).size
+            : response.length,
+        );
+
         setSales(salesData);
         setTotalSales(salesTotal);
         setTotalProfit(profitTotal);
@@ -160,7 +183,7 @@ const TotalSummaryScreen = () => {
       )}
       <View style={styles.itemInfo}>
         <Text style={styles.name}>
-          {item.name} ×{item.quantity}
+          {item.name} {item.quantity}
         </Text>
         <Text style={styles.date}>{formatDate(item.date)}</Text>
       </View>
@@ -204,7 +227,15 @@ const TotalSummaryScreen = () => {
         >
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Sales Summary</Text>
+        <Text style={styles.headerTitle}>
+          {selectedDate
+            ? selectedDate.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })
+            : "Sales Summary"}
+        </Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -288,8 +319,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: moderateScale(20),
-    fontWeight: "600",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#333",
   },
   placeholder: {
@@ -304,7 +334,7 @@ const styles = StyleSheet.create({
     marginTop: verticalScale(12),
     fontSize: moderateScale(16),
     color: "#666",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   summaryContainer: {
     flexDirection: "row",
@@ -329,15 +359,14 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     fontSize: moderateScale(14),
-    fontWeight: "600",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#333",
     marginBottom: verticalScale(4),
   },
   summaryLabel: {
     fontSize: moderateScale(12),
     color: "#666",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   listHeader: {
     flexDirection: "row",
@@ -348,14 +377,13 @@ const styles = StyleSheet.create({
   },
   listHeaderTitle: {
     fontSize: moderateScale(18),
-    fontWeight: "600",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#333",
   },
   listHeaderCount: {
     fontSize: moderateScale(14),
     color: "#666",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   listContent: {
     paddingHorizontal: scale(20),
@@ -385,30 +413,28 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: moderateScale(16),
-    fontWeight: "600",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     color: "#333",
     marginBottom: verticalScale(4),
   },
   date: {
     fontSize: moderateScale(12),
     color: "#666",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   amountContainer: {
     alignItems: "flex-end",
   },
   amount: {
     fontSize: moderateScale(16),
-    fontWeight: "600",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#0056D2",
     marginBottom: verticalScale(2),
   },
   profit: {
     fontSize: moderateScale(12),
     color: "#22C55E",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   emptyContainer: {
     alignItems: "center",
@@ -418,17 +444,16 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: moderateScale(18),
-    fontWeight: "600",
     color: "#666",
     marginTop: verticalScale(16),
     marginBottom: verticalScale(8),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
   },
   emptySubtext: {
     fontSize: moderateScale(14),
     color: "#999",
     textAlign: "center",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     lineHeight: 20,
     marginBottom: verticalScale(24),
   },
@@ -441,8 +466,7 @@ const styles = StyleSheet.create({
   quickSellText: {
     color: "#fff",
     fontSize: moderateScale(16),
-    fontWeight: "600",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
 });
 

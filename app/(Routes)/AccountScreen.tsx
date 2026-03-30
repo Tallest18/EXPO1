@@ -3,12 +3,12 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    Dimensions,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Dimensions,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const { width, height } = Dimensions.get("window");
@@ -79,7 +79,6 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontSize: moderateScale(22),
-    fontWeight: "bold",
     marginTop: verticalScale(42),
     alignSelf: "center",
   },
@@ -91,7 +90,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: moderateScale(15),
-    fontWeight: "bold",
     marginBottom: verticalScale(5),
   },
   input: {
@@ -128,7 +126,6 @@ const styles = StyleSheet.create({
   signUpButtonText: {
     color: "#fff",
     fontSize: moderateScale(15),
-    fontWeight: "bold",
     textAlign: "center",
   },
 });

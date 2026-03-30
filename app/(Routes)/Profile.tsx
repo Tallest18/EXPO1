@@ -1,9 +1,10 @@
 // app/(Main)/Profile.tsx
+import type { UploadableProfileImage } from "@/src/api";
 import { getProfile, updateProfile } from "@/src/api";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -21,13 +22,16 @@ import {
 const Profile = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [profileImage, setProfileImage] = useState("");
+  const [profileImage, setProfileImage] = useState(""); // remote URL from backend
+  const [localImageUri, setLocalImageUri] = useState(""); // local URI for display after picking
   const [businessName, setBusinessName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [businessType, setBusinessType] = useState("");
-  const [imageUploading, setImageUploading] = useState(false);
 
-  // ✅ Fetch user data when screen loads
+  // Holds the picked image asset until Save is pressed
+  const pendingImageRef = useRef<UploadableProfileImage | null>(null);
+
+  // Fetch user data when screen loads
   useEffect(() => {
     const fetchUserData = async () => {
       setLoading(true);
@@ -46,43 +50,30 @@ const Profile = () => {
 
     fetchUserData();
   }, []);
-  // ✅ Upload image + save to Firestore
-  const uploadImage = async (image: ImagePicker.ImagePickerAsset) => {
-    const previousImage = profileImage;
-    setProfileImage(image.uri);
-    setImageUploading(true);
-    try {
-      const updated = await updateProfile(
-        {
-          name: businessName,
-          business_name: businessName,
-          business_type: businessType || undefined,
-        },
-        image as any,
-      );
-      setProfileImage(updated.profile_image || image.uri);
 
-      Alert.alert("Success", "Profile picture updated successfully.");
-    } catch (error) {
-      console.error("Image upload error:", error);
-      setProfileImage(previousImage);
-      Alert.alert("Error", "Failed to upload image.");
-    } finally {
-      setImageUploading(false);
-    }
-  };
-  // ✅ Handle picking image
+  // Convert ImagePickerAsset → UploadableProfileImage
+  const asUploadable = (
+    asset: ImagePicker.ImagePickerAsset,
+  ): UploadableProfileImage => ({
+    uri: asset.uri,
+    fileName: asset.fileName ?? asset.uri.split("/").pop(),
+    mimeType: asset.mimeType ?? "image/jpeg",
+    type: asset.mimeType ?? "image/jpeg",
+  });
+
+  // Handle picking image — just store it locally, do NOT upload yet
   const handlePickImage = async (useCamera: boolean) => {
     if (Platform.OS === "web" && !useCamera) {
-      const webPickerResult = await ImagePicker.launchImageLibraryAsync({
+      const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: "images",
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.7,
       });
-
-      if (!webPickerResult.canceled) {
-        uploadImage(webPickerResult.assets[0]);
+      if (!result.canceled) {
+        const asset = result.assets[0];
+        pendingImageRef.current = asUploadable(asset);
+        setLocalImageUri(asset.uri); // show immediately in UI
       }
       return;
     }
@@ -90,7 +81,8 @@ const Profile = () => {
     const permissionResult = useCamera
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (permissionResult.granted === false) {
+
+    if (!permissionResult.granted) {
       Alert.alert(
         "Permission Denied",
         "Permission to access camera or gallery is required!",
@@ -105,28 +97,44 @@ const Profile = () => {
       quality: 0.7,
     };
 
-    const pickerResult = useCamera
+    const result = useCamera
       ? await ImagePicker.launchCameraAsync(pickerOptions)
       : await ImagePicker.launchImageLibraryAsync(pickerOptions);
 
-    if (!pickerResult.canceled) {
-      uploadImage(pickerResult.assets[0]);
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      pendingImageRef.current = asUploadable(asset);
+      setLocalImageUri(asset.uri); // show immediately in UI
     }
   };
-  // ✅ Save name + keep image in Firestore
+
+  // Save everything in one request — text fields + image together
   const handleSave = async () => {
     if (!businessName.trim()) {
       Alert.alert("Required", "Please enter your business name");
       return;
     }
+
     setLoading(true);
     try {
-      await updateProfile({
-        name: businessName,
-        business_name: businessName,
-        business_type: businessType || undefined,
-      });
+      const updated = await updateProfile(
+        {
+          name: businessName,
+          business_name: businessName,
+          business_type: businessType || undefined,
+          // NEVER add profile_image here as a string
+        },
+        // If user picked a new image, send it. Otherwise undefined = no change.
+        pendingImageRef.current ?? undefined,
+      );
 
+      // Update displayed image with what the backend confirms
+      if (updated.profile_image) {
+        setProfileImage(updated.profile_image);
+        setLocalImageUri(""); // clear local URI, use remote now
+      }
+
+      pendingImageRef.current = null;
       Alert.alert("Success", "Profile details saved!");
       router.back();
     } catch (error) {
@@ -135,12 +143,12 @@ const Profile = () => {
     }
     setLoading(false);
   };
+
   const showImagePickerOptions = () => {
     if (Platform.OS === "web") {
       handlePickImage(false);
       return;
     }
-
     Alert.alert(
       "Change Profile Picture",
       "How would you like to select a new photo?",
@@ -151,6 +159,10 @@ const Profile = () => {
       ],
     );
   };
+
+  // Display local URI if user just picked one, otherwise use remote URL
+  const displayImage = localImageUri || profileImage;
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -164,30 +176,32 @@ const Profile = () => {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Profile</Text>
         </View>
+
         {/* Profile Picture */}
         <View style={styles.profileSection}>
           <TouchableOpacity
             onPress={showImagePickerOptions}
             style={styles.profileImageContainer}
+            disabled={loading}
           >
             <Image
+              key={displayImage} // bust cache on URI change
               source={
-                profileImage
-                  ? { uri: profileImage }
-                  : require("../../assets/images/icon.png")
+                displayImage
+                  ? { uri: displayImage }
+                  : require("../../assets/images/noImg.jpg")
               }
               style={styles.profileImage}
             />
-            {imageUploading && (
-              <View style={styles.uploadingOverlay}>
-                <ActivityIndicator size="small" color="#fff" />
-              </View>
-            )}
             <View style={styles.cameraIconContainer}>
               <Feather name="camera" size={20} color="#fff" />
             </View>
           </TouchableOpacity>
-          <Text style={styles.imageTip}>Tap to change picture</Text>
+          <Text style={styles.imageTip}>
+            {localImageUri
+              ? "Image selected — tap Save to upload"
+              : "Tap to change picture"}
+          </Text>
         </View>
 
         {/* Business Name Input */}
@@ -246,6 +260,7 @@ const Profile = () => {
     </SafeAreaView>
   );
 };
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F4F7FC" },
   scrollContent: { paddingBottom: 40 },
@@ -261,9 +276,8 @@ const styles = StyleSheet.create({
   backButton: { marginRight: 10, padding: 5 },
   headerTitle: {
     fontSize: 20,
-    fontWeight: "bold",
     color: "#111827",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
   },
   profileSection: { alignItems: "center", marginBottom: 30 },
   profileImageContainer: {
@@ -285,26 +299,18 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#F4F7FC",
   },
-  uploadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    borderRadius: 75,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   imageTip: {
     marginTop: 10,
     fontSize: 14,
     color: "#6B7280",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   formSection: { paddingHorizontal: 20, marginBottom: 20 },
   label: {
     fontSize: 16,
-    fontWeight: "600",
     color: "#111827",
     marginBottom: 8,
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
   },
   input: {
     backgroundColor: "#FFFFFF",
@@ -315,7 +321,7 @@ const styles = StyleSheet.create({
     color: "#111827",
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   readOnlyInput: {
     backgroundColor: "#F9FAFB",
@@ -325,7 +331,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#6B7280",
     marginTop: 4,
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   saveButton: {
     backgroundColor: "#1155CC",
@@ -337,12 +343,12 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 18,
-    fontWeight: "bold",
     color: "#FFFFFF",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
   },
   disabled: {
     opacity: 0.6,
   },
 });
+
 export default Profile;

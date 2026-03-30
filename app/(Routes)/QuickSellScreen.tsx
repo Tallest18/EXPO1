@@ -216,7 +216,7 @@ const QuickSellScreen = () => {
       setIsProcessing(false);
 
       Alert.alert(
-        "Success! 🎉",
+        "Success! x}0",
         `Sale completed!\nTotal: ₦${totalAmount.toFixed(
           0,
         )}\nProfit: ₦${totalProfit.toFixed(0)}`,
@@ -240,7 +240,7 @@ const QuickSellScreen = () => {
         source={
           item.image?.uri
             ? { uri: item.image.uri }
-            : require("../../assets/images/icon.png")
+            : require("../../assets/images/noImg.jpg")
         }
         style={styles.cartItemImage}
       />
@@ -283,7 +283,7 @@ const QuickSellScreen = () => {
         source={
           item.image?.uri
             ? { uri: item.image.uri }
-            : require("../../assets/images/icon.png")
+            : require("../../assets/images/noImg.jpg")
         }
         style={styles.productImage}
       />
@@ -427,9 +427,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: "bold",
     color: "#111827",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
   },
   searchContainer: {
     flexDirection: "row",
@@ -447,7 +446,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontSize: 16,
     color: "#111827",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   productListContainer: {
     backgroundColor: "#fff",
@@ -476,21 +475,19 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 15,
-    fontWeight: "600",
     color: "#111827",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   productStock: {
     fontSize: 13,
     color: "#6B7280",
     marginTop: 2,
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   productPrice: {
     fontSize: 15,
-    fontWeight: "600",
     color: "#1155CC",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   cartContainer: {
     backgroundColor: "#fff",
@@ -508,14 +505,13 @@ const styles = StyleSheet.create({
   },
   cartTitle: {
     fontSize: 18,
-    fontWeight: "600",
     color: "#111827",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
   },
   cartCount: {
     fontSize: 14,
     color: "#6B7280",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   emptyCart: {
     alignItems: "center",
@@ -523,16 +519,15 @@ const styles = StyleSheet.create({
   },
   emptyCartText: {
     fontSize: 16,
-    fontWeight: "600",
     color: "#6B7280",
     marginTop: 16,
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   emptyCartSubtext: {
     fontSize: 14,
     color: "#9CA3AF",
     marginTop: 4,
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   cartItem: {
     flexDirection: "row",
@@ -553,15 +548,14 @@ const styles = StyleSheet.create({
   },
   cartItemName: {
     fontSize: 15,
-    fontWeight: "600",
     color: "#111827",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   cartItemPrice: {
     fontSize: 14,
     color: "#6B7280",
     marginTop: 4,
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   quantityControls: {
     flexDirection: "row",
@@ -576,10 +570,9 @@ const styles = StyleSheet.create({
   },
   quantityText: {
     fontSize: 16,
-    fontWeight: "600",
     color: "#111827",
     marginHorizontal: 12,
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     minWidth: 24,
     textAlign: "center",
   },
@@ -590,7 +583,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     padding: 20,
     color: "#9CA3AF",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   bottomContainer: {
     backgroundColor: "#fff",
@@ -611,13 +604,12 @@ const styles = StyleSheet.create({
   summaryLabel: {
     fontSize: 15,
     color: "#6B7280",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   summaryValue: {
     fontSize: 15,
-    fontWeight: "600",
     color: "#111827",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   profitText: {
     color: "#10B981",
@@ -629,15 +621,13 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 18,
-    fontWeight: "600",
     color: "#111827",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
   },
   totalValue: {
     fontSize: 22,
-    fontWeight: "bold",
     color: "#1155CC",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
   },
   completeButton: {
     backgroundColor: "#1155CC",
@@ -655,8 +645,7 @@ const styles = StyleSheet.create({
   completeButtonText: {
     color: "#fff",
     fontSize: 18,
-    fontWeight: "600",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
   },
 });
 

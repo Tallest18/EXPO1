@@ -2,19 +2,19 @@ import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Dimensions,
-  Easing,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Dimensions,
+    Easing,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 import { createSale, getProduct } from "@/src/api";
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
     marginTop: verticalScale(10),
     fontSize: moderateScale(16),
     color: "#666",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   header: {
     flexDirection: "row",
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: moderateScale(24),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#000",
   },
   content: {
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: moderateScale(14),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     color: "#666",
     marginBottom: verticalScale(12),
   },
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
   },
   paymentOptionText: {
     fontSize: moderateScale(15),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     color: "#000",
   },
   radioButton: {
@@ -616,8 +616,7 @@ const styles = StyleSheet.create({
   doneButtonText: {
     color: "white",
     fontSize: moderateScale(16),
-    fontWeight: "600",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   bottomPadding: {
     height: verticalScale(40),
@@ -645,7 +644,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: moderateScale(20),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#000",
   },
   closeButton: {
@@ -656,7 +655,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: moderateScale(14),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     color: "#000",
     marginBottom: verticalScale(8),
   },
@@ -672,7 +671,7 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(8),
     padding: scale(14),
     fontSize: moderateScale(15),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     color: "#000",
   },
   amountInputContainer: {
@@ -684,14 +683,14 @@ const styles = StyleSheet.create({
   },
   currencySymbol: {
     fontSize: moderateScale(16),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "DMSans_700Bold",
     color: "#000",
     marginRight: 8,
   },
   amountInput: {
     flex: 1,
     fontSize: moderateScale(15),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     color: "#000",
     padding: scale(0),
   },
@@ -711,7 +710,7 @@ const styles = StyleSheet.create({
   },
   quickAmountText: {
     fontSize: moderateScale(14),
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
     color: "#000",
   },
   textArea: {
@@ -728,8 +727,7 @@ const styles = StyleSheet.create({
   saveDebtorButtonText: {
     color: "white",
     fontSize: moderateScale(16),
-    fontWeight: "600",
-    fontFamily: "Poppins-Regular",
+    fontFamily: "DMSans_400Regular",
   },
   toastContainer: {
     position: "absolute",
@@ -754,7 +752,7 @@ const styles = StyleSheet.create({
   },
   toastText: {
     color: "#FFFFFF",
-    fontFamily: "Poppins-SemiBold",
+    fontFamily: "DMSans_600SemiBold",
     fontSize: moderateScale(13),
     textAlign: "center",
   },
