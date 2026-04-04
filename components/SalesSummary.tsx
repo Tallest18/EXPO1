@@ -31,7 +31,6 @@ const formatSalesDate = (dateString: string) => {
 
 const SalesSummary: React.FC<SalesSummaryProps> = ({ salesSummary }) => {
   const router = useRouter();
-  console.log("SalesSummary rendered with data:", salesSummary);
 
   return (
     <View style={styles.salesSummarySection}>
@@ -86,13 +85,11 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ salesSummary }) => {
                   style={styles.productThumbnail}
                 />
               ) : (
-                <View style={styles.productPlaceholder}>
-                  <Feather
-                    name="package"
-                    size={moderateScale(20)}
-                    color="#666"
-                  />
-                </View>
+                <Image
+                  source={require("../assets/images/noImg.jpg")}
+                  style={styles.productThumbnail}
+                  resizeMode="cover"
+                />
               )}
             </View>
 
@@ -124,7 +121,7 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ salesSummary }) => {
               >
                 {formatCurrency(item.amount)}
               </Text>
-              <Text style={styles.salesSummaryLabel}>Cost</Text>
+              <Text style={styles.salesSummaryLabel}>Transfer</Text>
             </View>
           </TouchableOpacity>
         )}

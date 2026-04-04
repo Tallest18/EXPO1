@@ -1,5 +1,6 @@
+import { DUMMY_PRODUCTS, Product } from "@/src/api/dummyData/dummyProducts";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -13,89 +14,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { styles } from "./Inventory.styles";
-
-import { ApiProduct, listProducts } from "@/src/api";
 import AddProductFlow from "../(Routes)/AddProductFlow";
-
-const { width, height } = Dimensions.get("window");
-
-// Device detection
-const isSmallDevice = width < 375;
-const isTablet = width >= 768;
-
-// Responsive sizing
-const scale = (size: number) => {
-  const baseWidth = 375;
-  const ratio = width / baseWidth;
-  if (isTablet) return size * Math.min(ratio, 1.4);
-  return size * ratio;
-};
-
-const verticalScale = (size: number) => {
-  const baseHeight = 812;
-  const ratio = height / baseHeight;
-  if (isTablet) return size * Math.min(ratio, 1.4);
-  return size * ratio;
-};
-
-const moderateScale = (size: number, factor = 0.5) =>
-  size + (scale(size) - size) * factor;
-
-const getFontSize = (base: number) => {
-  if (isSmallDevice) return base * 0.88;
-  if (isTablet) return base * 1.15;
-  return base;
-};
-
-// Horizontal padding that scales safely
-const H_PAD = isTablet ? scale(32) : isSmallDevice ? scale(14) : scale(20);
-
-// Types
-interface Product {
-  id: string;
-  name: string;
-  category: string;
-  barcode: string;
-  image?: {
-    uri: string;
-    type?: string;
-    fileName?: string;
-    fileSize?: number;
-  } | null;
-  quantityType: string;
-  unitsInStock: number;
-  costPrice: number;
-  sellingPrice: number;
-  lowStockThreshold: number;
-  expiryDate: string;
-  supplier: {
-    name: string;
-    phone: string;
-  };
-  dateAdded: string;
-  userId: string;
-}
-
-const mapApiProduct = (product: ApiProduct): Product => ({
-  id: String(product.id),
-  name: product.name,
-  category: product.category_name || "",
-  barcode: product.barcode || "",
-  image: product.image ? { uri: product.image } : null,
-  quantityType: product.quantity_type || "Single Items",
-  unitsInStock: product.quantity_left ?? product.quantity,
-  costPrice: Number(product.buying_price || 0),
-  sellingPrice: Number(product.selling_price || 0),
-  lowStockThreshold: product.low_stock_threshold ?? 0,
-  expiryDate: product.expiry_date || "",
-  supplier: {
-    name: product.supplier_name || product.supplier_obj_name || "",
-    phone: product.supplier_phone || "",
-  },
-  dateAdded: product.created_at || new Date().toISOString(),
-  userId: "api-user",
-});
+import { styles } from "./Inventory.styles";
 
 type FilterType = "all" | "inStock" | "outOfStock" | "expiring";
 
@@ -112,8 +32,23 @@ interface FilterItem {
   count: number;
 }
 
+const { width } = Dimensions.get("window");
+const isSmallDevice = width < 375;
+const isTablet = width >= 768;
+const scale = (size: number) => {
+  const baseWidth = 375;
+  const ratio = width / baseWidth;
+  if (isTablet) return size * Math.min(ratio, 1.4);
+  return size * ratio;
+};
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
+
+const H_PAD = isTablet ? scale(32) : isSmallDevice ? scale(14) : scale(20);
+
 const Inventory: React.FC = () => {
   const router = useRouter();
+  const { focusProductId } = useLocalSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
@@ -129,36 +64,16 @@ const Inventory: React.FC = () => {
   });
 
   useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        const response = await listProducts();
-        const productsData = response
-          .map(mapApiProduct)
-          .sort(
-            (a, b) =>
-              new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime(),
-          );
-
-        setProducts(productsData);
-        calculateFilterCounts(productsData);
-      } catch (error: any) {
-        Alert.alert(
-          "Error Loading Products",
-          error?.message || "Failed to load products",
-          [{ text: "OK" }],
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadProducts();
-
-    const interval = setInterval(() => {
-      loadProducts();
-    }, 15000);
-
-    return () => clearInterval(interval);
+    setLoading(true);
+    setTimeout(() => {
+      const productsData = [...DUMMY_PRODUCTS].sort(
+        (a, b) =>
+          new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime(),
+      );
+      setProducts(productsData);
+      calculateFilterCounts(productsData);
+      setLoading(false);
+    }, 800);
   }, []);
 
   const calculateFilterCounts = (productsData: Product[]): void => {
@@ -201,6 +116,7 @@ const Inventory: React.FC = () => {
     });
   };
 
+  // Main filtering logic, including focusProductId
   useEffect(() => {
     let filtered = searchQuery.trim()
       ? performSearch(searchQuery)
@@ -220,8 +136,17 @@ const Inventory: React.FC = () => {
       });
     }
 
+    // Move focusProductId to the top if present
+    if (focusProductId) {
+      const idx = filtered.findIndex((p) => p.id === focusProductId);
+      if (idx > -1) {
+        const [prod] = filtered.splice(idx, 1);
+        filtered = [prod, ...filtered];
+      }
+    }
+
     setFilteredProducts(filtered);
-  }, [products, activeFilter, searchQuery]);
+  }, [products, activeFilter, searchQuery, focusProductId]);
 
   const handleSearchChange = (text: string): void => setSearchQuery(text);
   const clearSearch = (): void => setSearchQuery("");
@@ -274,16 +199,9 @@ const Inventory: React.FC = () => {
     );
   };
 
-  // Tablet: 2 columns, phone: 1 column
   const cardWidth = isTablet ? (width - H_PAD * 2 - scale(16)) / 2 : "100%";
 
   const renderProductCard = (product: Product): React.ReactElement => {
-    const imageSize = isTablet
-      ? scale(110)
-      : isSmallDevice
-        ? scale(88)
-        : scale(100);
-
     return (
       <TouchableOpacity
         key={product.id}
@@ -308,7 +226,7 @@ const Inventory: React.FC = () => {
                   ? { uri: product.image.uri }
                   : require("../../assets/images/noImg.jpg")
               }
-              style={[styles.productImage]}
+              style={styles.productImage}
             />
 
             <View style={styles.infoBoxesContainer}>
@@ -331,13 +249,13 @@ const Inventory: React.FC = () => {
                   </Text>
                 </View>
                 <View style={styles.smallInfoBox}>
-                  <Text style={styles.boxLabel}>Cost Price</Text>
+                  <Text style={styles.boxLabel}>Profit/Unit</Text>
                   <Text
                     style={styles.infoBoxValue}
                     numberOfLines={1}
                     adjustsFontSizeToFit
                   >
-                    ₦{product.costPrice.toLocaleString()}
+                    ₦{product?.profitPerUnit?.toLocaleString()}
                   </Text>
                 </View>
               </View>
@@ -450,13 +368,13 @@ const Inventory: React.FC = () => {
         </View>
         <View style={styles.bottomPadding} />
       </ScrollView>
-
-      {/* Add Product Modal */}
-      <AddProductFlow
-        visible={showAddProduct}
-        onClose={() => setShowAddProduct(false)}
-        onSaveProduct={handleAddProduct}
-      />
+      {showAddProduct && (
+        <AddProductFlow
+          visible={showAddProduct}
+          onSaveProduct={() => {}}
+          onClose={() => setShowAddProduct(false)}
+        />
+      )}
     </SafeAreaView>
   );
 };

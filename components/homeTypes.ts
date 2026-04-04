@@ -14,14 +14,15 @@ export interface Notification {
     | "sale"
     | "product_added";
   title: string;
-  actions?: string;
   message: string;
   status: "New" | "Read" | "Archived";
   time: string;
   isNew: boolean;
   isRead: boolean;
   productId?: string;
+  price?: number | string;
   dateAdded: string;
+  actions?: NotificationAction[];
 }
 
 export interface Product {
@@ -67,4 +68,10 @@ export interface UserData {
   transactions: number;
   stockLeft: number;
   salesSummary: SalesSummaryItem[];
+}
+
+export interface NotificationAction {
+  label: string;
+  type: "restock" | "view_product" | string;
+  productId?: string;
 }

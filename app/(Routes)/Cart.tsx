@@ -4,29 +4,17 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   Image,
   SafeAreaView,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { styles } from "./components/Cart.styles";
 
 import { getProduct } from "@/src/api";
-
-const { width, height } = Dimensions.get("window");
-
-// Responsive sizing functions
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(Math.max(value, min), max);
-const scale = (size: number) =>
-  clamp((width / 375) * size, size * 0.76, size * 1.3);
-const verticalScale = (size: number) =>
-  clamp((height / 812) * size, size * 0.62, size * 1.2);
-const moderateScale = (size: number, factor = 0.5) =>
-  size + (scale(size) - size) * factor;
+import { scale, verticalScale } from "../(Main)/scaling";
 
 // Types
 interface Product {
@@ -241,14 +229,16 @@ const Cart: React.FC = () => {
 
     return (
       <View key={`${item.productId}-${index}`} style={styles.cartItem}>
-        <Image
-          source={
-            item.product.image?.uri
-              ? { uri: item.product.image.uri }
-              : require("../../assets/images/noImg.jpg")
-          }
-          style={styles.productImage}
-        />
+        <View style={styles.productImageContainer}>
+          <Image
+            source={
+              item.product.image?.uri
+                ? { uri: item.product.image.uri }
+                : require("../../assets/images/noImg.jpg")
+            }
+            style={styles.productImage}
+          />
+        </View>
 
         <View style={styles.productInfo}>
           <View style={styles.productHeader}>
@@ -273,7 +263,6 @@ const Cart: React.FC = () => {
             <Text style={styles.productPrice}>
               ₦{item.product.sellingPrice.toLocaleString()}
             </Text>
-            <Text style={styles.quantityLabel}>x {item.quantity}</Text>
           </View>
 
           <View style={styles.bottomRow}>
@@ -282,7 +271,7 @@ const Cart: React.FC = () => {
                 onPress={() => decrementQuantity(item.productId)}
                 style={styles.quantityButton}
               >
-                <Text style={styles.quantityButtonText}></Text>
+                <Text style={styles.quantityButtonText}>-</Text>
               </TouchableOpacity>
 
               <Text style={styles.quantityText}>{item.quantity}</Text>
@@ -294,8 +283,6 @@ const Cart: React.FC = () => {
                 <Text style={styles.quantityButtonText}>+</Text>
               </TouchableOpacity>
             </View>
-
-            <Text style={styles.itemTotal}>₦{itemTotal.toLocaleString()}</Text>
           </View>
         </View>
       </View>
@@ -352,7 +339,7 @@ const Cart: React.FC = () => {
           <ScrollView
             style={styles.cartContainer}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.cartContentContainer}
+            // contentContainerStyle={styles.cartContentContainer}
           >
             {cart.map((item, index) => renderCartItem(item, index))}
           </ScrollView>
@@ -378,214 +365,5 @@ const Cart: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: verticalScale(30),
-    backgroundColor: "#E7EEFA",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: verticalScale(10),
-    fontSize: moderateScale(16),
-    color: "#666",
-    fontFamily: "DMSans_400Regular",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: scale(20),
-    paddingTop: verticalScale(20),
-    paddingBottom: verticalScale(15),
-    backgroundColor: "#E7EEFA",
-  },
-  headerTitle: {
-    fontSize: moderateScale(24),
-    fontFamily: "DMSans_700Bold",
-    color: "#000",
-    textAlign: "center",
-  },
-  backButton: {
-    padding: scale(8),
-    backgroundColor: "#fff",
-    borderRadius: moderateScale(8),
-  },
-  headerRight: {
-    padding: scale(8),
-  },
-  itemCount: {
-    fontSize: moderateScale(14),
-    fontFamily: "DMSans_400Regular",
-    color: "#666",
-  },
-  cartContainer: {
-    flex: 1,
-  },
-  cartContentContainer: {
-    paddingHorizontal: scale(20),
-    paddingTop: verticalScale(10),
-    paddingBottom: verticalScale(20),
-  },
-  cartItem: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: moderateScale(12),
-    padding: scale(14),
-    marginBottom: verticalScale(12),
-    flexDirection: "row",
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderStyle: "dashed",
-  },
-  productImage: {
-    width: scale(60),
-    height: verticalScale(60),
-    borderRadius: moderateScale(8),
-    backgroundColor: "#F5F5F5",
-    marginRight: 12,
-  },
-  productInfo: {
-    flex: 1,
-    justifyContent: "space-between",
-  },
-  productHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: verticalScale(4),
-  },
-  productName: {
-    fontSize: moderateScale(16),
-    fontFamily: "DMSans_700Bold",
-    color: "#000",
-    flex: 1,
-    marginRight: 8,
-  },
-  removeButton: {
-    padding: scale(2),
-  },
-  priceQuantityRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: scale(8),
-    marginBottom: verticalScale(8),
-  },
-  productPrice: {
-    fontSize: moderateScale(15),
-    fontFamily: "DMSans_700Bold",
-    color: "#000",
-  },
-  quantityLabel: {
-    fontSize: moderateScale(14),
-    fontFamily: "DMSans_400Regular",
-    color: "#666",
-  },
-  bottomRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  quantityControl: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-  },
-  quantityButton: {
-    width: scale(28),
-    height: verticalScale(28),
-    backgroundColor: "#F0F0F0",
-    borderRadius: moderateScale(6),
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  quantityButtonText: {
-    fontSize: moderateScale(18),
-    fontFamily: "DMSans_400Regular",
-    color: "#000",
-    lineHeight: 20,
-  },
-  quantityText: {
-    fontSize: moderateScale(16),
-    fontFamily: "DMSans_700Bold",
-    color: "#000",
-    marginHorizontal: scale(16),
-    minWidth: 20,
-    textAlign: "center",
-  },
-  itemTotal: {
-    fontSize: moderateScale(16),
-    fontFamily: "DMSans_700Bold",
-    color: "#007AFF",
-  },
-  footer: {
-    backgroundColor: "#D6E4F5",
-    paddingHorizontal: scale(20),
-    paddingTop: verticalScale(16),
-    paddingBottom: verticalScale(20),
-  },
-  totalContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: verticalScale(16),
-  },
-  totalLabel: {
-    fontSize: moderateScale(18),
-    fontFamily: "DMSans_700Bold",
-    color: "#000",
-  },
-  totalAmount: {
-    fontSize: moderateScale(20),
-    fontFamily: "DMSans_700Bold",
-    color: "#000",
-  },
-  checkoutButton: {
-    backgroundColor: "#2563EB",
-    borderRadius: moderateScale(10),
-    paddingVertical: verticalScale(14),
-    alignItems: "center",
-  },
-  checkoutButtonText: {
-    color: "white",
-    fontSize: moderateScale(16),
-    fontFamily: "DMSans_400Regular",
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: scale(40),
-  },
-  emptyTitle: {
-    fontSize: moderateScale(20),
-    color: "#666",
-    marginTop: verticalScale(16),
-    marginBottom: verticalScale(8),
-    fontFamily: "DMSans_400Regular",
-  },
-  emptyDescription: {
-    fontSize: moderateScale(14),
-    color: "#999",
-    textAlign: "center",
-    marginBottom: verticalScale(24),
-    fontFamily: "DMSans_400Regular",
-  },
-  shopButton: {
-    backgroundColor: "#2563EB",
-    borderRadius: moderateScale(12),
-    paddingHorizontal: scale(24),
-    paddingVertical: verticalScale(12),
-  },
-  shopButtonText: {
-    color: "#FFF",
-    fontSize: moderateScale(16),
-    fontFamily: "DMSans_400Regular",
-  },
-});
 
 export default Cart;

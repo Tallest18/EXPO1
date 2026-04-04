@@ -10,14 +10,14 @@ import WelcomeScreen from "@/app/(Auth)/WelcomeScreen";
 import Cart from "@/app/(Routes)/Cart";
 import Checkout from "@/app/(Routes)/Checkout";
 import MessagesScreen from "@/app/(Routes)/MessagesScreen";
-import NotificationDetails from "@/app/(Routes)/NotificationDetails";
 import NotificationsScreen from "@/app/(Routes)/NotificationsScreen";
 import ProductDetails from "@/app/(Routes)/ProductDetails";
 import Profile from "@/app/(Routes)/Profile";
 import QuickSellScreen from "@/app/(Routes)/QuickSellScreen";
+import RestockDetails from "@/app/(Routes)/RestockDetails";
 import SalesDetailScreen from "@/app/(Routes)/SalesDetailScreen";
 import TotalSummaryScreen from "@/app/(Routes)/TotalSummaryScreen";
-import BottomTabNavigator from "./BottomTabNavigator";
+// import BottomTabNavigator from "./BottomTabNavigator";
 
 const Stack = createStackNavigator<AppStackParamList>();
 
@@ -60,8 +60,8 @@ const AppNavigator = ({ navigationRef }: { navigationRef?: any }) => {
       {/* App-specific routes */}
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen
-        name="NotificationDetails"
-        component={NotificationDetails}
+        name="RestockDetails"
+        component={RestockDetails}
         options={{ headerShown: false }}
       />
       <Stack.Screen name="TotalSummary" component={TotalSummaryScreen} />
@@ -74,7 +74,7 @@ const AppNavigator = ({ navigationRef }: { navigationRef?: any }) => {
       <Stack.Screen name="ProductDetails" component={ProductDetails} />
 
       {/* Main app flow (bottom tabs) */}
-      <Stack.Screen name="(Main)" component={BottomTabNavigator} />
+      {/* <Stack.Screen name="(Main)" component={BottomTabNavigator} /> */}
     </Stack.Navigator>
   );
 };

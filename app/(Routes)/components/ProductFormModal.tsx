@@ -34,6 +34,7 @@ interface Props {
   onSave: () => void;
   onClose: () => void;
   onScanBarcode?: () => void;
+  title?: string;
 }
 
 const ProductFormModal: React.FC<Props> = ({
@@ -44,6 +45,7 @@ const ProductFormModal: React.FC<Props> = ({
   onSave,
   onClose,
   onScanBarcode,
+  title,
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [imageUploading] = useState(false);
@@ -161,7 +163,7 @@ const ProductFormModal: React.FC<Props> = ({
     >
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>New Product</Text>
+          <Text style={styles.headerTitle}>{title}</Text>
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
             <Ionicons name="close" size={22} color="#1A202C" />
           </TouchableOpacity>

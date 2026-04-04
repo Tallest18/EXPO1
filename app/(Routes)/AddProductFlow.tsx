@@ -1,5 +1,5 @@
 import { Product, useAddProductForm } from "@/hooks/useAddProductForm";
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import SuccessModal from "../../components/ui/SuccessModal";
 import InitialChoiceSheet from "./components/InitialChoiceSheet";
 import ProductFormModal from "./components/ProductFormModal";
@@ -9,17 +9,20 @@ interface AddProductFlowProps {
   visible: boolean;
   onClose: () => void;
   onSaveProduct: (productData: Product) => void;
+  initialProduct?: Product; // <-- add this
 }
 
 const AddProductFlow: React.FC<AddProductFlowProps> = ({
   visible,
   onClose,
   onSaveProduct,
+  initialProduct,
 }) => {
-  const [showInitialChoice, setShowInitialChoice] = useState(true);
+  const [showInitialChoice, setShowInitialChoice] = useState(!initialProduct);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const [showFormModal, setShowFormModal] = useState(false);
-
+  const [showFormModal, setShowFormModal] = useState(!!initialProduct);
+  const [hasPrefilled, setHasPrefilled] = useState(false);
+  const isEditMode = !!initialProduct;
   const {
     formData,
     saving,
@@ -30,6 +33,19 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
     handleSaveProduct,
     setShowSuccessModal,
   } = useAddProductForm(onSaveProduct);
+
+  useEffect(() => {
+    if (initialProduct && !hasPrefilled && visible) {
+      populateFromProduct(initialProduct);
+      setShowInitialChoice(false);
+      setShowFormModal(true);
+      setHasPrefilled(true);
+    }
+    // Reset flag when modal closes
+    if (!visible && hasPrefilled) {
+      setHasPrefilled(false);
+    }
+  }, [initialProduct, visible, hasPrefilled, populateFromProduct]);
 
   const handleAddManually = () => {
     setShowInitialChoice(false);
@@ -99,6 +115,7 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         updateFormData={updateFormData}
         onSave={handleSaveProduct}
         onClose={handleFormClose}
+        title={isEditMode ? "Edit Product" : "Add Product"}
       />
 
       <SuccessModal

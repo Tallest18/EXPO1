@@ -1,34 +1,34 @@
 import {
-    getProduct,
-    listCategories,
-    listSuppliers,
-    updateProductWithImage,
+  getProduct,
+  listCategories,
+  listSuppliers,
+  updateProductWithImage,
 } from "@/src/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Image,
-    Modal,
-    PermissionsAndroid,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Image,
+  Modal,
+  PermissionsAndroid,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import {
-    Asset,
-    ImagePickerResponse,
-    launchCamera,
-    launchImageLibrary,
-    MediaType,
+  Asset,
+  ImagePickerResponse,
+  launchCamera,
+  launchImageLibrary,
+  MediaType,
 } from "react-native-image-picker";
 
 const { width, height } = Dimensions.get("window");
@@ -1046,7 +1046,7 @@ const EditProduct: React.FC = () => {
       {/* Loading Overlay */}
       {(updating || imageUploading) && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#2046AE" />
+          <ActivityIndicator size="large" color="#1155CC" />
           <Text style={styles.loadingText}>
             {imageUploading ? "Uploading image..." : "Updating product..."}
           </Text>
@@ -1468,7 +1468,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: verticalScale(12),
     fontSize: moderateScale(18),
-    color: "#2046AE",
+    color: "#1155CC",
   },
   loadingContainer: {
     flex: 1,

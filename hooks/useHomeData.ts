@@ -2,6 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert } from "react-native";
 
 import {
+  Notification,
+  Product,
+  SalesSummaryItem,
+  UserData,
+} from "@/components/homeTypes";
+import {
   ApiProduct,
   ApiSale,
   ApiSaleItem,
@@ -11,7 +17,6 @@ import {
   listProducts,
   listSales,
 } from "@/src/api";
-import { Notification, Product, SalesSummaryItem, UserData } from "@/components/home/homeTypes";
 
 const mapApiProduct = (product: ApiProduct): Product => ({
   id: String(product.id),
@@ -86,14 +91,19 @@ export const useHomeData = () => {
 
   const loadHomeData = useCallback(async () => {
     try {
-      const [profile, overview, productsResponse, salesResponse, notificationsRes] =
-        await Promise.all([
-          getProfile(),
-          getDashboardOverview(),
-          listProducts(),
-          listSales(),
-          listNotifications(),
-        ]);
+      const [
+        profile,
+        overview,
+        productsResponse,
+        salesResponse,
+        notificationsRes,
+      ] = await Promise.all([
+        getProfile(),
+        getDashboardOverview(),
+        listProducts(),
+        listSales(),
+        listNotifications(),
+      ]);
 
       const mappedProducts = productsResponse.map(mapApiProduct);
       const salesSummary = toSalesSummary(salesResponse);
@@ -106,6 +116,9 @@ export const useHomeData = () => {
         isRead: n.is_read,
         productId: n.product ? String(n.product) : undefined,
         dateAdded: n.created_at ? new Date(n.created_at).getTime() : Date.now(),
+        actions: "",
+        status: "unread",
+        isNew: !n.is_read,
       }));
 
       setInventory(mappedProducts);
@@ -117,7 +130,10 @@ export const useHomeData = () => {
         todaySales: Number(overview.today?.sales || 0),
         profit: Number(overview.today?.profit || 0),
         transactions: Number(overview.today?.transactions || 0),
-        stockLeft: mappedProducts.reduce((sum, p) => sum + (p.unitsInStock || 0), 0),
+        stockLeft: mappedProducts.reduce(
+          (sum, p) => sum + (p.unitsInStock || 0),
+          0,
+        ),
         salesSummary,
       }));
     } catch (error) {
@@ -127,7 +143,10 @@ export const useHomeData = () => {
 
   const handleAddProduct = async (productData: Omit<Product, "id">) => {
     try {
-      const newProductWithId: Product = { ...productData, id: `temp-${Date.now()}` };
+      const newProductWithId: Product = {
+        ...productData,
+        id: `temp-${Date.now()}`,
+      };
       setInventory((prev) => [...prev, newProductWithId]);
       setUserData((prev) => ({
         ...prev,

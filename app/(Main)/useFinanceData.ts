@@ -94,7 +94,7 @@ export const useFinanceData = (selectedPeriod: Period, selectedDate: Date) => {
         revenueTrendResp,
         products,
       ] = await Promise.all([
-        getDashboardOverview(selectedDate.toISOString()),
+        getDashboardOverview(),
         getFinancialSummary(period),
         getTopProducts(period),
         getSlowMovingProducts(),

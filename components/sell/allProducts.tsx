@@ -58,13 +58,15 @@ const AllProducts: React.FC<AllProductsProps> = ({
           </Text>
 
           <View style={styles.priceRow}>
-            <Text
-              style={styles.productPrice}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-            >
-              ₦{(product.sellingPrice || 0).toLocaleString()}
-            </Text>
+            {!isInCart && (
+              <Text
+                style={styles.productPrice}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+                ₦{(product.sellingPrice || 0).toLocaleString()}
+              </Text>
+            )}
 
             {isInCart ? (
               <View style={styles.quantityControls}>
@@ -73,7 +75,7 @@ const AllProducts: React.FC<AllProductsProps> = ({
                   onPress={() => onDecrement(product.id)}
                   activeOpacity={0.7}
                 >
-                  <Feather name="minus" size={14} color="#1155cc" />
+                  <Feather name="minus" size={20} color="black" />
                 </TouchableOpacity>
                 <Text style={styles.quantityText}>{cartItem.quantity}</Text>
                 <TouchableOpacity
@@ -81,7 +83,7 @@ const AllProducts: React.FC<AllProductsProps> = ({
                   onPress={() => onIncrement(product.id)}
                   activeOpacity={0.7}
                 >
-                  <Feather name="plus" size={14} color="#1155cc" />
+                  <Feather name="plus" size={20} color="black" />
                 </TouchableOpacity>
               </View>
             ) : (

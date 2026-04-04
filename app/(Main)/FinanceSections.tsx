@@ -1,9 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
+import Octicons from "@expo/vector-icons/Octicons";
 import React from "react";
 import {
   ActivityIndicator,
   Image,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -19,16 +19,9 @@ import {
   StockRecommendation,
   TopProduct,
 } from "./finance.types";
+import { styles } from "./FinanceSections.styles";
 import { formatCurrency, formatDateLabel } from "./formatters";
-import {
-  getFontSize,
-  H_PAD,
-  isSmallDevice,
-  moderateScale,
-  scale,
-  screenWidth,
-  verticalScale,
-} from "./scaling";
+import { H_PAD, moderateScale, scale, screenWidth } from "./scaling";
 // import { getFontSize } from "./scaling";
 
 // ─── Summary Cards ────────────────────────────────────────────────────────────
@@ -51,7 +44,17 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
         >
           {formatCurrency(financialSummary.totalProfit)}
         </Text>
-        <View style={styles.changeIndicator}>
+        <View
+          style={[
+            styles.changeIndicator,
+            {
+              backgroundColor: "#DCFCE7",
+              paddingVertical: moderateScale(2),
+              borderRadius: moderateScale(10),
+              width: moderateScale(60),
+            },
+          ]}
+        >
           <Ionicons
             name={
               financialSummary.totalProfit >= 0
@@ -90,7 +93,17 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
         >
           {formatCurrency(financialSummary.totalRevenue)}
         </Text>
-        <View style={styles.changeIndicator}>
+        <View
+          style={[
+            styles.changeIndicator,
+            {
+              backgroundColor: "#FFEDD4",
+              paddingVertical: moderateScale(2),
+              borderRadius: moderateScale(10),
+              width: moderateScale(50),
+            },
+          ]}
+        >
           <Ionicons
             name="trending-down"
             size={moderateScale(11)}
@@ -109,7 +122,17 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
         >
           {formatCurrency(financialSummary.totalExpenses)}
         </Text>
-        <View style={styles.changeIndicator}>
+        <View
+          style={[
+            styles.changeIndicator,
+            {
+              backgroundColor: "#DCFCE7",
+              paddingVertical: moderateScale(2),
+              borderRadius: moderateScale(10),
+              width: moderateScale(50),
+            },
+          ]}
+        >
           <Ionicons
             name="trending-up"
             size={moderateScale(11)}
@@ -163,7 +186,7 @@ export const DailySummaryCard: React.FC<DailySummaryCardProps> = ({
         <View style={styles.dailySummaryItem}>
           <Text style={styles.dailySummaryLabel}>Sale Amount</Text>
           <Text
-            style={styles.dailySummaryValue}
+            style={{ ...styles.dailySummaryValue, color: "#1155CC" }}
             numberOfLines={1}
             adjustsFontSizeToFit
           >
@@ -242,7 +265,7 @@ export const TopProductsSection: React.FC<TopProductsProps> = ({
               >
                 {formatCurrency(product.profit)}
               </Text>
-              <Text style={styles.productRevenueLabel}>profit</Text>
+              <Text style={styles.productRevenueLabel}>Profit</Text>
             </View>
           </View>
         ))}
@@ -276,11 +299,13 @@ export const SlowMovingStockSection: React.FC<SlowMovingStockProps> = ({
                     resizeMode="cover"
                   />
                 ) : (
-                  <Ionicons
-                    name="time-outline"
-                    size={moderateScale(17)}
-                    color="#F59E0B"
-                  />
+                  <View style={styles.slowStockBadge}>
+                    <Ionicons
+                      name="time-outline"
+                      size={moderateScale(18)}
+                      color="#FF6900"
+                    />
+                  </View>
                 )}
               </View>
               <View style={styles.slowStockInfo}>
@@ -318,7 +343,9 @@ export const StockRecommendationsSection: React.FC<
       <View style={styles.listContainer}>
         {stockRecommendations.map((rec, index) => (
           <View key={index} style={styles.recommendationCard}>
-            <Text style={styles.recommendationEmoji}>{rec.icon}</Text>
+            <View style={styles.recommendationIcon}>
+              <Octicons name="light-bulb" size={20} color="black" />
+            </View>
             <View style={styles.recommendationContent}>
               <Text style={styles.recommendationMessage} numberOfLines={2}>
                 {rec.message}
@@ -478,375 +505,3 @@ export const MonthlyReportCard: React.FC<MonthlyReportCardProps> = ({
     </View>
   </View>
 );
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  summaryContainer: {
-    paddingHorizontal: H_PAD,
-    marginBottom: verticalScale(14),
-  },
-  summaryRow: { flexDirection: "row", gap: scale(8) },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: moderateScale(12),
-    padding: scale(isSmallDevice ? 8 : 12),
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  profitCard: { borderLeftWidth: 4, borderLeftColor: "#1155CC" },
-  revenueCard: { borderLeftWidth: 4, borderLeftColor: "#D4183D" },
-  expenseCard: { borderLeftWidth: 4, borderLeftColor: "#FFBA00" },
-  summaryLabel: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 9 : 11)),
-    color: "#6B7280",
-    marginBottom: verticalScale(5),
-    fontFamily: "DMSans_400Regular",
-  },
-  summaryValue: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 12 : 15)),
-    color: "#1F2937",
-    marginBottom: verticalScale(5),
-    fontFamily: "DMSans_700Bold",
-  },
-  changeIndicator: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: scale(3),
-  },
-  changeText: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 9 : 11)),
-    fontFamily: "DMSans_600SemiBold",
-  },
-
-  section: {
-    backgroundColor: "#FFFFFF",
-    marginHorizontal: scale(15),
-    marginBottom: verticalScale(14),
-    padding: scale(isSmallDevice ? 12 : 16),
-    borderRadius: moderateScale(12),
-  },
-  sectionTitle: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 15 : 17)),
-    color: "#1F2937",
-    marginBottom: verticalScale(12),
-    fontFamily: "DMSans_700Bold",
-  },
-
-  dailySummaryHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: verticalScale(10),
-  },
-  dateSelector: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: scale(5),
-    backgroundColor: "#EEF2FF",
-    paddingHorizontal: scale(10),
-    paddingVertical: verticalScale(6),
-    borderRadius: moderateScale(10),
-    borderWidth: 1,
-    borderColor: "#C7D2FE",
-    zIndex: 10,
-  },
-  dateText: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 10 : 12)),
-    color: "#2046AE",
-    fontFamily: "DMSans_600SemiBold",
-  },
-  dailySummaryCard: { gap: scale(10) },
-  dailySummaryRow: { flexDirection: "row", gap: scale(10) },
-  dailySummaryItem: {
-    flex: 1,
-    backgroundColor: "#1155CC0D",
-    padding: scale(10),
-    borderRadius: moderateScale(10),
-  },
-  dailySummaryItem2: {
-    flex: 1,
-    backgroundColor: "#FFBA001A",
-    padding: scale(10),
-    borderRadius: moderateScale(10),
-  },
-  dailySummaryItem3: {
-    flex: 1,
-    backgroundColor: "#ECECF0",
-    padding: scale(10),
-    borderRadius: moderateScale(10),
-  },
-  dailySummaryLabel: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 10 : 12)),
-    color: "#6B7280",
-    marginBottom: verticalScale(4),
-    fontFamily: "DMSans_400Regular",
-  },
-  dailySummaryValue: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 15 : 18)),
-    color: "#1F2937",
-    fontFamily: "DMSans_700Bold",
-  },
-
-  listContainer: { gap: scale(10) },
-  productCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F9FAFB",
-    borderRadius: moderateScale(10),
-    padding: scale(10),
-    gap: scale(10),
-  },
-  productIcon: {
-    width: scale(42),
-    height: scale(42),
-    backgroundColor: "#FFBA0033",
-    borderRadius: moderateScale(21),
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  productImage: {
-    width: scale(42),
-    height: scale(42),
-    borderRadius: moderateScale(21),
-  },
-  productInfo: { flex: 1 },
-  productName: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 12 : 14)),
-    color: "#1F2937",
-    marginBottom: verticalScale(3),
-    fontFamily: "DMSans_600SemiBold",
-  },
-  productQuantity: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 10 : 12)),
-    color: "#6B7280",
-    fontFamily: "DMSans_400Regular",
-  },
-  productRevenue: { alignItems: "flex-end" },
-  productRevenueText: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 13 : 15)),
-    color: "#1F2937",
-    fontFamily: "DMSans_700Bold",
-  },
-  productRevenueLabel: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 10 : 11)),
-    color: "#6B7280",
-    fontFamily: "DMSans_400Regular",
-  },
-
-  slowStockCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#FFFBEB",
-    borderRadius: moderateScale(10),
-    padding: scale(12),
-    borderWidth: 1,
-    borderColor: "#FEF3C7",
-  },
-  slowStockLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: scale(10),
-    flex: 1,
-  },
-  slowStockIcon: {
-    width: scale(36),
-    height: scale(36),
-    backgroundColor: "#FEF3C7",
-    borderRadius: moderateScale(18),
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  slowStockImage: {
-    width: scale(36),
-    height: scale(36),
-    borderRadius: moderateScale(18),
-  },
-  slowStockInfo: { flex: 1 },
-  slowStockName: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 12 : 14)),
-    color: "#1F2937",
-    marginBottom: verticalScale(2),
-    fontFamily: "DMSans_600SemiBold",
-  },
-  slowStockDetail: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 10 : 12)),
-    color: "#6B7280",
-    fontFamily: "DMSans_400Regular",
-  },
-  slowStockBadge: {
-    backgroundColor: "#FEF3C7",
-    paddingHorizontal: scale(10),
-    paddingVertical: verticalScale(5),
-    borderRadius: moderateScale(10),
-  },
-  slowStockDays: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 11 : 13)),
-    color: "#F59E0B",
-    fontFamily: "DMSans_600SemiBold",
-  },
-
-  recommendationCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: moderateScale(10),
-    borderLeftWidth: 4,
-    borderLeftColor: "#1155CC",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    padding: scale(12),
-    gap: scale(10),
-  },
-  recommendationEmoji: {
-    fontSize: getFontSize(moderateScale(22)),
-    fontFamily: "DMSans_400Regular",
-  },
-  recommendationContent: { flex: 1 },
-  recommendationMessage: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 12 : 13)),
-    color: "#1F2937",
-    marginBottom: verticalScale(3),
-    fontFamily: "DMSans_600SemiBold",
-  },
-  recommendationDetail: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 10 : 12)),
-    color: "#6B7280",
-    fontFamily: "DMSans_400Regular",
-  },
-
-  chartCard: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: moderateScale(12),
-    padding: scale(12),
-    alignItems: "center",
-  },
-  chartLegend: {
-    flexDirection: "row",
-    gap: scale(16),
-    marginBottom: verticalScale(10),
-    alignSelf: "flex-start",
-  },
-  legendItem: { flexDirection: "row", alignItems: "center", gap: scale(6) },
-  legendDot: {
-    width: scale(10),
-    height: scale(10),
-    borderRadius: moderateScale(5),
-  },
-  legendText: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 11 : 13)),
-    color: "#6B7280",
-    fontFamily: "DMSans_400Regular",
-  },
-  chart: { borderRadius: moderateScale(12) },
-
-  insightCard: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: moderateScale(10),
-    padding: scale(12),
-  },
-  insightHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: verticalScale(6),
-  },
-  insightMonth: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 13 : 15)),
-    color: "#1F2937",
-    fontFamily: "DMSans_700Bold",
-  },
-  performanceBadge: {
-    backgroundColor: "#D1FAE5",
-    paddingHorizontal: scale(8),
-    paddingVertical: verticalScale(3),
-    borderRadius: moderateScale(10),
-  },
-  performanceText: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 11 : 12)),
-    color: "#10B981",
-    fontFamily: "DMSans_600SemiBold",
-  },
-  insightLabel: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 11 : 13)),
-    color: "#6B7280",
-    marginBottom: verticalScale(4),
-    fontFamily: "DMSans_400Regular",
-  },
-  insightDescription: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 10 : 12)),
-    color: "#9CA3AF",
-    lineHeight: getFontSize(moderateScale(18)),
-    fontFamily: "DMSans_400Regular",
-  },
-
-  monthlyReportCard: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: moderateScale(12),
-    padding: scale(isSmallDevice ? 12 : 16),
-  },
-  monthlyReportHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: verticalScale(6),
-  },
-  monthlyReportMonth: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 13 : 15)),
-    color: "#1F2937",
-    fontFamily: "DMSans_700Bold",
-    flexShrink: 1,
-    marginRight: scale(8),
-  },
-  readyBadge: {
-    backgroundColor: "#D1FAE5",
-    paddingHorizontal: scale(8),
-    paddingVertical: verticalScale(3),
-    borderRadius: moderateScale(10),
-  },
-  readyBadgeText: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 11 : 12)),
-    color: "#10B981",
-    fontFamily: "DMSans_600SemiBold",
-  },
-  monthlyReportSubtitle: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 11 : 13)),
-    color: "#6B7280",
-    marginBottom: verticalScale(14),
-    fontFamily: "DMSans_400Regular",
-  },
-  monthlyReportStats: { gap: scale(10), marginBottom: verticalScale(16) },
-  monthlyReportStat: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  monthlyReportStatLabel: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 12 : 14)),
-    color: "#6B7280",
-    fontFamily: "DMSans_400Regular",
-  },
-  monthlyReportStatValue: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 13 : 15)),
-    color: "#1F2937",
-    fontFamily: "DMSans_700Bold",
-  },
-  downloadButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#2046AE",
-    paddingVertical: verticalScale(13),
-    borderRadius: moderateScale(50),
-    gap: scale(8),
-  },
-  downloadButtonText: {
-    fontSize: getFontSize(moderateScale(isSmallDevice ? 13 : 15)),
-    color: "#FFFFFF",
-    fontFamily: "DMSans_600SemiBold",
-  },
-});

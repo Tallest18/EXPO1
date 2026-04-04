@@ -30,19 +30,19 @@ const Onboarding1 = () => {
           Inventra
         </Text>
         <Text style={styles.subtitle} numberOfLines={1} adjustsFontSizeToFit>
-          Inventory Management System
+          One App, everything your shop needs
         </Text>
       </View>
 
       <View style={styles.logoContainer}>
         <Text style={styles.fromText}>From</Text>
         <View style={styles.logoRow}>
-          <View style={styles.logoIcon}>
-            <Image
-              source={require("../../assets/images/Logo White.png")}
-              style={styles.image}
-            />
-          </View>
+          {/* <View style={styles.logoIcon}> */}
+          <Image
+            source={require("../../assets/images/logo1.png")}
+            style={styles.image}
+          />
+          {/* </View> */}
           <Text style={styles.logoText} numberOfLines={1} adjustsFontSizeToFit>
             Wonderfall
           </Text>
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     width: "100%",
-    paddingHorizontal: scale(20),
+    paddingHorizontal: scale(2),
   },
   title: {
     fontSize: height * 0.08, // Responsive font size
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   subtitle: {
-    fontSize: height * 0.03, // Responsive font size
+    fontSize: 14,
     color: "#fff",
     fontFamily: "DMSans_400Regular",
     textAlign: "center",

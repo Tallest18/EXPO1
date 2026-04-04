@@ -2,38 +2,34 @@ import { clearTokens, getProfile, logout } from "@/src/api";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { styles } from "./More.styles";
 
 import {
-    ActivityIndicator,
-    Dimensions,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import SuccessModal from "../../components/ui/SuccessModal";
 
-const { width, height } = Dimensions.get("window");
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-// Responsive sizing functions
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(Math.max(value, min), max);
-const scale = (size: number) =>
-  clamp((width / 375) * size, size * 0.76, size * 1.3);
-const verticalScale = (size: number) =>
-  clamp((height / 812) * size, size * 0.62, size * 1.2);
-const moderateScale = (size: number, factor = 0.5) =>
-  size + (scale(size) - size) * factor;
-
-// Define a type for the options to ensure type safety for icon names
 type Option = {
   title: string;
   icon: keyof typeof Ionicons.glyphMap;
   action: () => void;
+  badge?: number;
 };
+
+type SectionConfig = {
+  title: string;
+  options: Option[];
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const More = () => {
   const [userName, setUserName] = useState<string>("Guest User");
@@ -42,8 +38,8 @@ const More = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [notificationCount] = useState(3); // replace with real count when available
 
-  // Fetch user data when component mounts
   useEffect(() => {
     fetchUserData();
   }, []);
@@ -62,39 +58,63 @@ const More = () => {
     }
   };
 
-  const businessOptions: Option[] = [
+  // ─── Section data ──────────────────────────────────────────────────────────
+
+  const SECTIONS: SectionConfig[] = [
     {
-      title: "Business Information",
-      icon: "briefcase-outline",
-      action: () => {
-        router.push("/(Routes)/Profile");
-      },
+      title: "ACCOUNT",
+      options: [
+        {
+          title: "Profile",
+          icon: "person-outline",
+          action: () => router.push("/(Routes)/Profile"),
+        },
+        {
+          title: "Settings",
+          icon: "settings-outline",
+          action: () => {}, //router.push("/(Routes)/Settings"),
+        },
+        {
+          title: "Notifications",
+          icon: "notifications-outline",
+          action: () => {}, //router.push("/(Routes)/Notifications"),
+          badge: notificationCount,
+        },
+      ],
     },
     {
-      title: "Change Profile Photo",
-      icon: "camera-outline",
-      action: () => {
-        router.push("/(Routes)/Profile");
-      },
+      title: "MY BUSINESS PROFILE",
+      options: [
+        {
+          title: "Business Information",
+          icon: "storefront-outline",
+          action: () => router.push("/(Routes)/Profile"),
+        },
+        {
+          title: "Change Profile Photo",
+          icon: "camera-outline",
+          action: () => router.push("/(Routes)/Profile"),
+        },
+      ],
+    },
+    {
+      title: "SUPPORT",
+      options: [
+        {
+          title: "Help & Support",
+          icon: "help-circle-outline",
+          action: () => {}, //router.push("/(Routes)/HelpCenterScreen"),
+        },
+        {
+          title: "Privacy Policy",
+          icon: "document-text-outline",
+          action: () => {}, //router.push("/(Routes)/PrivacyPolicy"),
+        },
+      ],
     },
   ];
 
-  const supportOptions: Option[] = [
-    {
-      title: "Help & Support",
-      icon: "help-circle-outline",
-      action: () => {
-        router.push("/(Routes)/HelpCenterScreen");
-      },
-    },
-    {
-      title: "Privacy Policy",
-      icon: "document-text-outline",
-      action: () => {
-        router.push("/(Routes)/PrivacyPolicy");
-      },
-    },
-  ];
+  // ─── Logout handlers ───────────────────────────────────────────────────────
 
   const proceedLogout = async () => {
     try {
@@ -103,20 +123,12 @@ const More = () => {
       console.error("Remote logout failed, clearing local session:", error);
     } finally {
       await clearTokens();
-      // Instead of navigating immediately, show success modal
       setShowSuccessModal(true);
     }
   };
 
-  const handleLogout = () => {
-    setShowLogoutModal(true);
-  };
-
   const handleConfirmLogout = async () => {
-    if (loggingOut) {
-      return;
-    }
-
+    if (loggingOut) return;
     setLoggingOut(true);
     try {
       await proceedLogout();
@@ -131,27 +143,46 @@ const More = () => {
     router.replace("/(Auth)/WelcomeScreen");
   };
 
-  const renderOption = (option: Option) => (
+  // ─── Render helpers ────────────────────────────────────────────────────────
+
+  const renderOption = (option: Option, index: number, total: number) => (
     <TouchableOpacity
       key={option.title}
-      style={styles.optionItem}
+      style={[
+        styles.optionItem,
+        index === 0 && styles.optionItemFirst,
+        index === total - 1 && styles.optionItemLast,
+      ]}
       onPress={option.action}
+      activeOpacity={0.7}
     >
       <View style={styles.iconContainer}>
-        <Ionicons name={option.icon} size={20} color="#2046AE" />
+        <Ionicons name={option.icon} size={20} color="#1155CC" />
       </View>
       <Text style={styles.optionText}>{option.title}</Text>
+
+      {/* Notification badge — only shown when badge count > 0 */}
+      {option.badge != null && option.badge > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{option.badge}</Text>
+        </View>
+      )}
+
       <Ionicons name="chevron-forward-outline" size={20} color="#C0C0C0" />
     </TouchableOpacity>
   );
 
+  // ─── Loading state ─────────────────────────────────────────────────────────
+
   if (loading) {
     return (
       <SafeAreaView style={[styles.safeArea, styles.centered]}>
-        <ActivityIndicator size="large" color="#2046AE" />
+        <ActivityIndicator size="large" color="#1155CC" />
       </SafeAreaView>
     );
   }
+
+  // ─── Main render ───────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -166,45 +197,54 @@ const More = () => {
           <Text style={styles.headerSubtitle}>Account and app settings</Text>
         </View>
 
-        {/* User Profile Card */}
+        {/* Profile card */}
         <TouchableOpacity
           style={styles.profileCard}
           onPress={() => router.push("/(Routes)/Profile")}
+          activeOpacity={0.85}
         >
           <View style={styles.profileIcon}>
             <Ionicons name="person" size={28} color="#fff" />
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{userName}</Text>
-            {userPhone && <Text style={styles.profilePhone}>{userPhone}</Text>}
+            {userPhone ? (
+              <Text style={styles.profilePhone}>{userPhone}</Text>
+            ) : null}
           </View>
         </TouchableOpacity>
 
-        {/* Business Profile Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>MY BUSINESS PROFILE</Text>
-          {businessOptions.map(renderOption)}
-        </View>
+        {/* Sections */}
+        {SECTIONS.map((section) => (
+          <View key={section.title} style={styles.section}>
+            <Text style={styles.sectionTitle}>{section.title}</Text>
+            <View style={styles.sectionCard}>
+              {section.options.map((option, i) =>
+                renderOption(option, i, section.options.length),
+              )}
+            </View>
+          </View>
+        ))}
 
-        {/* Support Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>SUPPORT</Text>
-          {supportOptions.map(renderOption)}
-        </View>
-
-        {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        {/* Logout */}
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={() => setShowLogoutModal(true)}
+          activeOpacity={0.7}
+        >
           <Ionicons name="log-out-outline" size={20} color="#E74C3C" />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerBrand}>Inventra</Text>
-          <Text style={styles.footerTagline}>Version 1.0.1</Text>
-          <Text style={styles.footerCredit}>
-            Made with ❤️ by Nigeria traders
-          </Text>
+          <View style={styles.footerCard}>
+            <Text style={styles.footerBrand}>Inventra</Text>
+            <Text style={styles.footerTagline}>Version 1.0.0</Text>
+            <Text style={styles.footerCredit}>
+              Made with ❤️ for Nigerian retailers
+            </Text>
+          </View>
         </View>
       </ScrollView>
 
@@ -220,6 +260,7 @@ const More = () => {
         onCancel={() => setShowLogoutModal(false)}
         onConfirm={handleConfirmLogout}
       />
+
       <SuccessModal
         visible={showSuccessModal}
         title="Logged out successfully!"
@@ -232,219 +273,5 @@ const More = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    paddingTop: verticalScale(0),
-    backgroundColor: "#E7EEFA",
-  },
-  centered: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  container: {
-    backgroundColor: "#E7EEFA",
-  },
-  contentContainer: {
-    flexGrow: 1,
-  },
-  header: {
-    paddingHorizontal: scale(20),
-    paddingTop: verticalScale(30),
-    paddingBottom: verticalScale(20),
-  },
-  headerTitle: {
-    fontSize: moderateScale(28),
-    color: "#1a1a1a",
-    marginBottom: verticalScale(4),
-    fontFamily: "DMSans_700Bold",
-  },
-  headerSubtitle: {
-    fontSize: moderateScale(15),
-    color: "#8E8E93",
-    fontFamily: "DMSans_400Regular",
-  },
-  profileCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#2046AE",
-    borderRadius: moderateScale(12),
-    padding: scale(16),
-    marginHorizontal: scale(20),
-    marginBottom: verticalScale(24),
-  },
-  profileIcon: {
-    width: scale(48),
-    height: verticalScale(48),
-    borderRadius: moderateScale(24),
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  profileInfo: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  profileName: {
-    fontSize: moderateScale(16),
-    color: "#fff",
-    marginBottom: verticalScale(4),
-    fontFamily: "DMSans_600SemiBold",
-  },
-  profilePhone: {
-    fontSize: moderateScale(14),
-    color: "rgba(255, 255, 255, 0.8)",
-    fontFamily: "DMSans_400Regular",
-  },
-  section: {
-    marginBottom: verticalScale(24),
-    display: "flex",
-    flexDirection: "column",
-    gap: verticalScale(3),
-  },
-  sectionTitle: {
-    fontSize: moderateScale(12),
-    color: "#8E8E93",
-    paddingHorizontal: scale(20),
-    marginBottom: verticalScale(8),
-    letterSpacing: 0.5,
-    fontFamily: "DMSans_600SemiBold",
-  },
-  optionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    paddingVertical: verticalScale(16),
-    paddingHorizontal: scale(20),
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-    marginLeft: 20,
-    marginRight: 20,
-    borderRadius: moderateScale(12),
-  },
-  iconContainer: {
-    width: scale(24),
-    alignItems: "center",
-  },
-  optionText: {
-    flex: 1,
-    marginLeft: 16,
-    fontSize: moderateScale(16),
-    color: "#1a1a1a",
-    fontFamily: "DMSans_400Regular",
-  },
-  logoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-    borderRadius: moderateScale(50),
-    borderWidth: 1,
-    borderColor: "#E74C3C",
-    paddingVertical: verticalScale(14),
-    marginHorizontal: scale(20),
-    marginBottom: verticalScale(24),
-  },
-  logoutText: {
-    fontSize: moderateScale(16),
-    color: "#E74C3C",
-    marginLeft: 8,
-    fontFamily: "DMSans_600SemiBold",
-  },
-  footer: {
-    alignItems: "center",
-    paddingVertical: verticalScale(24),
-    paddingBottom: verticalScale(40),
-  },
-  footerBrand: {
-    fontSize: moderateScale(18),
-    color: "#2046AE",
-    marginBottom: verticalScale(4),
-    fontFamily: "DMSans_700Bold",
-  },
-  footerTagline: {
-    fontSize: moderateScale(13),
-    color: "#8E8E93",
-    marginBottom: verticalScale(4),
-    fontFamily: "DMSans_400Regular",
-  },
-  footerCredit: {
-    fontSize: moderateScale(13),
-    color: "#8E8E93",
-    fontFamily: "DMSans_400Regular",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(13, 30, 66, 0.45)",
-    justifyContent: "center",
-    paddingHorizontal: scale(24),
-  },
-  modalCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: moderateScale(18),
-    paddingHorizontal: scale(20),
-    paddingVertical: verticalScale(20),
-    borderWidth: 1,
-    borderColor: "#E4EAF7",
-  },
-  modalIconWrap: {
-    width: scale(50),
-    height: verticalScale(50),
-    borderRadius: moderateScale(25),
-    backgroundColor: "#FDEBE9",
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "center",
-    marginBottom: verticalScale(12),
-  },
-  modalTitle: {
-    fontSize: moderateScale(18),
-    color: "#1A1A1A",
-    fontFamily: "DMSans_700Bold",
-    textAlign: "center",
-    marginBottom: verticalScale(6),
-  },
-  modalSubtitle: {
-    fontSize: moderateScale(14),
-    color: "#5F6778",
-    fontFamily: "DMSans_400Regular",
-    textAlign: "center",
-    lineHeight: moderateScale(22),
-    marginBottom: verticalScale(16),
-  },
-  modalActions: {
-    flexDirection: "row",
-    gap: scale(10),
-  },
-  cancelAction: {
-    flex: 1,
-    borderRadius: moderateScale(12),
-    paddingVertical: verticalScale(13),
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F1F4FB",
-    borderWidth: 1,
-    borderColor: "#D8E2F6",
-  },
-  cancelActionText: {
-    color: "#2046AE",
-    fontSize: moderateScale(14),
-    fontFamily: "DMSans_600SemiBold",
-  },
-  confirmAction: {
-    flex: 1,
-    borderRadius: moderateScale(12),
-    paddingVertical: verticalScale(13),
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#E74C3C",
-  },
-  confirmActionText: {
-    color: "#FFFFFF",
-    fontSize: moderateScale(14),
-    fontFamily: "DMSans_600SemiBold",
-  },
-});
 
 export default More;

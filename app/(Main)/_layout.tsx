@@ -1,6 +1,13 @@
-import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import {
+  ChartColumnIncreasing,
+  CircleEllipsis,
+  FolderOpen,
+  House,
+  ShoppingCart,
+} from "lucide-react-native";
 import React from "react";
+import { Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const MainLayout = () => {
@@ -41,12 +48,19 @@ const MainLayout = () => {
         name="Home"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "home" : "home-outline"}
-              size={26}
-              color={color} // use system color
-            />
+          tabBarIcon: ({ color, focused }) => <House size={32} color={color} />,
+          tabBarLabel: ({ focused }) => (
+            <Text
+              style={{
+                color: focused ? "#000000" : "#B5CAEF",
+                fontSize: 16,
+                fontWeight: "500",
+                marginTop: 4,
+                fontFamily: "DMSans_400Regular",
+              }}
+            >
+              Home
+            </Text>
           ),
         }}
       />
@@ -55,11 +69,20 @@ const MainLayout = () => {
         options={{
           title: "Inventory",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "cube" : "cube-outline"}
-              size={26}
-              color={color}
-            />
+            <FolderOpen size={32} color={color} />
+          ),
+          tabBarLabel: ({ focused }) => (
+            <Text
+              style={{
+                color: focused ? "#000000" : "#D2D2D2", // Example: blue when active, light blue when inactive
+                fontSize: 16,
+                fontWeight: "500",
+                marginTop: 4,
+                fontFamily: "DMSans_400Regular",
+              }}
+            >
+              Inventory
+            </Text>
           ),
         }}
       />
@@ -68,11 +91,20 @@ const MainLayout = () => {
         options={{
           title: "Sell",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "cart" : "cart-outline"}
-              size={26}
-              color={color}
-            />
+            <ShoppingCart size={32} color={color} />
+          ),
+          tabBarLabel: ({ focused }) => (
+            <Text
+              style={{
+                color: focused ? "#000000" : "#D2D2D2", // Example: orange when active, light blue when inactive
+                fontSize: 16,
+                fontWeight: "500",
+                marginTop: 4,
+                fontFamily: "DMSans_400Regular",
+              }}
+            >
+              Sell
+            </Text>
           ),
         }}
       />
@@ -81,11 +113,20 @@ const MainLayout = () => {
         options={{
           title: "Finance",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "wallet" : "wallet-outline"}
-              size={26}
-              color={color}
-            />
+            <ChartColumnIncreasing size={32} color={color} />
+          ),
+          tabBarLabel: ({ focused }) => (
+            <Text
+              style={{
+                color: focused ? "#000000" : "#D2D2D2", // Example: green when active, light blue when inactive
+                fontSize: 16,
+                fontWeight: "500",
+                marginTop: 4,
+                fontFamily: "DMSans_400Regular",
+              }}
+            >
+              Finance
+            </Text>
           ),
         }}
       />
@@ -94,15 +135,20 @@ const MainLayout = () => {
         options={{
           title: "More",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={
-                focused
-                  ? "ellipsis-horizontal-circle"
-                  : "ellipsis-horizontal-circle-outline"
-              }
-              size={26}
-              color={color}
-            />
+            <CircleEllipsis size={32} color={color} />
+          ),
+          tabBarLabel: ({ focused }) => (
+            <Text
+              style={{
+                color: focused ? "#000000" : "#D2D2D2", // Example: dark blue when active, light blue when inactive
+                fontSize: 16,
+                fontWeight: "500",
+                marginTop: 4,
+                fontFamily: "DMSans_400Regular",
+              }}
+            >
+              More
+            </Text>
           ),
         }}
       />

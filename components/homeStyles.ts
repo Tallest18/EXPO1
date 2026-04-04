@@ -108,7 +108,7 @@ export const homeStyles = StyleSheet.create({
     paddingVertical: verticalScale(2),
     borderRadius: moderateScale(12),
     fontSize: getFontSize(moderateScale(12)),
-    fontFamily: "DMSans_400Regular",
+    fontFamily: "DMSans_700Bold",
   },
   salesAmount: {
     color: "#FFFFFF",
@@ -289,8 +289,8 @@ export const homeStyles = StyleSheet.create({
     marginBottom: verticalScale(2),
   },
   salesSummaryLabel: {
-    fontSize: getFontSize(moderateScale(11)),
-    color: "#999",
+    fontSize: getFontSize(moderateScale(6)),
+    color: "#9747FF",
     fontFamily: "DMSans_400Regular",
   },
   viewAllLink: {

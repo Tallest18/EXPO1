@@ -1,6 +1,5 @@
-import { Ionicons } from "@expo/vector-icons";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRouter } from "expo-router";
+import { Bell, MessageCircleQuestionMark } from "lucide-react-native";
 import React from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 import { moderateScale, scale, homeStyles as styles } from "./homeStyles";
@@ -38,22 +37,14 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ name, profileImage }) => {
             onPress={() => router.push("/(Routes)/NotificationsScreen")}
             activeOpacity={0.7}
           >
-            <Ionicons
-              name="notifications-outline"
-              size={moderateScale(24)}
-              color="black"
-            />
+            <Bell size={moderateScale(24)} color="black" />
           </TouchableOpacity>
 
           <TouchableOpacity
             // onPress={() => router.push("/(Routes)/MessagesScreen")}
             activeOpacity={0.7}
           >
-            <MaterialCommunityIcons
-              name="comment-question-outline"
-              size={28}
-              color="black"
-            />
+            <MessageCircleQuestionMark size={moderateScale(24)} color="black" />
           </TouchableOpacity>
 
           <TouchableOpacity

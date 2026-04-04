@@ -216,10 +216,6 @@ const Sell: React.FC = () => {
   const totalCartItems = cart.reduce((t, item) => t + item.quantity, 0);
 
   const viewCart = () => {
-    if (cart.length === 0) {
-      showModal("Empty Cart", "Your cart is empty. Add some products first!");
-      return;
-    }
     router.push({
       pathname: "/(Routes)/Cart" as any,
       params: {
@@ -282,7 +278,7 @@ const Sell: React.FC = () => {
           />
         </View>
         <TouchableOpacity style={styles.filterButton} activeOpacity={0.7}>
-          <Feather name="sliders" size={18} color="#fff" />
+          <Feather name="sliders" size={18} color="#0000" />
         </TouchableOpacity>
       </View>
 
@@ -342,7 +338,7 @@ const Sell: React.FC = () => {
       )}
 
       {/* View Cart FAB */}
-      {totalCartItems > 0 && (
+      {totalCartItems > 0 && activeTab === "all" && (
         <View style={styles.viewCartContainer}>
           <TouchableOpacity
             style={styles.viewCartButton}

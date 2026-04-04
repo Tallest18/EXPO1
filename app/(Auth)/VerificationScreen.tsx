@@ -173,7 +173,7 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={0}
     >
-      <StatusBar barStyle="light-content" backgroundColor="#2046AE" />
+      <StatusBar barStyle="light-content" backgroundColor="#1155CC" />
 
       <View style={styles.topSection} />
 
@@ -357,12 +357,11 @@ const styles = StyleSheet.create({
   },
   codeInput: {
     width: scale(50),
-    height: verticalScale(50),
     borderWidth: 2,
     borderColor: "#D1D5DB",
     borderRadius: moderateScale(8),
     textAlign: "center",
-    fontSize: moderateScale(20),
+    fontSize: moderateScale(16),
     color: "#111827",
     backgroundColor: "#FFFFFF",
     fontFamily: "DMSans_400Regular",

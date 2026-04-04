@@ -38,7 +38,7 @@ export type AppStackParamList = {
   SettingsScreen: undefined;
   Profile: { userId: string };
   NotificationScreen: { email: string };
-  NotificationDetails: undefined;
+  RestockDetails: undefined;
   ProductDetails: undefined;
   SalesDetail: undefined;
 

@@ -16,7 +16,7 @@ W, H = A4
 styles = getSampleStyleSheet()
 
 BLUE = colors.HexColor("#1155CC")
-DARK_BLUE = colors.HexColor("#2046AE")
+DARK_BLUE = colors.HexColor("#1155CC")
 LIGHT_BLUE = colors.HexColor("#EBF0FF")
 GRAY = colors.HexColor("#6B7280")
 LIGHT_GRAY = colors.HexColor("#F3F4F6")

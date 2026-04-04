@@ -214,7 +214,7 @@ const NotificationsScreen = () => {
         style={styles.notificationCard}
         onPress={() =>
           router.push({
-            pathname: "/(Routes)/NotificationDetails",
+            pathname: "/(Routes)/RestockDetails",
             params: { notification: JSON.stringify(item) },
           })
         }

@@ -17,7 +17,7 @@ OUT_PATH = os.path.join(OUT_DIR, "Inventra_Backend_Documentation.pdf")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 BRAND_BLUE   = HexColor("#1155CC")
-BRAND_DARK   = HexColor("#2046AE")
+BRAND_DARK   = HexColor("#1155CC")
 ACCENT_GOLD  = HexColor("#F5A623")
 LIGHT_BLUE   = HexColor("#EEF3FF")
 LIGHT_GRAY   = HexColor("#F4F4F4")
@@ -1034,7 +1034,7 @@ story.append(P("Design Tokens:", h3))
 design_tokens = [
     ["Token", "Value", "Usage"],
     ["Primary Blue", "#1155CC", "Buttons, headers, accents, brand colour"],
-    ["Dark Blue", "#2046AE", "Background on auth screens"],
+    ["Dark Blue", "#1155CC", "Background on auth screens"],
     ["Font Family", "Poppins", "Regular, Medium, SemiBold, Bold, Light variants"],
 ]
 story += hdr_table(
