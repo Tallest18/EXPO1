@@ -1,69 +1,42 @@
-// app/(routes)/VerificationScreen.tsx
+// app/(Auth)/VerificationScreen.tsx
 import { resendOtp, saveAuthTokens, verifyOtp } from "@/src/api";
 import { Ionicons } from "@expo/vector-icons";
-import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
-  Dimensions,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StatusBar,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import type { AppStackParamList } from "../../src/navigation/types";
+import { styles } from "./VerificationScreen.style";
 
-const { width, height } = Dimensions.get("window");
+const VerificationScreen: React.FC = () => {
+  const params = useLocalSearchParams<{
+    phoneNumber: string;
+    verificationId: string;
+    mockCode?: string;
+  }>();
 
-// Responsive sizing functions
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(Math.max(value, min), max);
-const scale = (size: number) =>
-  clamp((width / 375) * size, size * 0.76, size * 1.3);
-const verticalScale = (size: number) =>
-  clamp((height / 812) * size, size * 0.62, size * 1.2);
-const moderateScale = (size: number, factor = 0.5) =>
-  size + (scale(size) - size) * factor;
-
-export interface VerificationExtraProps {
-  onSuccess?: () => void;
-  onGoBack?: () => void;
-  phoneNumber?: string;
-  verificationId?: string;
-  mockCode?: string;
-}
-
-const VerificationScreen: React.FC<VerificationExtraProps> = ({
-  onSuccess,
-  onGoBack,
-  phoneNumber: propPhoneNumber,
-  verificationId: propVerificationId,
-  mockCode: propMockCode,
-}) => {
-  const navigation = useNavigation<any>();
-  const route = useRoute<RouteProp<AppStackParamList, "VerificationScreen">>();
-  const params = route?.params;
-
-  // Use props first, then route params, then defaults
-  const phoneNumber = propPhoneNumber || params?.phoneNumber || "";
+  const phoneNumber = params.phoneNumber ?? "";
   const [verificationId, setVerificationId] = useState(
-    propVerificationId || params?.verificationId || "",
+    params.verificationId ?? "",
   );
   const [mockCode, setMockCode] = useState<string | null>(
-    propMockCode || params?.mockCode || null,
+    params.mockCode || null,
   );
 
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(45);
   const [resendLoading, setResendLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const inputRefs = useRef<TextInput[]>([]);
 
   useEffect(() => {
@@ -80,8 +53,16 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
     newCode[index] = value;
     setCode(newCode);
 
+    // Clear error when typing again
+    if (errorMessage) setErrorMessage(null);
+
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
+    }
+
+    // Auto verify when all digits are filled
+    if (newCode.every((d) => d !== "")) {
+      verifyCode(newCode.join(""));
     }
   };
 
@@ -106,25 +87,24 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
       const result = await verifyOtp(verificationId, verificationCode);
       await saveAuthTokens(result.tokens);
 
-      setLoading(false);
-      if (onSuccess) {
-        onSuccess();
-      } else if (result.is_new_user) {
-        router.replace("/(Auth)/BusinessSelectionScreen");
-      } else {
-        router.replace("/(Main)/Home");
-      }
+      setTimeout(() => {
+        if (result.is_new_user) {
+          router.replace("/(Auth)/BusinessSelectionScreen");
+        } else {
+          router.replace("/(Main)/Home");
+        }
+      }, 100);
     } catch (error: any) {
-      setLoading(false);
       console.error("Verification failed:", error);
-
       const message =
         error?.response?.data?.error ||
         error?.response?.data?.detail ||
         "Invalid verification code. Please try again.";
-      Alert.alert("Verification Failed", message);
+      setErrorMessage(message); // show inline error
       setCode(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -138,32 +118,30 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
       setVerificationId(resp.verification_id);
       setMockCode(resp.code || null);
       setResendTimer(45);
-      setResendLoading(false);
-      Alert.alert("Success", "Verification code resent successfully!");
+      setErrorMessage(null);
     } catch (error: any) {
-      setResendLoading(false);
       console.error("Error resending code:", error);
-
       const message =
         error?.response?.data?.error ||
         error?.response?.data?.detail ||
         "Failed to resend verification code.";
-      Alert.alert("Error", message);
+      setErrorMessage(message);
+    } finally {
+      setResendLoading(false);
     }
   };
 
   const clearAllInputs = () => {
     setCode(["", "", "", "", "", ""]);
+    setErrorMessage(null);
     inputRefs.current[0]?.focus();
   };
 
   const handleGoBack = () => {
-    if (onGoBack) {
-      onGoBack();
-    } else if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
+    if (router.canGoBack()) {
       router.back();
+    } else {
+      router.replace("/(Auth)/WelcomeScreen");
     }
   };
 
@@ -218,72 +196,71 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
               ))}
             </View>
 
-            {mockCode ? (
-              <Text style={styles.mockCodeText}>
-                Test code (mock mode):{" "}
-                <Text style={styles.mockCodeValue}>{mockCode}</Text>
+            {/* Inline error message */}
+            {errorMessage && (
+              <Text style={{ color: "red", marginTop: 8, textAlign: "center" }}>
+                {errorMessage}
               </Text>
-            ) : null}
+            )}
 
             <TouchableOpacity
               style={[
-                styles.verifyButton,
-                (code.some((d) => d === "") || loading) && styles.disabled,
+                styles.resendContainer,
+                (resendTimer > 0 || resendLoading) && styles.disabled,
               ]}
-              onPress={() => verifyCode(code.join(""))}
-              disabled={code.some((d) => d === "") || loading}
+              onPress={resendCode}
+              disabled={resendTimer > 0 || resendLoading}
             >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text style={styles.verifyText}>Verify</Text>
-              )}
+              <Text
+                style={[
+                  styles.resendText,
+                  (resendTimer > 0 || resendLoading) && styles.disabledText,
+                ]}
+              >
+                {resendLoading
+                  ? "Sending..."
+                  : resendTimer > 0
+                    ? `Didn't get the code? Resend in ${resendTimer}s`
+                    : "Didn't get the code? Resend now"}
+              </Text>
             </TouchableOpacity>
 
             <View style={styles.actionsContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.resendContainer,
-                  (resendTimer > 0 || resendLoading) && styles.disabled,
-                ]}
-                onPress={resendCode}
-                disabled={resendTimer > 0 || resendLoading}
-              >
-                <Text
-                  style={[
-                    styles.resendText,
-                    (resendTimer > 0 || resendLoading) && styles.disabledText,
-                  ]}
-                >
-                  {resendLoading
-                    ? "Sending..."
-                    : resendTimer > 0
-                      ? `Didn't get the code? Resend in ${resendTimer}s`
-                      : "Didn't get the code? Resend now"}
+              {mockCode ? (
+                <Text style={styles.mockCodeText}>
+                  Test code (mock mode):{" "}
+                  <Text style={styles.mockCodeValue}>{mockCode}</Text>
                 </Text>
-              </TouchableOpacity>
+              ) : null}
+              <View
+                style={{
+                  flexDirection: "row",
+                  marginTop: 10,
+                  justifyContent: "space-between",
+                }}
+              >
+                <TouchableOpacity
+                  style={[styles.backButton, loading && styles.disabled]}
+                  onPress={handleGoBack}
+                  disabled={loading}
+                >
+                  <Ionicons name="arrow-back" size={20} color="#1155CC" />
+                  <Text style={styles.backText}>Back</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.clearButton}
-                onPress={clearAllInputs}
-                disabled={loading}
-              >
-                <Text
-                  style={[styles.clearText, loading && styles.disabledText]}
+                <TouchableOpacity
+                  style={styles.clearButton}
+                  onPress={clearAllInputs}
+                  disabled={loading}
                 >
-                  Clear all
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    style={[styles.clearText, loading && styles.disabledText]}
+                  >
+                    Clear all
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-
-            <TouchableOpacity
-              style={[styles.backButton, loading && styles.disabled]}
-              onPress={handleGoBack}
-              disabled={loading}
-            >
-              <Ionicons name="arrow-back" size={20} color="#1155CC" />
-              <Text style={styles.backText}>Back</Text>
-            </TouchableOpacity>
           </View>
         </ScrollView>
 
@@ -297,136 +274,5 @@ const VerificationScreen: React.FC<VerificationExtraProps> = ({
     </KeyboardAvoidingView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#1155CC" },
-  topSection: { flex: 1 },
-  bottomSection: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: verticalScale(8),
-    minHeight: "60%",
-    flex: 1,
-  },
-  handleBar: {
-    width: scale(40),
-    height: verticalScale(4),
-    backgroundColor: "#E5E7EB",
-    borderRadius: moderateScale(2),
-    alignSelf: "center",
-    marginBottom: verticalScale(32),
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  formContainer: {
-    paddingHorizontal: scale(24),
-    paddingBottom: verticalScale(40),
-  },
-  title: {
-    fontSize: moderateScale(22),
-    color: "#111827",
-    marginBottom: verticalScale(8),
-    fontFamily: "DMSans_400Regular",
-  },
-  subtitle: {
-    fontSize: moderateScale(18),
-    color: "#6B7280",
-    marginBottom: verticalScale(32),
-    lineHeight: 24,
-    fontFamily: "DMSans_400Regular",
-  },
-  codeContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: verticalScale(10),
-    gap: scale(3),
-  },
-  mockCodeText: {
-    marginBottom: verticalScale(14),
-    fontSize: moderateScale(11),
-    fontFamily: "DMSans_400Regular",
-    color: "#6B7280",
-    textAlign: "left",
-  },
-  mockCodeValue: {
-    fontFamily: "DMSans_700Bold",
-    color: "#1155CC",
-    letterSpacing: 2,
-  },
-  codeInput: {
-    width: scale(50),
-    borderWidth: 2,
-    borderColor: "#D1D5DB",
-    borderRadius: moderateScale(8),
-    textAlign: "center",
-    fontSize: moderateScale(16),
-    color: "#111827",
-    backgroundColor: "#FFFFFF",
-    fontFamily: "DMSans_400Regular",
-  },
-  codeInputFilled: { borderColor: "#10B981", backgroundColor: "#F0FDF4" },
-  codeInputDisabled: { opacity: 0.6 },
-  verifyButton: {
-    backgroundColor: "#1155CC",
-    paddingVertical: verticalScale(12),
-    borderRadius: moderateScale(8),
-    marginBottom: verticalScale(24),
-    alignItems: "center",
-  },
-  verifyText: {
-    fontSize: moderateScale(16),
-    color: "#FFFFFF",
-    fontFamily: "DMSans_400Regular",
-  },
-  actionsContainer: { marginBottom: verticalScale(32) },
-  resendContainer: {
-    paddingVertical: verticalScale(8),
-    marginBottom: verticalScale(8),
-  },
-  resendText: {
-    fontSize: moderateScale(14),
-    color: "#6B7280",
-    textAlign: "left",
-    fontFamily: "DMSans_400Regular",
-  },
-  clearButton: { paddingVertical: verticalScale(4) },
-  clearText: {
-    fontSize: moderateScale(14),
-    color: "#EF4444",
-    textAlign: "left",
-    fontFamily: "DMSans_400Regular",
-  },
-  disabled: { opacity: 0.6 },
-  disabledText: { color: "#9CA3AF" },
-  backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: verticalScale(8),
-  },
-  backText: {
-    fontSize: moderateScale(16),
-    fontFamily: "DMSans_400Regular",
-    color: "#1155CC",
-    marginLeft: 8,
-  },
-  loadingOverlay: {
-    position: "absolute",
-    top: verticalScale(0),
-    left: scale(0),
-    right: scale(0),
-    bottom: verticalScale(0),
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: verticalScale(12),
-    fontSize: moderateScale(18),
-    color: "#1155CC",
-    fontFamily: "DMSans_400Regular",
-  },
-});
 
 export default VerificationScreen;

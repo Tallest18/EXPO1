@@ -2,18 +2,19 @@ import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { styles } from "./components/Cart.styles";
 
-import { getProduct } from "@/src/api";
+import { PRODUCTS_ITEM } from "@/src/api/endpoints";
+import axios from "axios";
 import { scale, verticalScale } from "../(Main)/scaling";
 
 // Types
@@ -55,97 +56,66 @@ const Cart: React.FC = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
 
   useEffect(() => {
-    loadCartProducts();
-  }, [params.cartData, params.timestamp]);
-
-  const loadCartProducts = async (): Promise<void> => {
-    setLoading(true);
-    try {
-      // Parse cart items from route params
-      let cartItems: CartItem[] = [];
-
-      if (params.cartData) {
-        try {
-          cartItems = JSON.parse(params.cartData as string);
-          console.log("Cart items received:", cartItems);
-          console.log("Number of unique items:", cartItems.length);
-          console.log(
-            "Total quantity:",
-            cartItems.reduce((sum, item) => sum + item.quantity, 0),
-          );
-        } catch (parseError) {
-          console.error("Error parsing cart data:", parseError);
-          Alert.alert("Error", "Failed to load cart data");
-          setCart([]);
-          setLoading(false);
-          return;
-        }
-      }
-
-      if (cartItems.length === 0) {
-        console.log("No items in cart");
+    let cartItems: CartItem[] = [];
+    if (params.cartData) {
+      try {
+        cartItems = JSON.parse(params.cartData as string);
+      } catch (parseError) {
+        Alert.alert("Error", "Failed to load cart data");
         setCart([]);
         setLoading(false);
         return;
       }
-
-      // Load product details for each cart item
-      const cartWithProducts = await Promise.all(
-        cartItems.map(async (item) => {
-          try {
-            console.log(
-              `Loading product ${item.productId} with quantity ${item.quantity}`,
-            );
-            const productData = await getProduct(item.productId);
-            if (productData) {
-              console.log("Product loaded:", productData.name);
-              return {
-                ...item,
-                product: {
-                  id: String(productData.id),
-                  name: productData.name,
-                  category: productData.category_name || "",
-                  barcode: productData.barcode || "",
-                  image: productData.image ? { uri: productData.image } : null,
-                  quantityType: productData.quantity_type || "Single Items",
-                  unitsInStock:
-                    productData.quantity_left ?? productData.quantity,
-                  costPrice: Number(productData.buying_price || 0),
-                  sellingPrice: Number(productData.selling_price || 0),
-                  lowStockThreshold: productData.low_stock_threshold ?? 0,
-                  expiryDate: productData.expiry_date || "",
-                  supplier: {
-                    name:
-                      productData.supplier_name ||
-                      productData.supplier_obj_name ||
-                      "",
-                    phone: productData.supplier_phone || "",
-                  },
-                  dateAdded: productData.created_at || new Date().toISOString(),
-                  userId: "api-user",
-                } as Product,
-              };
-            }
-
-            console.warn("Product not found:", item.productId);
-            return item;
-          } catch (error) {
-            console.error("Error loading product:", error);
-            return item;
-          }
-        }),
-      );
-
-      console.log("Cart with products loaded:", cartWithProducts);
-      setCart(cartWithProducts);
-    } catch (error) {
-      console.error("Error loading cart:", error);
-      Alert.alert("Error", "Failed to load cart items");
-      setCart([]);
-    } finally {
-      setLoading(false);
     }
-  };
+    if (cartItems.length === 0) {
+      setCart([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    Promise.all(
+      cartItems.map(async (item) => {
+        try {
+          const { data: productData } = await axios.get(
+            PRODUCTS_ITEM(item.productId),
+          );
+          if (productData) {
+            return {
+              ...item,
+              product: {
+                id: String(productData.id),
+                name: productData.name,
+                category: productData.category_name || "",
+                barcode: productData.barcode || "",
+                image: productData.image ? { uri: productData.image } : null,
+                quantityType: productData.quantity_type || "Single Items",
+                unitsInStock: productData.quantity_left ?? productData.quantity,
+                costPrice: Number(productData.buying_price || 0),
+                sellingPrice: Number(productData.selling_price || 0),
+                lowStockThreshold: productData.low_stock_threshold ?? 0,
+                expiryDate: productData.expiry_date || "",
+                supplier: {
+                  name:
+                    productData.supplier_name ||
+                    productData.supplier_obj_name ||
+                    "",
+                  phone: productData.supplier_phone || "",
+                },
+                dateAdded: productData.created_at || new Date().toISOString(),
+                userId: "api-user",
+              } as Product,
+            };
+          }
+        } catch (error) {
+          // fallback: skip product
+        }
+        return item;
+      }),
+    ).then((cartWithProducts) => {
+      setCart(cartWithProducts);
+      setLoading(false);
+    });
+  }, [params.cartData, params.timestamp]);
 
   const updateQuantity = (productId: string, newQuantity: number): void => {
     if (newQuantity < 1) {
@@ -261,7 +231,7 @@ const Cart: React.FC = () => {
 
           <View style={styles.priceQuantityRow}>
             <Text style={styles.productPrice}>
-              ₦{item.product.sellingPrice.toLocaleString()}
+              ₦{(item.product.sellingPrice ?? 0).toLocaleString()}
             </Text>
           </View>
 
@@ -349,7 +319,7 @@ const Cart: React.FC = () => {
             <View style={styles.totalContainer}>
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalAmount}>
-                ₦{calculateTotal().toLocaleString()}
+                ₦{(calculateTotal() ?? 0).toLocaleString()}
               </Text>
             </View>
 

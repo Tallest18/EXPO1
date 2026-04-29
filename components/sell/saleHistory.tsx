@@ -142,7 +142,7 @@ const SaleCard: React.FC<{ sale: Sale }> = ({ sale }) => {
       {/* Amount + payment label */}
       <View style={styles.saleRight}>
         <Text style={styles.saleAmount} numberOfLines={1} adjustsFontSizeToFit>
-          ₦{sale.totalAmount.toLocaleString()}
+          ₦{(sale.totalAmount ?? 0).toLocaleString()}
         </Text>
         <Text style={[styles.salePaymentLabel, { color: paymentColor }]}>
           {capitalise(sale.paymentMethod)}

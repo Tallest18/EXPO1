@@ -97,28 +97,69 @@ const Finance = () => {
             ))}
           </View>
 
-          <SummaryCards financialSummary={financialSummary} />
+          <SummaryCards
+            financialSummary={
+              financialSummary || {
+                totalProfit: 0,
+                totalRevenue: 0,
+                totalExpenses: 0,
+              }
+            }
+          />
 
           <DailySummaryCard
-            dailySummary={dailySummary}
+            dailySummary={
+              dailySummary || {
+                revenue: 0,
+                profit: 0,
+                sales: 0,
+                orders: 0,
+                date: "-",
+              }
+            }
             selectedDate={selectedDate}
             onOpenDatePicker={showDatePicker}
           />
 
-          <TopProductsSection topProducts={topProducts} />
+          <TopProductsSection topProducts={topProducts || []} />
 
-          <SlowMovingStockSection slowMovingStock={slowMovingStock} />
+          <SlowMovingStockSection slowMovingStock={slowMovingStock || []} />
 
           <StockRecommendationsSection
-            stockRecommendations={stockRecommendations}
+            stockRecommendations={stockRecommendations || []}
           />
 
-          <SalesTrendChart chartData={chartData} />
+          <SalesTrendChart
+            chartData={
+              chartData || {
+                labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+                datasets: [
+                  {
+                    data: [0, 0, 0, 0, 0, 0, 0],
+                    color: () => "#2046AE",
+                    strokeWidth: 3,
+                  },
+                  {
+                    data: [0, 0, 0, 0, 0, 0, 0],
+                    color: () => "#FBBF24",
+                    strokeWidth: 3,
+                  },
+                ],
+              }
+            }
+          />
 
-          <SeasonalInsightsSection seasonalInsights={seasonalInsights} />
+          <SeasonalInsightsSection seasonalInsights={seasonalInsights || []} />
 
           <MonthlyReportCard
-            monthlyReport={monthlyReport}
+            monthlyReport={
+              monthlyReport || {
+                month: "-",
+                totalSales: 0,
+                totalCost: 0,
+                totalProfit: 0,
+              }
+            }
             pdfLoading={pdfLoading}
             onDownload={generatePDFReport}
           />
@@ -134,7 +175,7 @@ const Finance = () => {
         */}
         {dataLoading && (
           <View style={styles.loadingOverlay} pointerEvents="none">
-            <ActivityIndicator size="large" color="#2046AE" />
+            <ActivityIndicator size="large" color="#1155CC" />
             <Text style={styles.loadingText}>Loading financial data...</Text>
           </View>
         )}
@@ -155,7 +196,7 @@ const Finance = () => {
         maximumDate={new Date()}
         display="default"
         themeVariant="light"
-        accentColor="#2046AE"
+        accentColor="#1155CC"
         confirmTextIOS="Apply"
         cancelTextIOS="Cancel"
       />

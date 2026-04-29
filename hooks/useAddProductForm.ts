@@ -3,12 +3,14 @@ import {
   listCategories,
   listSuppliers,
 } from "@/src/api";
+import { apiClient } from "@/src/api/client";
 // import { Alert, useState } from "react";
 import {
   checkExpiringProducts,
   checkLowStock,
   notifyProductAdded,
 } from "@/app/notificationHelpers";
+import { PRODUCTS_USER_INVENTORY } from "@/src/api/endpoints";
 import { useState } from "react";
 import { Alert } from "react-native";
 
@@ -229,19 +231,36 @@ export function useAddProductForm(onSaveProduct: (product: Product) => void) {
         finalSellingPrice = parseFloat(formData.sellingPricePerUnit) || 0;
       }
 
-      const [categories, suppliers] = await Promise.all([
+      // Type guards for paginated or array responses
+      function isPaginated<T>(data: any): data is { results: T[] } {
+        return data && Array.isArray(data.results);
+      }
+
+      const [categoriesRaw, suppliersRaw] = await Promise.all([
         listCategories(),
         listSuppliers(),
       ]);
-
+      console.log("categoriesRaw:", categoriesRaw);
+      type Category = { id: number; name: string; description?: string | null };
+      type Supplier = { id: number; name: string; phone?: string | null };
+      const categories: Category[] = Array.isArray(categoriesRaw)
+        ? categoriesRaw
+        : isPaginated<Category>(categoriesRaw)
+          ? categoriesRaw.results
+          : [];
+      const suppliers: Supplier[] = Array.isArray(suppliersRaw)
+        ? suppliersRaw
+        : isPaginated<Supplier>(suppliersRaw)
+          ? suppliersRaw.results
+          : [];
       const matchedCategory = categories.find(
-        (c) => c.name.toLowerCase() === (formData.category || "").toLowerCase(),
+        (c: Category) =>
+          c.name.toLowerCase() === (formData.category || "").toLowerCase(),
       );
       const matchedSupplier = suppliers.find(
-        (s) =>
+        (s: Supplier) =>
           s.name.toLowerCase() === (formData.supplier.name || "").toLowerCase(),
       );
-
       if (!categories.length || !suppliers.length) {
         Alert.alert(
           "Error",
@@ -250,28 +269,55 @@ export function useAddProductForm(onSaveProduct: (product: Product) => void) {
         return;
       }
 
+      // 1. Add to user inventory
+      const inventoryPayload = {
+        category: formData.category,
+        barcode: formData.barcode || formData.sku || "",
+        units_in_stock: unitsInStock,
+        unit_type: formData.quantityType || "Single Items",
+        cost_price: String(finalCostPrice),
+        selling_price: String(finalSellingPrice),
+        low_stock_threshold: parseInt(formData.lowStockThreshold) || 10,
+        expiry_date:
+          formData.expiryDate.month && formData.expiryDate.year
+            ? `${formData.expiryDate.year}-${String(
+                Number(formData.expiryDate.month),
+              ).padStart(2, "0")}-${String(
+                Number(formData.expiryDate.day || "1"),
+              ).padStart(2, "0")}`
+            : undefined,
+        supplier_name: formData.supplier.name || undefined,
+        supplier_phone: formData.supplier.phone || undefined,
+        image_url: formData.productImage?.uri || undefined,
+      };
+      console.log("[POST] /api/products/user-inventory/", inventoryPayload);
+      await apiClient.post(PRODUCTS_USER_INVENTORY, inventoryPayload);
+
+      // 2. Add to global products
+      const globalProductPayload = {
+        name: formData.productName || "Untitled Product",
+        category: matchedCategory?.id ?? categories[0].id,
+        supplier: matchedSupplier?.id ?? suppliers[0].id,
+        buying_price: String(finalCostPrice),
+        selling_price: String(finalSellingPrice),
+        quantity: unitsInStock,
+        quantity_type: formData.quantityType || "Single Items",
+        low_stock_threshold: parseInt(formData.lowStockThreshold) || 10,
+        barcode: formData.sku || "",
+        expiry_date:
+          formData.expiryDate.month && formData.expiryDate.year
+            ? `${formData.expiryDate.year}-${String(
+                Number(formData.expiryDate.month),
+              ).padStart(2, "0")}-${String(
+                Number(formData.expiryDate.day || "1"),
+              ).padStart(2, "0")}`
+            : undefined,
+        supplier_name: formData.supplier.name || undefined,
+        supplier_phone: formData.supplier.phone || undefined,
+      };
+      console.log("[POST] /products/items/", globalProductPayload);
       const apiProduct = await createProductWithImage(
-        {
-          name: formData.productName || "Untitled Product",
-          category: matchedCategory?.id ?? categories[0].id,
-          supplier: matchedSupplier?.id ?? suppliers[0].id,
-          buying_price: String(finalCostPrice),
-          selling_price: String(finalSellingPrice),
-          quantity: unitsInStock,
-          quantity_type: formData.quantityType || "Single Items",
-          low_stock_threshold: parseInt(formData.lowStockThreshold) || 10,
-          barcode: formData.sku || "",
-          expiry_date:
-            formData.expiryDate.month && formData.expiryDate.year
-              ? `${formData.expiryDate.year}-${String(
-                  Number(formData.expiryDate.month),
-                ).padStart(2, "0")}-${String(
-                  Number(formData.expiryDate.day || "1"),
-                ).padStart(2, "0")}`
-              : undefined,
-          supplier_name: formData.supplier.name || undefined,
-          supplier_phone: formData.supplier.phone || undefined,
-        },
+        globalProductPayload,
         formData.productImage,
       );
 

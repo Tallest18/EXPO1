@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, Text, TextInput } from "react-native";
 import {
   SafeAreaProvider,
@@ -31,50 +31,36 @@ function AppContent() {
   const router = useRouter();
   const segments = useSegments();
   const insets = useSafeAreaInsets();
+  const navigationHandled = useRef(false);
 
   const [fontsLoaded, fontError] = useFonts(FONT_ASSETS);
 
+  // --- Global font defaults ---
   useEffect(() => {
-    if (!fontsLoaded && !fontError) {
-      return;
-    }
+    if (!fontsLoaded && !fontError) return;
 
-    const textComponent = Text as typeof Text & {
-      defaultProps?: {
-        style?: unknown;
-        allowFontScaling?: boolean;
-        maxFontSizeMultiplier?: number;
-      };
-    };
-    const textInputComponent = TextInput as typeof TextInput & {
-      defaultProps?: {
-        style?: unknown;
-        allowFontScaling?: boolean;
-        maxFontSizeMultiplier?: number;
-      };
-    };
-
-    textComponent.defaultProps = {
-      ...textComponent.defaultProps,
+    (Text as any).defaultProps = {
+      ...(Text as any).defaultProps,
       allowFontScaling: false,
       maxFontSizeMultiplier: 1,
       style: [
         { fontFamily: FONT_FAMILY.regular },
-        textComponent.defaultProps?.style,
+        (Text as any).defaultProps?.style,
       ],
     };
 
-    textInputComponent.defaultProps = {
-      ...textInputComponent.defaultProps,
+    (TextInput as any).defaultProps = {
+      ...(TextInput as any).defaultProps,
       allowFontScaling: false,
       maxFontSizeMultiplier: 1,
       style: [
         { fontFamily: FONT_FAMILY.regular },
-        textInputComponent.defaultProps?.style,
+        (TextInput as any).defaultProps?.style,
       ],
     };
-  }, [fontError, fontsLoaded]);
+  }, [fontsLoaded, fontError]);
 
+  // --- Bootstrap auth session ---
   useEffect(() => {
     let cancelled = false;
 
@@ -85,7 +71,6 @@ function AppContent() {
           if (!cancelled) setIsAuthenticated(false);
           return;
         }
-
         await getProfile();
         if (!cancelled) setIsAuthenticated(true);
       } catch {
@@ -101,36 +86,40 @@ function AppContent() {
     };
   }, []);
 
+  // --- Handle navigation based on auth state ---
   const handleNavigation = useCallback(() => {
-    if ((fontsLoaded || fontError) && isAuthenticated !== null) {
-      SplashScreen.hideAsync();
+    const fontsReady = fontsLoaded || fontError;
+    const authReady = isAuthenticated !== null;
+    const routerReady = segments.length > 0 && !!segments[0];
 
-      const inProtectedGroup =
-        segments[0] === "(Main)" || segments[0] === "(Routes)";
-      const inAuthFlow = segments[0] === "(Auth)";
-      const inOnboardingFlow = segments[0] === "(Anboarding)";
-      const hasSegments = segments.length > 0;
+    if (!fontsReady || !authReady || !routerReady) return;
+    if (navigationHandled.current) return;
 
-      if (
-        isAuthenticated &&
-        !inProtectedGroup &&
-        !inAuthFlow &&
-        !inOnboardingFlow
-      ) {
-        router.replace("/(Main)/Home");
-      } else if (!isAuthenticated && inProtectedGroup) {
-        getAccessToken().then((token) => {
-          if (token) {
-            setIsAuthenticated(true);
-          } else {
-            router.replace("/(Auth)/WelcomeScreen");
-          }
-        });
-      } else if (!isAuthenticated && !hasSegments) {
-        router.replace("/(Anboarding)/Onboarding1");
-      } else if (isAuthenticated && !hasSegments) {
-        router.replace("/(Main)/Home");
-      }
+    SplashScreen.hideAsync();
+
+    const inProtectedGroup =
+      segments[0] === "(Main)" || segments[0] === "(Routes)";
+    const inAuthFlow = segments[0] === "(Auth)";
+    const inOnboardingFlow = segments[0] === "(Onboarding)";
+    const alreadyInCorrectPlace =
+      (isAuthenticated && inProtectedGroup) || (!isAuthenticated && inAuthFlow);
+
+    if (alreadyInCorrectPlace) return;
+
+    // FIX: Set the flag BEFORE calling router.replace so a re-render
+    // triggered by the replace cannot fire this callback a second time.
+    // The old setTimeout(..., 100) caused a race: if the user tapped a tab
+    // within that 100 ms window, Expo Router tore down part of the navigator
+    // tree, and when the timeout fired it called History.pushState on a null
+    // node → "Cannot read properties of null (reading 'dispatchEvent')".
+    navigationHandled.current = true;
+
+    if (isAuthenticated && !inProtectedGroup) {
+      router.replace("/(Main)/Home");
+    } else if (!isAuthenticated && inProtectedGroup) {
+      router.replace("/(Auth)/WelcomeScreen");
+    } else if (!isAuthenticated && !inOnboardingFlow) {
+      router.replace("/(Onboarding)/Onboarding1");
     }
   }, [fontsLoaded, fontError, isAuthenticated, segments, router]);
 
@@ -138,13 +127,8 @@ function AppContent() {
     handleNavigation();
   }, [handleNavigation]);
 
-  if (!fontsLoaded && !fontError) {
-    return null;
-  }
-
-  if (isAuthenticated === null) {
-    return null;
-  }
+  if (!fontsLoaded && !fontError) return null;
+  if (isAuthenticated === null) return null;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -160,20 +144,16 @@ function AppContent() {
             },
           }}
         >
-          <Stack.Screen name="(Anboarding)" options={{ headerShown: false }} />
+          <Stack.Screen name="(Onboarding)" options={{ headerShown: false }} />
           <Stack.Screen name="(Auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(Main)" options={{ headerShown: false }} />
           <Stack.Screen name="(Routes)" options={{ headerShown: false }} />
         </Stack>
 
-        {/* Rendered outside Stack so it sits above the tab bar */}
         <AddProductFlow
           visible={showAddProduct}
           onClose={() => setShowAddProduct(false)}
-          onSaveProduct={(product) => {
-            // handle save if needed at root level
-            setShowAddProduct(false);
-          }}
+          onSaveProduct={() => setShowAddProduct(false)}
         />
       </AddProductContext.Provider>
     </QueryClientProvider>

@@ -16,7 +16,29 @@ import {
 } from "react-native";
 import { styles } from "./Checkout.styles";
 
-import { createSale, getProduct } from "@/src/api";
+import { apiClient } from "@/src/api";
+import { PRODUCTS_ITEM, SALES, SALES_DEBTORS } from "@/src/api/endpoints";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+// Debtor API type
+interface Debtor {
+  id: number;
+  customer_name: string;
+  customer_phone?: string;
+  amount_owed: number;
+  due_date?: string;
+  transaction_ref?: string;
+}
+
+// TanStack Query: fetch all debtors
+function useDebtors() {
+  return useQuery({
+    queryKey: ["sales-debtors"],
+    queryFn: async () => {
+      const { data } = await apiClient.get(SALES_DEBTORS);
+      return data;
+    },
+  });
+}
 
 // Types
 interface Product {
@@ -103,62 +125,58 @@ const Checkout: React.FC = () => {
   };
 
   // Fetch product details for cart items
+
+  // TanStack Query: fetch product details for each cart item
   useEffect(() => {
-    const fetchCartProducts = async () => {
-      try {
-        const cartData: CartItem[] = params.cartData
-          ? JSON.parse(params.cartData as string)
-          : [];
-
-        if (cartData.length === 0) {
-          setLoading(false);
-          return;
+    const cartData: CartItem[] = params.cartData
+      ? JSON.parse(params.cartData as string)
+      : [];
+    if (cartData.length === 0) {
+      setCartItems([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    Promise.all(
+      cartData.map(async (item) => {
+        try {
+          const { data: product } = await apiClient.get(
+            PRODUCTS_ITEM(item.productId),
+          );
+          if (product) {
+            return {
+              ...item,
+              product: {
+                id: String(product.id),
+                name: product.name,
+                category: product.category_name || "",
+                barcode: product.barcode || "",
+                image: product.image ? { uri: product.image } : null,
+                quantityType: product.quantity_type || "Single Items",
+                unitsInStock: product.quantity_left ?? product.quantity,
+                costPrice: Number(product.buying_price || 0),
+                sellingPrice: Number(product.selling_price || 0),
+                lowStockThreshold: product.low_stock_threshold ?? 0,
+                expiryDate: product.expiry_date || "",
+                supplier: {
+                  name:
+                    product.supplier_name || product.supplier_obj_name || "",
+                  phone: product.supplier_phone || "",
+                },
+                dateAdded: product.created_at || new Date().toISOString(),
+                userId: "api-user",
+              } as Product,
+            };
+          }
+        } catch (error) {
+          // fallback: skip product
         }
-
-        // Fetch product details for each cart item
-        const cartWithProducts = await Promise.all(
-          cartData.map(async (item) => {
-            const product = await getProduct(item.productId);
-
-            if (product) {
-              return {
-                ...item,
-                product: {
-                  id: String(product.id),
-                  name: product.name,
-                  category: product.category_name || "",
-                  barcode: product.barcode || "",
-                  image: product.image ? { uri: product.image } : null,
-                  quantityType: product.quantity_type || "Single Items",
-                  unitsInStock: product.quantity_left ?? product.quantity,
-                  costPrice: Number(product.buying_price || 0),
-                  sellingPrice: Number(product.selling_price || 0),
-                  lowStockThreshold: product.low_stock_threshold ?? 0,
-                  expiryDate: product.expiry_date || "",
-                  supplier: {
-                    name:
-                      product.supplier_name || product.supplier_obj_name || "",
-                    phone: product.supplier_phone || "",
-                  },
-                  dateAdded: product.created_at || new Date().toISOString(),
-                  userId: "api-user",
-                } as Product,
-              };
-            }
-            return item;
-          }),
-        );
-
-        setCartItems(cartWithProducts);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching cart products:", error);
-        Alert.alert("Error", "Failed to load cart items");
-        setLoading(false);
-      }
-    };
-
-    fetchCartProducts();
+        return item;
+      }),
+    ).then((cartWithProducts) => {
+      setCartItems(cartWithProducts);
+      setLoading(false);
+    });
   }, [params.cartData]);
 
   const calculateTotal = (): number => {
@@ -170,17 +188,26 @@ const Checkout: React.FC = () => {
     }, 0);
   };
 
+  // TanStack Query: sale creation mutation
+  const queryClient = useQueryClient();
+  const saleMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      return apiClient.post(SALES, payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sales"] });
+    },
+  });
+
   const handlePayment = async (): Promise<void> => {
     if (!selectedPayment) {
       Alert.alert("Error", "Please select a payment method");
       return;
     }
-
     if (cartItems.length === 0) {
       Alert.alert("Error", "Cart is empty");
       return;
     }
-
     // Validate debtor details if Credit (Debtor) is selected
     if (selectedPayment === "Credit (Debtor)") {
       if (!customerName.trim()) {
@@ -196,9 +223,7 @@ const Checkout: React.FC = () => {
         return;
       }
     }
-
     setProcessing(true);
-
     try {
       const paymentMethodMap: Record<PaymentMethod, string> = {
         Cash: "cash",
@@ -206,10 +231,8 @@ const Checkout: React.FC = () => {
         POS: "pos",
         "Credit (Debtor)": "credit",
       };
-
       const total = calculateTotal();
-
-      await createSale({
+      await saleMutation.mutateAsync({
         payment_method: paymentMethodMap[selectedPayment],
         notes: notes || undefined,
         customer_name:
@@ -227,13 +250,11 @@ const Checkout: React.FC = () => {
           quantity: item.quantity,
         })),
       });
-
       setProcessing(false);
       showAppToast(
         `Checkout successful: ₦${calculateTotal().toLocaleString()} via ${selectedPayment}`,
         "success",
       );
-
       setTimeout(() => {
         router.replace("/(Main)/Home" as any);
       }, 900);

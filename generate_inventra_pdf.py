@@ -519,7 +519,7 @@ story.append(P("4.1 Auth State Management (app/_layout.tsx)", h2))
 story.append(P(
     "The root layout uses <b>onAuthStateChanged(auth, callback)</b> to continuously monitor authentication state. "
     "Route groups are divided into protected (<b>(Main)</b> and <b>(Routes)</b>) and public "
-    "(<b>(Auth)</b> and <b>(Anboarding)</b>). If a user is authenticated they are redirected to <b>/(Main)/Home</b>; "
+    "(<b>(Auth)</b> and <b>(Onboarding)</b>). If a user is authenticated they are redirected to <b>/(Main)/Home</b>; "
     "if not, they are redirected to <b>/Onboarding1</b>.", body))
 
 story.append(PB())
@@ -924,10 +924,10 @@ story.append(P(
 story.append(SP(6))
 
 nav_tree = """app/
-├── index.tsx                      → Redirects to (Anboarding)/Onboarding1
+├── index.tsx                      → Redirects to (Onboarding)/Onboarding1
 ├── _layout.tsx                    → Root layout — auth guard + font loading
 │
-├── (Anboarding)/                  ── PUBLIC ──────────────────────
+├── (Onboarding)/                  ── PUBLIC ──────────────────────
 │   └── Onboarding1.tsx            → 5s splash → WelcomeScreen
 │
 ├── (Auth)/                        ── PUBLIC ──────────────────────
@@ -963,8 +963,8 @@ nav_tree = """app/
 story += code_block(nav_tree)
 
 story += info_box(
-    "Note: The route group name '(Anboarding)' (intentional spelling) is the actual directory name in the codebase. "
-    "Both (Anboarding) and (Auth) are public routes that do not require authentication.")
+    "Note: The route group name '(Onboarding)' (intentional spelling) is the actual directory name in the codebase. "
+    "Both (Onboarding) and (Auth) are public routes that do not require authentication.")
 
 story.append(PB())
 

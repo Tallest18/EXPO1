@@ -1,4 +1,4 @@
-// app/(routes)/WelcomeScreen.tsx
+// app/(Auth)/WelcomeScreen.tsx
 import { requestOtp } from "@/src/api";
 import { router } from "expo-router";
 import React, { useState } from "react";
@@ -19,7 +19,6 @@ import {
 
 const { width, height } = Dimensions.get("window");
 
-// Clamped responsive sizing  safe on all screen sizes including tiny phones
 const clamp = (val: number, min: number, max: number) =>
   Math.min(Math.max(val, min), max);
 const scale = (size: number) =>
@@ -29,26 +28,15 @@ const verticalScale = (size: number) =>
 const moderateScale = (size: number, factor = 0.5) =>
   size + (scale(size) - size) * factor;
 
-interface WelcomeScreenProps {
-  onNavigateToVerification?: (
-    phoneNumber: string,
-    verificationId: string,
-    mockCode?: string,
-  ) => void;
-}
-
-const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
-  onNavigateToVerification,
-}) => {
+const WelcomeScreen: React.FC = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // --- Phone helpers ---
   const formatPhoneNumber = (phone: string): string => {
     let formatted = phone.trim().replace(/[\s\-\(\)]/g, "");
     if (!formatted.startsWith("+")) {
       formatted = formatted.replace(/^0/, "");
-      formatted = "+234" + formatted; // Default to Nigeria
+      formatted = "+234" + formatted;
     }
     return formatted;
   };
@@ -58,7 +46,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
     return phoneRegex.test(phone);
   };
 
-  // --- Handle OTP send ---
   const handleSendOTP = async () => {
     if (!phoneNumber.trim()) {
       Alert.alert("Error", "Please enter your phone number");
@@ -78,21 +65,20 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
     try {
       setLoading(true);
       const resp = await requestOtp(formattedPhone);
-      const verificationId = resp.verification_id;
-      const returnedCode = resp.code;
 
-      if (onNavigateToVerification) {
-        onNavigateToVerification(formattedPhone, verificationId, returnedCode);
-      } else {
-        router.push({
-          pathname: "./VerificationScreen",
-          params: {
-            phoneNumber: formattedPhone,
-            verificationId: verificationId,
-            mockCode: returnedCode,
-          },
-        });
-      }
+      // setTimeout ensures the web History API is fully ready before navigation
+      setTimeout(() => {
+        if (router && typeof router.replace === "function") {
+          router.replace({
+            pathname: "/(Auth)/VerificationScreen",
+            params: {
+              phoneNumber: formattedPhone,
+              verificationId: resp.verification_id,
+              mockCode: resp.code ?? "",
+            },
+          });
+        }
+      }, 300);
     } catch (error: any) {
       console.error("Error sending OTP:", error);
       const message =

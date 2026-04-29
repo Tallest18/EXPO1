@@ -42,7 +42,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
           numberOfLines={1}
           adjustsFontSizeToFit
         >
-          {formatCurrency(financialSummary.totalProfit)}
+          {formatCurrency(financialSummary.totalSales)}
         </Text>
         <View
           style={[
@@ -57,29 +57,28 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
         >
           <Ionicons
             name={
-              financialSummary.totalProfit >= 0
+              financialSummary.totalSalesChange >= 0
                 ? "trending-up"
                 : "trending-down"
             }
             size={moderateScale(11)}
-            color={financialSummary.totalProfit >= 0 ? "#10B981" : "#EF4444"}
+            color={
+              financialSummary.totalSalesChange >= 0 ? "#10B981" : "#EF4444"
+            }
           />
           <Text
             style={[
               styles.changeText,
               {
                 color:
-                  financialSummary.totalProfit >= 0 ? "#10B981" : "#EF4444",
+                  financialSummary.totalSalesChange >= 0
+                    ? "#10B981"
+                    : "#EF4444",
               },
             ]}
           >
-            {financialSummary.totalProfit >= 0 ? "+" : ""}
-            {(
-              (financialSummary.totalProfit /
-                (financialSummary.totalRevenue || 1)) *
-              100
-            ).toFixed(0)}
-            %
+            {financialSummary.totalSalesChange >= 0 ? "+" : ""}
+            {financialSummary.totalSalesChange}%
           </Text>
         </View>
       </View>
@@ -91,7 +90,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
           numberOfLines={1}
           adjustsFontSizeToFit
         >
-          {formatCurrency(financialSummary.totalRevenue)}
+          {formatCurrency(financialSummary.totalCost)}
         </Text>
         <View
           style={[
@@ -105,11 +104,28 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
           ]}
         >
           <Ionicons
-            name="trending-down"
+            name={
+              financialSummary.totalCostChange >= 0
+                ? "trending-up"
+                : "trending-down"
+            }
             size={moderateScale(11)}
-            color="#EF4444"
+            color={
+              financialSummary.totalCostChange >= 0 ? "#10B981" : "#EF4444"
+            }
           />
-          <Text style={[styles.changeText, { color: "#EF4444" }]}>-5%</Text>
+          <Text
+            style={[
+              styles.changeText,
+              {
+                color:
+                  financialSummary.totalCostChange >= 0 ? "#10B981" : "#EF4444",
+              },
+            ]}
+          >
+            {financialSummary.totalCostChange >= 0 ? "+" : ""}
+            {financialSummary.totalCostChange}%
+          </Text>
         </View>
       </View>
 
@@ -120,7 +136,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
           numberOfLines={1}
           adjustsFontSizeToFit
         >
-          {formatCurrency(financialSummary.totalExpenses)}
+          {formatCurrency(financialSummary.totalProfit)}
         </Text>
         <View
           style={[
@@ -134,11 +150,30 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
           ]}
         >
           <Ionicons
-            name="trending-up"
+            name={
+              financialSummary.totalProfitChange >= 0
+                ? "trending-up"
+                : "trending-down"
+            }
             size={moderateScale(11)}
-            color="#10B981"
+            color={
+              financialSummary.totalProfitChange >= 0 ? "#10B981" : "#EF4444"
+            }
           />
-          <Text style={[styles.changeText, { color: "#10B981" }]}>+8%</Text>
+          <Text
+            style={[
+              styles.changeText,
+              {
+                color:
+                  financialSummary.totalProfitChange >= 0
+                    ? "#10B981"
+                    : "#EF4444",
+              },
+            ]}
+          >
+            {financialSummary.totalProfitChange >= 0 ? "+" : ""}
+            {financialSummary.totalProfitChange}%
+          </Text>
         </View>
       </View>
     </View>
@@ -170,13 +205,13 @@ export const DailySummaryCard: React.FC<DailySummaryCardProps> = ({
         <Ionicons
           name="calendar-outline"
           size={moderateScale(13)}
-          color="#2046AE"
+          color="#1155CC"
         />
         <Text style={styles.dateText}>{formatDateLabel(selectedDate)}</Text>
         <Ionicons
           name="chevron-down"
           size={moderateScale(13)}
-          color="#2046AE"
+          color="#1155CC"
         />
       </TouchableOpacity>
     </View>
@@ -184,13 +219,13 @@ export const DailySummaryCard: React.FC<DailySummaryCardProps> = ({
     <View style={styles.dailySummaryCard}>
       <View style={styles.dailySummaryRow}>
         <View style={styles.dailySummaryItem}>
-          <Text style={styles.dailySummaryLabel}>Sale Amount</Text>
+          <Text style={styles.dailySummaryLabel}>Sales Amount</Text>
           <Text
             style={{ ...styles.dailySummaryValue, color: "#1155CC" }}
             numberOfLines={1}
             adjustsFontSizeToFit
           >
-            {formatCurrency(dailySummary.revenue)}
+            {formatCurrency(dailySummary.salesAmount)}
           </Text>
         </View>
         <View style={styles.dailySummaryItem2}>
@@ -207,11 +242,13 @@ export const DailySummaryCard: React.FC<DailySummaryCardProps> = ({
       <View style={styles.dailySummaryRow}>
         <View style={styles.dailySummaryItem3}>
           <Text style={styles.dailySummaryLabel}>Transactions</Text>
-          <Text style={styles.dailySummaryValue}>{dailySummary.sales}</Text>
+          <Text style={styles.dailySummaryValue}>
+            {dailySummary.transactions}
+          </Text>
         </View>
         <View style={styles.dailySummaryItem3}>
           <Text style={styles.dailySummaryLabel}>Items Sold</Text>
-          <Text style={styles.dailySummaryValue}>{dailySummary.orders}</Text>
+          <Text style={styles.dailySummaryValue}>{dailySummary.itemsSold}</Text>
         </View>
       </View>
     </View>
@@ -235,9 +272,9 @@ export const TopProductsSection: React.FC<TopProductsProps> = ({
         {topProducts.map((product, index) => (
           <View key={index} style={styles.productCard}>
             <View style={styles.productIcon}>
-              {product.imageUrl ? (
+              {product.image_url ? (
                 <Image
-                  source={{ uri: product.imageUrl }}
+                  source={{ uri: product.image_url }}
                   style={styles.productImage}
                   resizeMode="cover"
                 />
@@ -251,10 +288,10 @@ export const TopProductsSection: React.FC<TopProductsProps> = ({
             </View>
             <View style={styles.productInfo}>
               <Text style={styles.productName} numberOfLines={1}>
-                {product.name}
+                {product.product_name}
               </Text>
               <Text style={styles.productQuantity}>
-                Sold: {product.quantity} units
+                Sold: {product.units_sold} units
               </Text>
             </View>
             <View style={styles.productRevenue}>
@@ -292,9 +329,9 @@ export const SlowMovingStockSection: React.FC<SlowMovingStockProps> = ({
           <View key={index} style={styles.slowStockCard}>
             <View style={styles.slowStockLeft}>
               <View style={styles.slowStockIcon}>
-                {item.imageUrl ? (
+                {item.image_url ? (
                   <Image
-                    source={{ uri: item.imageUrl }}
+                    source={{ uri: item.image_url }}
                     style={styles.slowStockImage}
                     resizeMode="cover"
                   />
@@ -310,15 +347,17 @@ export const SlowMovingStockSection: React.FC<SlowMovingStockProps> = ({
               </View>
               <View style={styles.slowStockInfo}>
                 <Text style={styles.slowStockName} numberOfLines={1}>
-                  {item.name}
+                  {item.product_name}
                 </Text>
                 <Text style={styles.slowStockDetail}>
-                  {item.quantity} units left
+                  {item.units_sold} units sold
                 </Text>
               </View>
             </View>
             <View style={styles.slowStockBadge}>
-              <Text style={styles.slowStockDays}>{item.daysInStock}d</Text>
+              <Text style={styles.slowStockDays}>
+                {item.days_in_stock} days
+              </Text>
             </View>
           </View>
         ))}
@@ -344,7 +383,18 @@ export const StockRecommendationsSection: React.FC<
         {stockRecommendations.map((rec, index) => (
           <View key={index} style={styles.recommendationCard}>
             <View style={styles.recommendationIcon}>
-              <Octicons name="light-bulb" size={20} color="black" />
+              {rec.icon === "restock" && (
+                <Octicons name="package" size={20} color="#FFB800" />
+              )}
+              {rec.icon === "insight" && (
+                <Octicons name="graph" size={20} color="#FFB800" />
+              )}
+              {rec.icon === "trend" && (
+                <Octicons name="flame" size={20} color="#FFB800" />
+              )}
+              {!rec.icon && (
+                <Octicons name="light-bulb" size={20} color="#FFB800" />
+              )}
             </View>
             <View style={styles.recommendationContent}>
               <Text style={styles.recommendationMessage} numberOfLines={2}>
@@ -373,7 +423,7 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
     <View style={styles.chartCard}>
       <View style={styles.chartLegend}>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: "#2046AE" }]} />
+          <View style={[styles.legendDot, { backgroundColor: "#1155CC" }]} />
           <Text style={styles.legendText}>Sales</Text>
         </View>
         <View style={styles.legendItem}>

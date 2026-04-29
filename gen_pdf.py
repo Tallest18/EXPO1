@@ -768,9 +768,9 @@ story += [
 story += section_header("7. Navigation Structure")
 story += info_box("Inventra uses <b>expo-router v6</b> (file-based routing). The folder/file structure directly defines the navigation hierarchy.")
 nav_items = [
-    ("app/index.tsx", "Entry point — redirects immediately to (Anboarding)/Onboarding1"),
+    ("app/index.tsx", "Entry point — redirects immediately to (Onboarding)/Onboarding1"),
     ("app/_layout.tsx", "Root Stack layout. Handles auth guard, font loading, splash screen control."),
-    ("app/(Anboarding)/Onboarding1.tsx", "Branded splash screen. Shows for 5 seconds then navigates to WelcomeScreen."),
+    ("app/(Onboarding)/Onboarding1.tsx", "Branded splash screen. Shows for 5 seconds then navigates to WelcomeScreen."),
     ("app/(Auth)/_layout.tsx", "Auth stack: WelcomeScreen → VerificationScreen → BusinessSelectionScreen"),
     ("app/(Auth)/WelcomeScreen.tsx", "Phone number input and OTP send"),
     ("app/(Auth)/VerificationScreen.tsx", "6-digit OTP verification"),

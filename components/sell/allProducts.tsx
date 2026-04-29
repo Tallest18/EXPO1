@@ -64,7 +64,7 @@ const AllProducts: React.FC<AllProductsProps> = ({
                 numberOfLines={1}
                 adjustsFontSizeToFit
               >
-                ₦{(product.sellingPrice || 0).toLocaleString()}
+                ₦{(product.sellingPrice ?? 0).toLocaleString()}
               </Text>
             )}
 

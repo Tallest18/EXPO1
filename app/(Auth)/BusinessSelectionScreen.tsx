@@ -1,23 +1,24 @@
-// app/(routes)/BusinessSelectionScreen.tsx
-import { updateProfile } from "@/src/api";
+// app/(Auth)/BusinessSelectionScreen.tsx
+import { AUTH_PROFILE } from "@/src/api/endpoints";
+import { useApiMutation } from "@/src/api/useApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Platform,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const { width, height } = Dimensions.get("window");
+
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
 const scale = (size: number) =>
@@ -48,89 +49,56 @@ const businessTypes: BusinessType[] = [
   },
 ];
 
-export interface BusinessSelectionExtraProps {
-  onFinish?: (businessType: string) => void;
-  onGoBack?: () => void;
-}
-
-const CartIcon: React.FC<{ size?: number }> = ({ size = 60 }) => (
-  <Text style={{ fontSize: size }}>x:</Text>
-);
-
-const PeopleIcon: React.FC<{ size?: number }> = ({ size = 60 }) => (
-  <Text style={{ fontSize: size }}>x⬍"️</Text>
-);
-
-const BusinessSelectionScreen: React.FC<BusinessSelectionExtraProps> = ({
-  onFinish,
-  onGoBack,
-}) => {
-  const navigation = useNavigation<any>();
+const BusinessSelectionScreen: React.FC = () => {
   const [selectedType, setSelectedType] = useState<string>("retail");
   const [loading, setLoading] = useState(false);
+
+  const updateProfileMutation = useApiMutation("patch", AUTH_PROFILE, {
+    onError: (error: any) => {
+      console.error("API error updating profile:", error);
+    },
+  });
 
   const handleFinish = async () => {
     if (loading) return;
     setLoading(true);
 
     try {
-      if (onFinish) {
-        onFinish(selectedType);
-        setLoading(false);
-        return;
-      }
-
       await Promise.all([
         AsyncStorage.setItem("businessType", selectedType),
         AsyncStorage.setItem("hasCompletedOnboarding", "true"),
-        updateProfile({ business_type: selectedType }),
+        updateProfileMutation.mutateAsync({ business_type: selectedType }),
       ]);
 
-      try {
+      setTimeout(() => {
         router.replace("/(Main)/Home");
-      } catch {
-        try {
-          router.push("/(Main)/Home");
-        } catch {
-          if (navigation) {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "Main" }],
-            });
-          }
-        }
-      }
+      }, 100);
     } catch (error) {
       console.error("Error saving business type:", error);
-      Alert.alert("Setup Complete", "Welcome to Inventra!", [
-        {
-          text: "Continue",
-          onPress: () => {
-            try {
-              router.replace("/(Main)/Home");
-            } catch {
-              if (navigation) {
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: "Main" }],
-                });
-              }
-            }
+      Alert.alert(
+        "Setup Complete",
+        "Your business type was saved. Welcome to Inventra!",
+        [
+          {
+            text: "Continue",
+            onPress: () => {
+              setTimeout(() => {
+                router.replace("/(Main)/Home");
+              }, 100);
+            },
           },
-        },
-      ]);
+        ],
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoBack = () => {
-    if (onGoBack) {
-      onGoBack();
-    } else if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else if (router.canGoBack()) {
+    if (router.canGoBack()) {
       router.back();
+    } else {
+      router.replace("/(Auth)/WelcomeScreen");
     }
   };
 
@@ -157,9 +125,8 @@ const BusinessSelectionScreen: React.FC<BusinessSelectionExtraProps> = ({
               {business.description}
             </Text>
           </View>
-
           <View style={styles.businessIcon}>
-            {isRetail ? <CartIcon size={50} /> : <PeopleIcon size={50} />}
+            <Text style={{ fontSize: 50 }}>{isRetail ? "🛒" : "👥"}</Text>
           </View>
         </View>
         {isSelected && <View style={styles.selectionIndicator} />}
@@ -169,7 +136,7 @@ const BusinessSelectionScreen: React.FC<BusinessSelectionExtraProps> = ({
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#2046AE" />
+      <StatusBar barStyle="light-content" backgroundColor="#1155CC" />
 
       <View style={styles.topSection} />
 
@@ -199,6 +166,14 @@ const BusinessSelectionScreen: React.FC<BusinessSelectionExtraProps> = ({
         </ScrollView>
 
         <View style={styles.buttonContainer}>
+          {/* <TouchableOpacity
+            style={[styles.backButton, loading && styles.disabled]}
+            onPress={handleGoBack}
+            disabled={loading}
+          >
+            <Text style={styles.backButtonText}>Back</Text>
+          </TouchableOpacity> */}
+
           <TouchableOpacity
             style={[styles.finishButton, loading && styles.disabled]}
             onPress={handleFinish}
@@ -215,7 +190,7 @@ const BusinessSelectionScreen: React.FC<BusinessSelectionExtraProps> = ({
 
         {loading && (
           <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#2046AE" />
+            <ActivityIndicator size="large" color="#1155CC" />
             <Text style={styles.loadingText}>Setting up your account...</Text>
           </View>
         )}
@@ -225,8 +200,8 @@ const BusinessSelectionScreen: React.FC<BusinessSelectionExtraProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#2046AE" },
-  topSection: { height: verticalScale(320) },
+  container: { flex: 1, backgroundColor: "#1155CC" },
+  topSection: { height: verticalScale(200) },
   bottomSection: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: moderateScale(24),
@@ -237,7 +212,7 @@ const styles = StyleSheet.create({
   handleBar: {
     width: scale(80),
     height: verticalScale(4),
-    backgroundColor: "black",
+    backgroundColor: "#E5E7EB",
     borderRadius: moderateScale(2),
     alignSelf: "center",
     marginBottom: verticalScale(20),
@@ -249,30 +224,30 @@ const styles = StyleSheet.create({
     minHeight: verticalScale(360),
   },
   successText: {
-    fontSize: moderateScale(15),
-    color: "#2046AE",
+    fontSize: moderateScale(16),
+    color: "#1155CC",
     textAlign: "center",
     marginBottom: verticalScale(8),
-    fontFamily: "DMSans_700Bold",
+    fontFamily: "DMSans_400Regular",
   },
   title: {
-    fontSize: moderateScale(26),
+    fontSize: moderateScale(24),
     fontFamily: "DMSans_700Bold",
-    color: "#111827",
+    color: "#000000",
     textAlign: "center",
     marginBottom: verticalScale(8),
   },
   subtitle: {
     fontSize: moderateScale(16),
-    color: "#6B7280",
+    color: "#BCBCBC",
     textAlign: "center",
     lineHeight: moderateScale(22),
     marginBottom: verticalScale(24),
     fontFamily: "DMSans_400Regular",
   },
   sectionTitle: {
-    fontSize: moderateScale(19),
-    fontFamily: "DMSans_700Bold",
+    fontSize: moderateScale(16),
+    fontFamily: "DMSans_400Regular",
     color: "#111827",
     marginBottom: verticalScale(14),
   },
@@ -288,7 +263,7 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(10),
   },
   selectedOption: {
-    borderColor: "#2046AE",
+    borderColor: "#1155CC",
     backgroundColor: "#F8FAFC",
   },
   businessContent: {
@@ -300,13 +275,13 @@ const styles = StyleSheet.create({
   businessInfo: { flex: 1, paddingRight: scale(14) },
   businessTitle: {
     fontSize: moderateScale(16),
-    fontFamily: "DMSans_700Bold",
+    fontFamily: "DMSans_400Regular",
     color: "#111827",
     marginBottom: verticalScale(4),
   },
   businessDescription: {
-    fontSize: moderateScale(13),
-    color: "#6B7280",
+    fontSize: moderateScale(14),
+    color: "#BCBCBC",
     lineHeight: moderateScale(18),
     fontFamily: "DMSans_400Regular",
   },
@@ -322,17 +297,34 @@ const styles = StyleSheet.create({
     right: scale(8),
     width: scale(8),
     height: scale(8),
-    backgroundColor: "#2046AE",
+    backgroundColor: "#1155CC",
     borderRadius: moderateScale(4),
   },
   buttonContainer: {
+    flexDirection: "row",
+    gap: scale(12),
     paddingHorizontal: scale(24),
     paddingBottom:
       Platform.OS === "ios" ? verticalScale(30) : verticalScale(18),
     backgroundColor: "#FFFFFF",
   },
+  backButton: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: "#1155CC",
+    borderRadius: moderateScale(25),
+    paddingVertical: verticalScale(14),
+    alignItems: "center",
+    minHeight: verticalScale(50),
+  },
+  backButtonText: {
+    color: "#1155CC",
+    fontSize: moderateScale(18),
+    fontFamily: "DMSans_700Bold",
+  },
   finishButton: {
-    backgroundColor: "#2046AE",
+    flex: 2,
+    backgroundColor: "#1155CC",
     borderRadius: moderateScale(25),
     paddingVertical: verticalScale(14),
     alignItems: "center",
@@ -340,8 +332,8 @@ const styles = StyleSheet.create({
   },
   finishButtonText: {
     color: "#FFFFFF",
-    fontSize: moderateScale(18),
-    fontFamily: "DMSans_700Bold",
+    fontSize: moderateScale(14),
+    fontFamily: "DMSans_500Medium",
   },
   disabled: { opacity: 0.6 },
   loadingOverlay: {
@@ -359,10 +351,7 @@ const styles = StyleSheet.create({
     marginTop: verticalScale(10),
     fontSize: moderateScale(16),
     fontFamily: "DMSans_400Regular",
-    color: "#2046AE",
-  },
-  emoji: {
-    fontSize: moderateScale(42),
+    color: "#1155CC",
   },
 });
 

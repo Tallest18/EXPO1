@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     borderColor: "#D8E2F6",
   },
   cancelActionText: {
-    color: "#2046AE",
+    color: "#1155CC",
     fontSize: 14,
     fontFamily: "DMSans_600SemiBold",
   },

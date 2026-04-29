@@ -1,5 +1,5 @@
 import { FormData } from "@/hooks/useAddProductForm";
-import { listCategories } from "@/src/api";
+import { useProductsData } from "@/hooks/useProductsData";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
@@ -49,30 +49,18 @@ const ProductFormModal: React.FC<Props> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [imageUploading] = useState(false);
-  const [availableCategories, setAvailableCategories] = useState<
-    Array<{ id: number; name: string }>
-  >([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const { categories, dataLoading: categoriesLoading } = useProductsData();
+  const availableCategories = (categories?.results || []).map((c: any) => ({
+    id: c.id,
+    name: c.name,
+  }));
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
   const { pickImage } = useImagePicker((image) =>
     updateFormData("productImage", image),
   );
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      setCategoriesLoading(true);
-      try {
-        const categories = await listCategories();
-        setAvailableCategories(categories || []);
-      } catch {
-        setAvailableCategories([]);
-      } finally {
-        setCategoriesLoading(false);
-      }
-    };
-    fetchCategories();
-  }, []);
+  // (category fetching now handled by TanStack Query)
 
   // Reset step when modal opens
   useEffect(() => {

@@ -1,35 +1,40 @@
 export interface FinancialSummary {
+  totalSales: number;
+  totalCost: number;
   totalProfit: number;
-  totalRevenue: number;
-  totalExpenses: number;
+  totalSalesChange: number;
+  totalCostChange: number;
+  totalProfitChange: number;
 }
 
 export interface DailySummary {
-  revenue: number;
+  salesAmount: number;
   profit: number;
-  sales: number;
-  orders: number;
-  date: string;
+  transactions: number;
+  itemsSold: number;
 }
 
 export interface TopProduct {
-  name: string;
-  quantity: number;
-  revenue: number;
-  imageUrl: string;
+  product_id: string;
+  product_name: string;
+  image_url: string | null;
+  units_sold: number;
   profit: number;
 }
 
 export interface SlowMovingProduct {
-  name: string;
-  daysInStock: number;
-  quantity: number;
-  imageUrl: string;
+  product_id: string;
+  product_name: string;
+  image_url: string | null;
+  units_sold: number;
+  days_in_stock: number;
 }
 
 export interface StockRecommendation {
-  type: "warning" | "info" | "success";
+  type: string;
   icon: string;
+  product_id?: string;
+  product_name?: string;
   message: string;
   detail: string;
 }
@@ -43,9 +48,11 @@ export interface SeasonalInsight {
 
 export interface MonthlyReport {
   month: string;
+  status?: string;
   totalSales: number;
   totalCost: number;
   totalProfit: number;
+  pdfUrl?: string;
 }
 
 export interface ChartData {

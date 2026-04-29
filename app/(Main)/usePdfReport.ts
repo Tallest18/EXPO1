@@ -35,17 +35,17 @@ export const usePdfReport = ({
 
       const html = `<!DOCTYPE html><html><head><style>
         body{font-family:'Helvetica','Arial',sans-serif;padding:40px;color:#1F2937}
-        .header{text-align:center;margin-bottom:40px;border-bottom:3px solid #2046AE;padding-bottom:20px}
-        .header h1{color:#2046AE;margin:0;font-size:32px}
+        .header{text-align:center;margin-bottom:40px;border-bottom:3px solid #1155CC;padding-bottom:20px}
+        .header h1{color:#1155CC;margin:0;font-size:32px}
         .header p{color:#6B7280;margin:10px 0 0 0;font-size:16px}
         .section{margin-bottom:30px}
-        .section-title{font-size:20px;font-weight:bold;color:#2046AE;margin-bottom:15px;border-left:4px solid #2046AE;padding-left:10px}
+        .section-title{font-size:20px;font-weight:bold;color:#1155CC;margin-bottom:15px;border-left:4px solid #1155CC;padding-left:10px}
         .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:30px}
         .stat-card{background:#F3F4F6;padding:20px;border-radius:8px;text-align:center}
         .stat-label{color:#6B7280;font-size:14px;margin-bottom:8px}
         .stat-value{color:#1F2937;font-size:24px;font-weight:bold}
         .products-table{width:100%;border-collapse:collapse;margin-top:15px}
-        .products-table th{background:#2046AE;color:white;padding:12px;text-align:left;font-size:14px}
+        .products-table th{background:#1155CC;color:white;padding:12px;text-align:left;font-size:14px}
         .products-table td{padding:12px;border-bottom:1px solid #E5E7EB;font-size:14px}
         .products-table tr:nth-child(even){background:#F9FAFB}
         .footer{margin-top:50px;text-align:center;color:#9CA3AF;font-size:12px;border-top:1px solid #E5E7EB;padding-top:20px}
@@ -86,7 +86,7 @@ export const usePdfReport = ({
         ${
           stockRecommendations.length > 0
             ? `<div class="section"><div class="section-title">Stock Recommendations</div>
-          ${stockRecommendations.map((r) => `<div style="background:#F9FAFB;padding:15px;margin-bottom:10px;border-radius:8px;border-left:4px solid #2046AE;"><strong>${r.message}</strong><br><span style="color:#6B7280;font-size:14px;">${r.detail}</span></div>`).join("")}
+          ${stockRecommendations.map((r) => `<div style="background:#F9FAFB;padding:15px;margin-bottom:10px;border-radius:8px;border-left:4px solid #1155CC;"><strong>${r.message}</strong><br><span style="color:#6B7280;font-size:14px;">${r.detail}</span></div>`).join("")}
         </div>`
             : ""
         }

@@ -155,20 +155,21 @@ export async function deleteProduct(id: string | number): Promise<void> {
   await apiClient.delete(`/products/items/${id}/`);
 }
 
+// Support both array and paginated object responses
+type Category = { id: number; name: string; description?: string | null };
+type Supplier = { id: number; name: string; phone?: string | null };
+type Paginated<T> = { results: T[] };
+
 export async function listCategories(): Promise<
-  Array<{ id: number; name: string; description?: string | null }>
+  Category[] | Paginated<Category>
 > {
-  const response = await apiClient.get<
-    Array<{ id: number; name: string; description?: string | null }>
-  >("/products/categories/");
+  const response = await apiClient.get("/products/categories/");
   return response.data;
 }
 
 export async function listSuppliers(): Promise<
-  Array<{ id: number; name: string; phone?: string | null }>
+  Supplier[] | Paginated<Supplier>
 > {
-  const response = await apiClient.get<
-    Array<{ id: number; name: string; phone?: string | null }>
-  >("/products/suppliers/");
+  const response = await apiClient.get("/products/suppliers/");
   return response.data;
 }

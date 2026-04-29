@@ -97,7 +97,7 @@ export const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: getFontSize(moderateScale(isSmallDevice ? 10 : 12)),
-    color: "#2046AE",
+    color: "#1155CC",
     fontFamily: "DMSans_600SemiBold",
   },
   dailySummaryCard: { gap: scale(10) },
@@ -382,7 +382,7 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#2046AE",
+    backgroundColor: "#1155CC",
     paddingVertical: verticalScale(13),
     borderRadius: moderateScale(50),
     gap: scale(8),

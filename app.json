@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "inventra",
-    "icon": "./assets/images/adaptive-icon.png",
+    "icon": "./assets/images/logo1.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
 
@@ -18,7 +18,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "INVENTRA2.W",
       "googleServicesFile": "./GoogleService-info.plist",
-      "icon": "./assets/images/adaptive-icon.png",
+      "icon": "./assets/images/logo1.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
@@ -27,7 +27,7 @@
 
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/logo1.png",
         "backgroundColor": "#1155CC"
       },
       "edgeToEdgeEnabled": true,

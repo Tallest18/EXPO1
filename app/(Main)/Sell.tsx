@@ -1,7 +1,8 @@
 import AllProducts from "@/components/sell/allProducts";
 import SalesHistory, { Sale } from "@/components/sell/saleHistory";
 import ConfirmModal from "@/components/ui/ConfirmModal";
-import { ApiProduct, ApiSale, listProducts, listSales } from "@/src/api";
+import { useSales } from "@/hooks/useSales";
+import { ApiProduct, listProducts } from "@/src/api";
 import Feather from "@expo/vector-icons/Feather";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -75,22 +76,31 @@ const mapApiProduct = (p: ApiProduct): Product => ({
   userId: "api-user",
 });
 
+// Map API Sale (from backend) to UI Sale (for SalesHistory)
+import type { Sale as ApiSale } from "@/hooks/useSales";
+
 const mapApiSale = (sale: ApiSale): Sale => ({
   id: String(sale.id),
   transactionId:
-    sale.transaction_id || `TXN-${String(sale.id).padStart(4, "0")}`,
-  items: (sale.items || []).map((item) => ({
-    productId: String(item.product),
-    productName: item.product_name || "Unknown Product",
+    sale.transaction_ref || `TXN-${String(sale.id).padStart(4, "0")}`,
+  items: (sale.items || []).map((item: any) => ({
+    productId: String(
+      typeof item.product === "object" ? item.product.id : item.product,
+    ),
+    productName:
+      item.product_name ||
+      (typeof item.product === "object"
+        ? item.product.name
+        : "Unknown Product"),
     quantity: Number(item.quantity || 0),
     unitPrice: Number(item.unit_price || 0),
-    totalPrice: Number(item.subtotal || 0),
-    productImage: item.product_image || null,
+    totalPrice: Number(item.unit_price || 0) * Number(item.quantity || 0),
+    productImage: undefined,
   })),
   totalAmount: Number(sale.total_amount || 0),
-  paymentMethod: sale.payment_method || "cash",
-  date: sale.sale_date || sale.created_at || new Date().toISOString(),
-  timestamp: sale.sale_date || sale.created_at || new Date().toISOString(),
+  paymentMethod: (sale as any).payment_method || "cash",
+  date: sale.created_at || new Date().toISOString(),
+  timestamp: sale.created_at || new Date().toISOString(),
 });
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -100,7 +110,15 @@ const Sell: React.FC = () => {
   const params = useLocalSearchParams();
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
+  // const [sales, setSales] = useState<Sale[]>([]);
+  const {
+    data: salesData,
+    isLoading: salesLoading,
+    error: salesError,
+  } = useSales();
+
+  console.log("Sales data:", salesData);
+
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -120,12 +138,9 @@ const Sell: React.FC = () => {
   }, [params.tab]);
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadProducts = async () => {
       try {
-        const [productsRes, salesRes] = await Promise.all([
-          listProducts(),
-          listSales(),
-        ]);
+        const productsRes = await listProducts();
         setProducts(
           productsRes
             .map(mapApiProduct)
@@ -135,23 +150,13 @@ const Sell: React.FC = () => {
                 new Date(a.dateAdded).getTime(),
             ),
         );
-        setSales(
-          salesRes
-            .map(mapApiSale)
-            .sort(
-              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-            ),
-        );
       } catch (err: any) {
-        Alert.alert("Error", err?.message || "Failed to load data");
+        Alert.alert("Error", err?.message || "Failed to load products");
       } finally {
         setLoading(false);
       }
     };
-
-    loadData();
-    const interval = setInterval(loadData, 15_000);
-    return () => clearInterval(interval);
+    loadProducts();
   }, []);
 
   const filteredProducts = useMemo(() => {
@@ -227,7 +232,7 @@ const Sell: React.FC = () => {
 
   // ─── Loading ─────────────────────────────────────────────────────────────
 
-  if (loading) {
+  if (loading || salesLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -334,7 +339,7 @@ const Sell: React.FC = () => {
           onDecrement={handleDecrement}
         />
       ) : (
-        <SalesHistory sales={sales} />
+        <SalesHistory sales={(salesData?.results ?? []).map(mapApiSale)} />
       )}
 
       {/* View Cart FAB */}

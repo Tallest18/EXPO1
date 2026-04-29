@@ -3,10 +3,10 @@ import React, { useEffect } from "react";
 import { AppStackParamList } from "./types";
 
 // Import all your screen components
-import Onboarding1 from "@/app/(Anboarding)/Onboarding1";
 import BusinessSelectionScreen from "@/app/(Auth)/BusinessSelectionScreen";
 import VerificationScreen from "@/app/(Auth)/VerificationScreen";
 import WelcomeScreen from "@/app/(Auth)/WelcomeScreen";
+import Onboarding1 from "@/app/(Onboarding)/Onboarding1";
 import Cart from "@/app/(Routes)/Cart";
 import Checkout from "@/app/(Routes)/Checkout";
 import MessagesScreen from "@/app/(Routes)/MessagesScreen";

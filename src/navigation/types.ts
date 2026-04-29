@@ -44,5 +44,5 @@ export type AppStackParamList = {
 
   "(Main)": NavigatorScreenParams<MainTabParamList>;
   "(Auth)": undefined;
-  "(Anboarding)": undefined;
+  "(Onboarding)": undefined;
 };

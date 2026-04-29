@@ -1,4 +1,5 @@
-import { DUMMY_PRODUCTS, Product } from "@/src/api/dummyData/dummyProducts";
+import { useProductsData } from "@/hooks/useProductsData";
+import { Product as UIProduct } from "@/src/api/dummyData/dummyProducts";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -49,13 +50,11 @@ const H_PAD = isTablet ? scale(32) : isSmallDevice ? scale(14) : scale(20);
 const Inventory: React.FC = () => {
   const router = useRouter();
   const { focusProductId } = useLocalSearchParams();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<UIProduct[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<UIProduct[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true);
   const [showAddProduct, setShowAddProduct] = useState<boolean>(false);
-
   const [filterCounts, setFilterCounts] = useState<FilterCounts>({
     all: 0,
     inStock: 0,
@@ -63,20 +62,39 @@ const Inventory: React.FC = () => {
     expiring: 0,
   });
 
-  useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      const productsData = [...DUMMY_PRODUCTS].sort(
-        (a, b) =>
-          new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime(),
-      );
-      setProducts(productsData);
-      calculateFilterCounts(productsData);
-      setLoading(false);
-    }, 800);
-  }, []);
+  // TanStack Query: fetch user inventory from API
+  const {
+    userInventory: userInventoryData,
+    dataLoading: loading,
+    // error: not exposed in unified hook, handle as needed
+  } = useProductsData(searchQuery);
 
-  const calculateFilterCounts = (productsData: Product[]): void => {
+  // Map API product to UI Product type
+  function mapApiProductToUI(p: ApiProduct): UIProduct {
+    if (typeof p.barcode !== "string") {
+      console.warn("API barcode is not string, got:", p.barcode);
+    }
+    return {
+      id: String(p.id),
+      name: p.name,
+      category: String(p.category),
+      barcode: String(p.barcode),
+      image: p.image_url ? { uri: p.image_url } : null,
+      quantityType: p.quantity_type || "Single Items",
+      unitsInStock: p.quantity,
+      profitPerUnit: p.selling_price - p.buying_price,
+      costPrice: p.buying_price,
+      sellingPrice: p.selling_price,
+      lowStockThreshold: p.low_stock_threshold,
+      expiryDate: p.expiry_date,
+      supplier: { name: p.supplier_name, phone: p.supplier_phone },
+      dateAdded: new Date().toISOString(),
+      userId: "api-user",
+    };
+  }
+
+  // Calculate filter counts
+  const calculateFilterCounts = (productsData: UIProduct[]): void => {
     const now = new Date();
     const tenDaysFromNow = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
     const counts: FilterCounts = {
@@ -85,21 +103,32 @@ const Inventory: React.FC = () => {
       outOfStock: 0,
       expiring: 0,
     };
-
     productsData.forEach((product) => {
       if (product.unitsInStock > 0) counts.inStock++;
       else counts.outOfStock++;
-
       if (product.expiryDate) {
         const expiryDate = new Date(product.expiryDate);
         if (expiryDate <= tenDaysFromNow && expiryDate > now) counts.expiring++;
       }
     });
-
     setFilterCounts(counts);
   };
 
-  const performSearch = (q: string): Product[] => {
+  // Map and set products when user inventory data changes
+  useEffect(() => {
+    if (userInventoryData && userInventoryData.results) {
+      const mapped = userInventoryData.results
+        .map(mapApiProductToUI)
+        .sort(
+          (a, b) =>
+            new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime(),
+        );
+      setProducts(mapped);
+      calculateFilterCounts(mapped);
+    }
+  }, [userInventoryData]);
+
+  const performSearch = (q: string): UIProduct[] => {
     if (!q.trim()) return products;
     const searchTerm = q.toLowerCase().trim();
     return products.filter((product) => {
@@ -136,7 +165,6 @@ const Inventory: React.FC = () => {
       });
     }
 
-    // Move focusProductId to the top if present
     if (focusProductId) {
       const idx = filtered.findIndex((p) => p.id === focusProductId);
       if (idx > -1) {
@@ -201,7 +229,7 @@ const Inventory: React.FC = () => {
 
   const cardWidth = isTablet ? (width - H_PAD * 2 - scale(16)) / 2 : "100%";
 
-  const renderProductCard = (product: Product): React.ReactElement => {
+  const renderProductCard = (product: UIProduct): React.ReactElement => {
     return (
       <TouchableOpacity
         key={product.id}
@@ -237,7 +265,7 @@ const Inventory: React.FC = () => {
                   numberOfLines={1}
                   adjustsFontSizeToFit
                 >
-                  ₦{product.sellingPrice.toLocaleString()}
+                  ₦{(product.sellingPrice ?? 0).toLocaleString()}
                 </Text>
               </View>
 
@@ -255,7 +283,7 @@ const Inventory: React.FC = () => {
                     numberOfLines={1}
                     adjustsFontSizeToFit
                   >
-                    ₦{product?.profitPerUnit?.toLocaleString()}
+                    ₦{(product?.profitPerUnit ?? 0).toLocaleString()}
                   </Text>
                 </View>
               </View>
@@ -340,9 +368,6 @@ const Inventory: React.FC = () => {
             value={searchQuery}
             onChangeText={handleSearchChange}
             placeholderTextColor="#999"
-            returnKeyType="search"
-            autoCapitalize="none"
-            autoCorrect={false}
           />
         </View>
         <TouchableOpacity style={styles.filterButton} activeOpacity={0.7}>
@@ -368,6 +393,7 @@ const Inventory: React.FC = () => {
         </View>
         <View style={styles.bottomPadding} />
       </ScrollView>
+
       {showAddProduct && (
         <AddProductFlow
           visible={showAddProduct}

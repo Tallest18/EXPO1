@@ -2,20 +2,20 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert } from "react-native";
 
 import {
-  Notification,
-  Product,
-  SalesSummaryItem,
-  UserData,
+    Notification,
+    Product,
+    SalesSummaryItem,
+    UserData,
 } from "@/components/homeTypes";
 import {
-  ApiProduct,
-  ApiSale,
-  ApiSaleItem,
-  getDashboardOverview,
-  getProfile,
-  listNotifications,
-  listProducts,
-  listSales,
+    ApiProduct,
+    ApiSale,
+    ApiSaleItem,
+    getDashboardOverview,
+    getProfile,
+    listNotifications,
+    listProducts,
+    listSales,
 } from "@/src/api";
 
 const mapApiProduct = (product: ApiProduct): Product => ({
@@ -105,7 +105,11 @@ export const useHomeData = () => {
         listNotifications(),
       ]);
 
-      const mappedProducts = productsResponse.map(mapApiProduct);
+      // Fix: support both array and paginated object
+      const productsArr = Array.isArray(productsResponse)
+        ? productsResponse
+        : productsResponse?.results || [];
+      const mappedProducts = productsArr.map(mapApiProduct);
       const salesSummary = toSalesSummary(salesResponse);
       const mappedNotifications: Notification[] = notificationsRes.map((n) => ({
         id: String(n.id),

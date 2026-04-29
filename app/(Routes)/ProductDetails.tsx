@@ -243,11 +243,11 @@ const ProductDetails: React.FC = () => {
             { label: "Unit Type", value: product.quantityType },
             {
               label: "Cost Price",
-              value: `₦${product.costPrice.toLocaleString()}`,
+              value: `₦${(product.costPrice ?? 0).toLocaleString()}`,
             },
             {
               label: "Selling Price",
-              value: `₦${product.sellingPrice.toLocaleString()}`,
+              value: `₦${(product.sellingPrice ?? 0).toLocaleString()}`,
             },
           ].map(({ label, value }) => (
             <View key={label} style={styles.row}>
