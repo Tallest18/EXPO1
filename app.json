@@ -99,7 +99,8 @@
       "router": {},
       "eas": {
         "projectId": "7273a755-63cd-4cbb-8f40-8a5855b129bf"
-      }
+      },
+      "EXPO_PUBLIC_API_BASE_URL": "https://cyberiah.pythonanywhere.com"
     },
 
     "runtimeVersion": {
