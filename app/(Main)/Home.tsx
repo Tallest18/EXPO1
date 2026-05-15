@@ -11,7 +11,7 @@ import { useHomeData } from "@/hooks/useHomeData";
 import ActionButtons from "../../components/ActionButtons";
 
 const Home = () => {
-  const { openAddProduct } = useContext(AddProductContext);
+  const { openAddProduct, openRestockProduct } = useContext(AddProductContext);
   const { inventory, notifications, userData } = useHomeData();
 
   const renderHeader = () => (
@@ -28,7 +28,13 @@ const Home = () => {
     </>
   );
 
-  const renderFooter = () => <NotificationFeed notifications={notifications} />;
+  const renderFooter = () => (
+    <NotificationFeed
+      notifications={notifications}
+      inventory={inventory}
+      onRestockProduct={openRestockProduct}
+    />
+  );
 
   return (
     <SafeAreaView style={styles.container}>

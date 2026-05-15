@@ -13,9 +13,12 @@ import {
 } from "react-native";
 import { styles } from "./components/Cart.styles";
 
+import { apiClient } from "@/src/api";
 import { PRODUCTS_ITEM } from "@/src/api/endpoints";
-import axios from "axios";
 import { scale, verticalScale } from "../(Main)/scaling";
+
+const normalizeEndpoint = (endpoint: string) =>
+  endpoint.startsWith("/api/") ? endpoint.replace(/^\/api/, "") : endpoint;
 
 // Types
 interface Product {
@@ -44,7 +47,7 @@ interface Product {
 }
 
 interface CartItem {
-  productId: string;
+  id: string;
   quantity: number;
   product?: Product;
 }
@@ -59,7 +62,12 @@ const Cart: React.FC = () => {
     let cartItems: CartItem[] = [];
     if (params.cartData) {
       try {
-        cartItems = JSON.parse(params.cartData as string);
+        const parsed = JSON.parse(params.cartData as string) as Array<
+          CartItem & { productId?: string }
+        >;
+        cartItems = parsed
+          .map((item) => ({ ...item, id: item.id || item.productId || "" }))
+          .filter((item) => !!item.id);
       } catch (parseError) {
         Alert.alert("Error", "Failed to load cart data");
         setCart([]);
@@ -75,9 +83,13 @@ const Cart: React.FC = () => {
     setLoading(true);
     Promise.all(
       cartItems.map(async (item) => {
+        if (item.product) {
+          return item;
+        }
+
         try {
-          const { data: productData } = await axios.get(
-            PRODUCTS_ITEM(item.productId),
+          const { data: productData } = await apiClient.get(
+            normalizeEndpoint(PRODUCTS_ITEM(item.id)),
           );
           if (productData) {
             return {
@@ -117,20 +129,20 @@ const Cart: React.FC = () => {
     });
   }, [params.cartData, params.timestamp]);
 
-  const updateQuantity = (productId: string, newQuantity: number): void => {
+  const updateQuantity = (id: string, newQuantity: number): void => {
     if (newQuantity < 1) {
-      removeFromCart(productId);
+      removeFromCart(id);
       return;
     }
 
     const updatedCart = cart.map((item) =>
-      item.productId === productId ? { ...item, quantity: newQuantity } : item,
+      item.id === id ? { ...item, quantity: newQuantity } : item,
     );
     setCart(updatedCart);
   };
 
-  const incrementQuantity = (productId: string): void => {
-    const item = cart.find((i) => i.productId === productId);
+  const incrementQuantity = (id: string): void => {
+    const item = cart.find((i) => i.id === id);
     if (item && item.product) {
       if (item.quantity >= item.product.unitsInStock) {
         Alert.alert(
@@ -139,19 +151,19 @@ const Cart: React.FC = () => {
         );
         return;
       }
-      updateQuantity(productId, item.quantity + 1);
+      updateQuantity(id, item.quantity + 1);
     }
   };
 
-  const decrementQuantity = (productId: string): void => {
-    const item = cart.find((i) => i.productId === productId);
+  const decrementQuantity = (id: string): void => {
+    const item = cart.find((i) => i.id === id);
     if (item) {
-      updateQuantity(productId, item.quantity - 1);
+      updateQuantity(id, item.quantity - 1);
     }
   };
 
-  const removeFromCart = (productId: string): void => {
-    const updatedCart = cart.filter((item) => item.productId !== productId);
+  const removeFromCart = (id: string): void => {
+    const updatedCart = cart.filter((item) => item.id !== id);
     setCart(updatedCart);
 
     // If cart is empty after removal, go back
@@ -198,7 +210,7 @@ const Cart: React.FC = () => {
     const itemTotal = item.product.sellingPrice * item.quantity;
 
     return (
-      <View key={`${item.productId}-${index}`} style={styles.cartItem}>
+      <View key={`${item.id}-${index}`} style={styles.cartItem}>
         <View style={styles.productImageContainer}>
           <Image
             source={
@@ -216,7 +228,7 @@ const Cart: React.FC = () => {
               {item.product.name}
             </Text>
             <TouchableOpacity
-              onPress={() => removeFromCart(item.productId)}
+              onPress={() => removeFromCart(item.id)}
               style={styles.removeButton}
               hitSlop={{
                 top: verticalScale(10),
@@ -238,7 +250,7 @@ const Cart: React.FC = () => {
           <View style={styles.bottomRow}>
             <View style={styles.quantityControl}>
               <TouchableOpacity
-                onPress={() => decrementQuantity(item.productId)}
+                onPress={() => decrementQuantity(item.id)}
                 style={styles.quantityButton}
               >
                 <Text style={styles.quantityButtonText}>-</Text>
@@ -247,7 +259,7 @@ const Cart: React.FC = () => {
               <Text style={styles.quantityText}>{item.quantity}</Text>
 
               <TouchableOpacity
-                onPress={() => incrementQuantity(item.productId)}
+                onPress={() => incrementQuantity(item.id)}
                 style={styles.quantityButton}
               >
                 <Text style={styles.quantityButtonText}>+</Text>

@@ -104,12 +104,52 @@ interface ImageAsset {
   height?: number;
 }
 
+interface NamedOption {
+  id: number;
+  name: string;
+}
+
+interface PaginatedNamedOption {
+  results?: NamedOption[];
+}
+
+const toNamedOptions = (
+  input: NamedOption[] | PaginatedNamedOption,
+): NamedOption[] => (Array.isArray(input) ? input : input?.results || []);
+
+const parseExpiryDateParts = (rawInput?: string) => {
+  const raw = (rawInput || "").trim();
+  if (!raw) return { day: "", month: "", year: "" };
+
+  // Backend/API format (and ISO date prefix): YYYY-MM-DD
+  const isoLike = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (isoLike) {
+    const [, y, m, d] = isoLike;
+    return {
+      day: String(Number(d)).padStart(2, "0"),
+      month: String(Number(m)).padStart(2, "0"),
+      year: y,
+    };
+  }
+
+  // Legacy UI format: MM/DD/YYYY
+  const slash = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slash) {
+    const [, m, d, y] = slash;
+    return {
+      day: String(Number(d)).padStart(2, "0"),
+      month: String(Number(m)).padStart(2, "0"),
+      year: y,
+    };
+  }
+
+  return { day: "", month: "", year: "" };
+};
+
 // ------------------- UTILITY FUNCTIONS -------------------
 
 const parseProductToFormData = (product: Product): FormData => {
-  const [month = "", day = "", year = ""] = product.expiryDate
-    ? product.expiryDate.split("/")
-    : ["", "", ""];
+  const { day, month, year } = parseExpiryDateParts(product.expiryDate);
 
   return {
     productName: product.name,
@@ -181,10 +221,13 @@ const EditProduct: React.FC = () => {
       }
 
       try {
-        const [apiProduct, categories] = await Promise.all([
+        const [apiProduct, categoriesRaw] = await Promise.all([
           getProduct(productIdString),
           listCategories(),
         ]);
+        const categories = toNamedOptions(
+          categoriesRaw as NamedOption[] | PaginatedNamedOption,
+        );
         setAvailableCategories(
           categories.map((item) => ({ id: item.id, name: item.name })),
         );
@@ -401,10 +444,17 @@ const EditProduct: React.FC = () => {
     setUpdating(true);
 
     try {
-      const [categories, suppliers] = await Promise.all([
+      const [categoriesRaw, suppliersRaw] = await Promise.all([
         listCategories(),
         listSuppliers(),
       ]);
+
+      const categories = toNamedOptions(
+        categoriesRaw as NamedOption[] | PaginatedNamedOption,
+      );
+      const suppliers = toNamedOptions(
+        suppliersRaw as NamedOption[] | PaginatedNamedOption,
+      );
 
       if (!categories.length || !suppliers.length) {
         Alert.alert(

@@ -5,11 +5,12 @@ import * as SplashScreen from "expo-splash-screen";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, Text, TextInput } from "react-native";
 import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
+    SafeAreaProvider,
+    useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
 import { AddProductContext } from "@/context/AddProductContext";
+import type { Product as AddProductModel } from "@/hooks/useAddProductForm";
 import { clearTokens, getAccessToken, getProfile } from "@/src/api";
 import { FONT_ASSETS, FONT_FAMILY } from "../constants/fonts";
 import AddProductFlow from "./(Routes)/AddProductFlow";
@@ -28,6 +29,10 @@ function AppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [queryClient] = useState(() => new QueryClient());
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [addProductInitialProduct, setAddProductInitialProduct] = useState<
+    AddProductModel | undefined
+  >(undefined);
+  const [addProductStartStep, setAddProductStartStep] = useState(0);
   const router = useRouter();
   const segments = useSegments();
   const insets = useSafeAreaInsets();
@@ -130,10 +135,28 @@ function AppContent() {
   if (!fontsLoaded && !fontError) return null;
   if (isAuthenticated === null) return null;
 
+  const openAddProduct = () => {
+    setAddProductInitialProduct(undefined);
+    setAddProductStartStep(0);
+    setShowAddProduct(true);
+  };
+
+  const openRestockProduct = (product: AddProductModel) => {
+    setAddProductInitialProduct(product);
+    setAddProductStartStep(1);
+    setShowAddProduct(true);
+  };
+
+  const closeAddProduct = () => {
+    setShowAddProduct(false);
+    setAddProductInitialProduct(undefined);
+    setAddProductStartStep(0);
+  };
+
   return (
     <QueryClientProvider client={queryClient}>
       <AddProductContext.Provider
-        value={{ openAddProduct: () => setShowAddProduct(true) }}
+        value={{ openAddProduct, openRestockProduct }}
       >
         <Stack
           screenOptions={{
@@ -152,8 +175,10 @@ function AppContent() {
 
         <AddProductFlow
           visible={showAddProduct}
-          onClose={() => setShowAddProduct(false)}
-          onSaveProduct={() => setShowAddProduct(false)}
+          onClose={closeAddProduct}
+          onSaveProduct={closeAddProduct}
+          initialProduct={addProductInitialProduct}
+          startStep={addProductStartStep}
         />
       </AddProductContext.Provider>
     </QueryClientProvider>

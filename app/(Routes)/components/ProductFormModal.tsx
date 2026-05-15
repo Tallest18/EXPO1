@@ -3,21 +3,21 @@ import { useProductsData } from "@/hooks/useProductsData";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Dimensions,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Dimensions,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import {
-  PricingStep,
-  ProductInfoStep,
-  ProductSummary,
-  StockExtrasStep,
+    PricingStep,
+    ProductInfoStep,
+    ProductSummary,
+    StockExtrasStep,
 } from "./ProductFormSteps";
 import { useImagePicker } from "./useImagePicker";
 
@@ -35,6 +35,7 @@ interface Props {
   onClose: () => void;
   onScanBarcode?: () => void;
   title?: string;
+  initialStep?: number;
 }
 
 const ProductFormModal: React.FC<Props> = ({
@@ -46,11 +47,14 @@ const ProductFormModal: React.FC<Props> = ({
   onClose,
   onScanBarcode,
   title,
+  initialStep = 0,
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [imageUploading] = useState(false);
-  const { categories, dataLoading: categoriesLoading } = useProductsData();
-  const availableCategories = (categories?.results || []).map((c: any) => ({
+  const { categories, loadingCategories } = useProductsData();
+  const availableCategories = (
+    Array.isArray(categories) ? categories : (categories as any)?.results || []
+  ).map((c: any) => ({
     id: c.id,
     name: c.name,
   }));
@@ -64,8 +68,8 @@ const ProductFormModal: React.FC<Props> = ({
 
   // Reset step when modal opens
   useEffect(() => {
-    if (visible) setCurrentStep(0);
-  }, [visible]);
+    if (visible) setCurrentStep(initialStep);
+  }, [visible, initialStep]);
 
   const validateStep = (step: number): boolean => {
     if (step === 0) {
@@ -164,7 +168,7 @@ const ProductFormModal: React.FC<Props> = ({
             formData={formData}
             updateFormData={updateFormData}
             availableCategories={availableCategories}
-            categoriesLoading={categoriesLoading}
+            categoriesLoading={loadingCategories}
             showCategoryDropdown={showCategoryDropdown}
             setShowCategoryDropdown={setShowCategoryDropdown}
             imageUploading={imageUploading}

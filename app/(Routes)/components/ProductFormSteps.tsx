@@ -126,7 +126,7 @@ export const ProductInfoStep: React.FC<ProductInfoStepProps> = ({
       </View>
 
       {/* SKU / Barcode */}
-      <View style={styles.fieldGroup}>
+      {/* <View style={styles.fieldGroup}>
         <FieldLabel label="SKU / Barcode" required />
         <View style={styles.skuRow}>
           <TextInput
@@ -142,7 +142,7 @@ export const ProductInfoStep: React.FC<ProductInfoStepProps> = ({
             <Text style={styles.scanButtonText}>Scan</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </View> */}
 
       {/* Product Category */}
       <View style={[styles.fieldGroup, { marginBottom: 0 }]}>

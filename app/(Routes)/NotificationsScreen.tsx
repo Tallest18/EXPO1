@@ -3,14 +3,14 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Dimensions,
-  FlatList,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Dimensions,
+    FlatList,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 import { listNotifications } from "@/src/api";
@@ -105,14 +105,17 @@ const NotificationsScreen = () => {
 
     const loadNotifications = async () => {
       try {
-        const response = await listNotifications();
-        const fetched: Notification[] = response.map((n) => ({
+        const response = await listNotifications({ page: 0, page_size: 20 });
+        const fetched: Notification[] = response.results.map((n) => ({
           id: String(n.id),
           type: (n.type as Notification["type"]) || "daily_summary",
           title: n.title,
-          message: n.message,
+          message: n.description || n.message || "",
           time: getTimeAgo(n.created_at),
-          isRead: n.is_read,
+          isRead:
+            typeof n.is_read === "boolean"
+              ? n.is_read
+              : String(n.status || "").toLowerCase() === "read",
           productId: n.product ? String(n.product) : undefined,
           dateAdded: n.created_at
             ? new Date(n.created_at).getTime()

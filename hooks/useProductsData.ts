@@ -7,7 +7,16 @@ import {
 } from "@/src/api/products";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-export function useProductsData(search?: string) {
+interface ProductsDataParams {
+  search?: string;
+  filter?: "inStock" | "outOfStock" | "expiring";
+  page?: number;
+  page_size?: number;
+  category?: number;
+}
+
+export function useProductsData(params: ProductsDataParams = {}) {
+  const { search, filter, page, page_size, category } = params;
   const queryClient = useQueryClient();
   // Product categories
   const { data: categories, isLoading: loadingCategories } = useQuery({
@@ -20,18 +29,35 @@ export function useProductsData(search?: string) {
   const { data: products, isLoading: loadingProducts } = useQuery({
     queryKey: ["products", search],
     queryFn: async () => {
-      const params = search ? { search } : {};
-      return (await apiClient.get(endpoints.PRODUCTS_ITEMS, { params })).data;
+      const queryParams = search ? { search } : {};
+      return (
+        await apiClient.get(endpoints.PRODUCTS_ITEMS, { params: queryParams })
+      ).data;
     },
   });
 
   // User inventory (optionally filtered by search)
   const { data: userInventory, isLoading: loadingInventory } = useQuery({
-    queryKey: ["user-inventory", search],
+    queryKey: [
+      "user-inventory",
+      search,
+      filter,
+      page ?? 0,
+      page_size ?? 10,
+      category ?? null,
+    ],
     queryFn: async () => {
-      const params = search ? { search } : {};
+      const queryParams = {
+        ...(search ? { search } : {}),
+        ...(filter ? { filter } : {}),
+        ...(page !== undefined ? { page } : {}),
+        ...(page_size !== undefined ? { page_size } : {}),
+        ...(category !== undefined ? { category } : {}),
+      };
       return (
-        await apiClient.get(endpoints.PRODUCTS_USER_INVENTORY, { params })
+        await apiClient.get(endpoints.PRODUCTS_USER_INVENTORY, {
+          params: queryParams,
+        })
       ).data;
     },
   });
@@ -111,6 +137,9 @@ export function useProductsData(search?: string) {
 
   return {
     dataLoading,
+    loadingCategories,
+    loadingProducts,
+    loadingInventory,
     categories,
     products,
     userInventory,

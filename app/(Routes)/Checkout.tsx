@@ -2,23 +2,26 @@ import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Easing,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Easing,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { styles } from "./Checkout.styles";
 
 import { apiClient } from "@/src/api";
 import { PRODUCTS_ITEM, SALES, SALES_DEBTORS } from "@/src/api/endpoints";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+const normalizeEndpoint = (endpoint: string) =>
+  endpoint.startsWith("/api/") ? endpoint.replace(/^\/api/, "") : endpoint;
 // Debtor API type
 interface Debtor {
   id: number;
@@ -34,7 +37,7 @@ function useDebtors() {
   return useQuery({
     queryKey: ["sales-debtors"],
     queryFn: async () => {
-      const { data } = await apiClient.get(SALES_DEBTORS);
+      const { data } = await apiClient.get(normalizeEndpoint(SALES_DEBTORS));
       return data;
     },
   });
@@ -67,12 +70,28 @@ interface Product {
 }
 
 interface CartItem {
-  productId: string;
+  id: string;
   quantity: number;
   product?: Product;
 }
 
 type PaymentMethod = "Cash" | "Transfer" | "POS" | "Credit (Debtor)";
+
+interface SaleItemPayload {
+  inventory: number;
+  quantity: number;
+  unit_price: string;
+}
+
+interface CreateSalePayload {
+  payment_method: string;
+  notes: string;
+  customer_name: string;
+  customer_phone: string;
+  amount_owed: string;
+  amount_paid: string;
+  items: SaleItemPayload[];
+}
 
 const Checkout: React.FC = () => {
   const router = useRouter();
@@ -129,7 +148,13 @@ const Checkout: React.FC = () => {
   // TanStack Query: fetch product details for each cart item
   useEffect(() => {
     const cartData: CartItem[] = params.cartData
-      ? JSON.parse(params.cartData as string)
+      ? (
+          JSON.parse(params.cartData as string) as Array<
+            CartItem & { productId?: string }
+          >
+        )
+          .map((item) => ({ ...item, id: item.id || item.productId || "" }))
+          .filter((item) => !!item.id)
       : [];
     if (cartData.length === 0) {
       setCartItems([]);
@@ -139,9 +164,13 @@ const Checkout: React.FC = () => {
     setLoading(true);
     Promise.all(
       cartData.map(async (item) => {
+        if (item.product) {
+          return item;
+        }
+
         try {
           const { data: product } = await apiClient.get(
-            PRODUCTS_ITEM(item.productId),
+            normalizeEndpoint(PRODUCTS_ITEM(item.id)),
           );
           if (product) {
             return {
@@ -191,8 +220,8 @@ const Checkout: React.FC = () => {
   // TanStack Query: sale creation mutation
   const queryClient = useQueryClient();
   const saleMutation = useMutation({
-    mutationFn: async (payload: any) => {
-      return apiClient.post(SALES, payload);
+    mutationFn: async (payload: CreateSalePayload) => {
+      return apiClient.post(normalizeEndpoint(SALES), payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
@@ -232,24 +261,22 @@ const Checkout: React.FC = () => {
         "Credit (Debtor)": "credit",
       };
       const total = calculateTotal();
-      await saleMutation.mutateAsync({
+      const isCreditSale = selectedPayment === "Credit (Debtor)";
+      const payload: CreateSalePayload = {
         payment_method: paymentMethodMap[selectedPayment],
-        notes: notes || undefined,
-        customer_name:
-          selectedPayment === "Credit (Debtor)" ? customerName : undefined,
-        customer_phone:
-          selectedPayment === "Credit (Debtor)" ? phoneNumber : undefined,
-        amount_owed:
-          selectedPayment === "Credit (Debtor)"
-            ? String(parseFloat(amountOwed) || 0)
-            : undefined,
-        amount_paid:
-          selectedPayment === "Credit (Debtor)" ? "0" : String(total),
+        notes: notes.trim(),
+        customer_name: isCreditSale ? customerName.trim() : "",
+        customer_phone: isCreditSale ? phoneNumber.trim() : "",
+        amount_owed: isCreditSale ? String(parseFloat(amountOwed) || 0) : "0",
+        amount_paid: isCreditSale ? "0" : String(total),
         items: cartItems.map((item) => ({
-          product: Number(item.productId),
+          inventory: Number(item.id),
           quantity: item.quantity,
+          unit_price: String(item.product?.sellingPrice ?? 0),
         })),
-      });
+      };
+
+      await saleMutation.mutateAsync(payload);
       setProcessing(false);
       showAppToast(
         `Checkout successful: ₦${calculateTotal().toLocaleString()} via ${selectedPayment}`,

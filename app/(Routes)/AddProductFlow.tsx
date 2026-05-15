@@ -1,4 +1,5 @@
 import { Product, useAddProductForm } from "@/hooks/useAddProductForm";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import SuccessModal from "../../components/ui/SuccessModal";
 import InitialChoiceSheet from "./components/InitialChoiceSheet";
@@ -6,18 +7,21 @@ import ProductFormModal from "./components/ProductFormModal";
 import SearchProductModal from "./components/SearchProductModal";
 
 interface AddProductFlowProps {
-  visible: boolean;
-  onClose: () => void;
-  onSaveProduct: (productData: Product) => void;
+  visible?: boolean;
+  onClose?: () => void;
+  onSaveProduct?: (productData: Product) => void;
   initialProduct?: Product; // <-- add this
+  startStep?: number;
 }
 
 const AddProductFlow: React.FC<AddProductFlowProps> = ({
-  visible,
+  visible = true,
   onClose,
-  onSaveProduct,
+  onSaveProduct = () => {},
   initialProduct,
+  startStep = 0,
 }) => {
+  const router = useRouter();
   const [showInitialChoice, setShowInitialChoice] = useState(!initialProduct);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showFormModal, setShowFormModal] = useState(!!initialProduct);
@@ -33,6 +37,18 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
     handleSaveProduct,
     setShowSuccessModal,
   } = useAddProductForm(onSaveProduct);
+
+  const closeFlow = () => {
+    if (onClose) {
+      onClose();
+      return;
+    }
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.replace("/(Main)/Inventory");
+  };
 
   useEffect(() => {
     if (initialProduct && !hasPrefilled && visible) {
@@ -70,7 +86,7 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
 
   const handleFormClose = () => {
     setShowFormModal(false);
-    onClose();
+    closeFlow();
     resetForm();
     setShowInitialChoice(true);
   };
@@ -78,13 +94,13 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
   const handleSuccessClose = () => {
     setShowSuccessModal(false);
     setShowFormModal(false);
-    onClose();
+    closeFlow();
     resetForm();
     setShowInitialChoice(true);
   };
 
   const handleClose = () => {
-    onClose();
+    closeFlow();
     resetForm();
     setShowInitialChoice(true);
     setShowSearchModal(false);
@@ -116,6 +132,7 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         onSave={handleSaveProduct}
         onClose={handleFormClose}
         title={isEditMode ? "Edit Product" : "Add Product"}
+        initialStep={startStep}
       />
 
       <SuccessModal

@@ -27,18 +27,14 @@ export const PRODUCTS_FINANCE_SUMMARY = "/products/finance/summary";
 export const PRODUCTS_FINANCE_TOP_PRODUCTS = "/products/finance/top-products";
 export const PRODUCTS_FINANCE_TRENDS = "/products/finance/trends";
 export const PRODUCTS_ITEMS = "/products/items/";
-export const PRODUCTS_ITEM = (id: string | number) =>
-  `/api/products/items/${id}/`;
-export const PRODUCTS_ITEMS_EXPIRING = "/api/products/items/expiring/";
-export const PRODUCTS_ITEMS_LOW_STOCK = "/api/products/items/low_stock/";
-export const PRODUCTS_ITEMS_OUT_OF_STOCK = "/api/products/items/out_of_stock/";
+
 export const PRODUCTS_SUPPLIERS = "/api/products/suppliers/";
 export const PRODUCTS_SUPPLIER = (id: string | number) =>
   `/api/products/suppliers/${id}/`;
 export const PRODUCTS_USER_INVENTORY = "/products/user-inventory/";
 export const PRODUCTS_USER_INVENTORY_ITEM = (id: string | number) =>
   `/api/products/user-inventory/${id}/`;
-export const PRODUCTS_USER_INVENTORY_ADD = "/api/products/user-inventory/add/";
+export const PRODUCTS_USER_INVENTORY_ADD = "/products/user-inventory/add/";
 
 // SALES
 export const SALES = "/api/products/sales/";
@@ -57,7 +53,7 @@ export const RESTOCK_BY_PRODUCT = (id: string | number) =>
 export const RESTOCKS_RECENT = "/api/products/restocks/recent/";
 
 // NOTIFICATIONS
-export const NOTIFICATIONS = "/api/products/notifications/";
+export const NOTIFICATIONS = "/api/products/notifications/"; // /api/products/notifications?page=0&page_size=3
 export const NOTIFICATION = (id: string | number) =>
   `/api/products/notifications/${id}/`;
 export const NOTIFICATION_MARK_READ = (id: string | number) =>

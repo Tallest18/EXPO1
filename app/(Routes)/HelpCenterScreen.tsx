@@ -37,11 +37,14 @@ const HelpCenterScreen = () => {
   useEffect(() => {
     const loadTopics = async () => {
       try {
-        const notifications = await listNotifications();
-        const mappedTopics = notifications
+        const notificationsResponse = await listNotifications({
+          page: 0,
+          page_size: 20,
+        });
+        const mappedTopics = notificationsResponse.results
           .map((item) => ({
             id: String(item.id),
-            title: item.title || item.message || "Untitled",
+            title: item.title || item.description || item.message || "Untitled",
             icon: iconByType[item.type || "general"] || iconByType.general,
           }))
           .filter(

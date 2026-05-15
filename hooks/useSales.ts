@@ -1,42 +1,26 @@
+import { apiClient } from "@/src/api/client";
 import {
-  SALE,
-  SALES,
-  SALES_DEBTORS,
-  SALES_THIS_WEEK,
-  SALES_TODAY,
+    SALES_DEBTORS,
+    SALES_THIS_WEEK,
+    SALES_TODAY
 } from "@/src/api/endpoints";
+import {
+    getSale,
+    listSalesPaginated,
+    type PaginatedResponse,
+    type ApiSale as Sale,
+} from "@/src/api/sales";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
 
-// Types matching API contract
-export interface SaleItem {
-  id: number;
-  product: { id: number; name: string; barcode?: string } | string;
-  quantity: number;
-  unit_price: number;
-  cost_price?: number;
-  product_name?: string;
-}
+const normalizeEndpoint = (endpoint: string) =>
+  endpoint.startsWith("/api/") ? endpoint.replace(/^\/api/, "") : endpoint;
 
-export interface Sale {
-  id: number;
-  customer_name: string;
-  customer_phone?: string;
-  total_amount: number;
-  amount_paid?: number;
-  amount_due?: number;
-  created_at: string;
-  updated_at?: string;
-  transaction_ref?: string;
-  items: SaleItem[];
-  is_fully_paid?: boolean;
-}
+export type SalesResponse = PaginatedResponse<Sale>;
 
-export interface SalesResponse {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: Sale[];
+export interface SalesQueryParams {
+  search?: string;
+  page?: number;
+  page_size?: number;
 }
 
 export interface Debtor {
@@ -54,14 +38,16 @@ export interface DebtorsResponse {
 }
 
 // Fetch all sales
-export function useSales(search?: string) {
+export function useSales(params?: SalesQueryParams) {
   return useQuery<SalesResponse>({
-    queryKey: ["sales", search],
+    queryKey: [
+      "sales",
+      params?.search ?? "",
+      params?.page ?? 0,
+      params?.page_size ?? 10,
+    ],
     queryFn: async () => {
-      const params = search ? { search } : {};
-      const response = await axios.get(SALES, { params });
-      console.log("Full response:", response);
-      return response.data;
+      return listSalesPaginated(params);
     },
   });
 }
@@ -70,10 +56,7 @@ export function useSales(search?: string) {
 export function useSaleDetail(id: number | string) {
   return useQuery<Sale>({
     queryKey: ["sale", id],
-    queryFn: async () => {
-      const { data } = await axios.get(SALE(id));
-      return data;
-    },
+    queryFn: async () => getSale(id),
     enabled: !!id,
   });
 }
@@ -83,7 +66,9 @@ export function useSalesToday() {
   return useQuery<SalesResponse>({
     queryKey: ["sales-today"],
     queryFn: async () => {
-      const { data } = await axios.get(SALES_TODAY);
+      const { data } = await apiClient.get<SalesResponse>(
+        normalizeEndpoint(SALES_TODAY),
+      );
       return data;
     },
   });
@@ -94,7 +79,9 @@ export function useSalesThisWeek() {
   return useQuery<SalesResponse>({
     queryKey: ["sales-this-week"],
     queryFn: async () => {
-      const { data } = await axios.get(SALES_THIS_WEEK);
+      const { data } = await apiClient.get<SalesResponse>(
+        normalizeEndpoint(SALES_THIS_WEEK),
+      );
       return data;
     },
   });
@@ -105,7 +92,9 @@ export function useDebtors() {
   return useQuery<DebtorsResponse>({
     queryKey: ["sales-debtors"],
     queryFn: async () => {
-      const { data } = await axios.get(SALES_DEBTORS);
+      const { data } = await apiClient.get<DebtorsResponse>(
+        normalizeEndpoint(SALES_DEBTORS),
+      );
       return data;
     },
   });

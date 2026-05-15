@@ -1,20 +1,25 @@
-import { DUMMY_PRODUCTS, Product } from "@/src/api/dummyData/dummyProducts";
+import { apiClient } from "@/src/api/client";
+import { Product } from "@/src/api/dummyData/dummyProducts";
+import { PRODUCTS_USER_INVENTORY_ITEM } from "@/src/api/endpoints";
 import { Feather, MaterialIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import AddProductFlow from "./AddProductFlow";
 import { styles } from "./ProductDetails.styles";
+
+const normalizeEndpoint = (endpoint: string) =>
+  endpoint.startsWith("/api/") ? endpoint.replace(/^\/api/, "") : endpoint;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -130,17 +135,55 @@ const ProductDetails: React.FC = () => {
       return;
     }
 
-    const found = DUMMY_PRODUCTS.find((p) => p.id === productId) ?? null;
+    const fetchProductDetails = async () => {
+      try {
+        const { data } = await apiClient.get(
+          normalizeEndpoint(PRODUCTS_USER_INVENTORY_ITEM(productId)),
+        );
 
-    if (!found) {
-      console.warn(
-        `[ProductDetails] No product found for id="${productId}". ` +
-          `Available ids: ${DUMMY_PRODUCTS.map((p) => p.id).join(", ")}`,
-      );
-    }
+        if (!data) {
+          setProduct(null);
+          return;
+        }
 
-    setProduct(found);
-    setLoading(false);
+        const costPrice = Number(data.cost_price || 0);
+        const sellingPrice = Number(data.selling_price || 0);
+
+        const mappedProduct: Product = {
+          id: String(data.id),
+          name: data.name,
+          category: data.category || "",
+          barcode: String(data.barcode || ""),
+          image: data.image_url ? { uri: data.image_url } : null,
+          quantityType: data.quantity_type || data.unit_type || "Single Items",
+          unitsInStock: Number(data.units_in_stock || 0),
+          profitPerUnit: sellingPrice - costPrice,
+          costPrice,
+          sellingPrice,
+          lowStockThreshold: data.low_stock_threshold ?? 0,
+          expiryDate: data.expiry_date || "",
+          supplier: {
+            name: data.supplier_name || "",
+            phone: data.supplier_phone || "",
+          },
+          dateAdded:
+            data.added_at || data.updated_at || new Date().toISOString(),
+          userId: "api-user",
+        };
+
+        setProduct(mappedProduct);
+      } catch (error) {
+        console.warn(
+          `[ProductDetails] Failed to fetch user inventory item id="${productId}"`,
+          error,
+        );
+        setProduct(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProductDetails();
   }, [productId]);
 
   // ─── Delete handler ────────────────────────────────────────────────────────

@@ -5,7 +5,7 @@ import React from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 interface CartItem {
-  productId: string;
+  id: string;
   quantity: number;
 }
 
@@ -40,7 +40,7 @@ const AllProducts: React.FC<AllProductsProps> = ({
     if (!product?.id) return null;
 
     const isOutOfStock = product.unitsInStock <= 0;
-    const cartItem = cart.find((item) => item.productId === product.id);
+    const cartItem = cart.find((item) => item.id === product.id);
     const isInCart = !!cartItem;
 
     const source =

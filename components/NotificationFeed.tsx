@@ -1,9 +1,9 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
-import { FlatList, Text, TouchableOpacity, View } from "react-native";
+import { Alert, FlatList, Text, TouchableOpacity, View } from "react-native";
 import { moderateScale, scale, homeStyles as styles } from "./homeStyles";
-import { Notification } from "./homeTypes";
+import { Notification, Product } from "./homeTypes";
 
 // ─── Dummy data ───────────────────────────────────────────────────────────────
 
@@ -97,7 +97,17 @@ const getNotificationIcon = (type: Notification["type"]) => {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const NotificationFeed: React.FC = () => {
+interface NotificationFeedProps {
+  notifications?: Notification[];
+  inventory?: Product[];
+  onRestockProduct?: (product: Product) => void;
+}
+
+const NotificationFeed: React.FC<NotificationFeedProps> = ({
+  notifications = [],
+  inventory = [],
+  onRestockProduct,
+}) => {
   const router = useRouter();
 
   const handleNotificationAction = (
@@ -105,12 +115,18 @@ const NotificationFeed: React.FC = () => {
     notification: Notification,
   ) => {
     switch (action.type) {
-      case "restock":
-        router.push({
-          pathname: "/(Routes)/RestockDetails",
-          params: { productId: action.productId ?? notification.id },
-        });
+      case "restock": {
+        const targetId = String(action.productId ?? notification.id);
+        const product = inventory.find((p) => String(p.id) === targetId);
+
+        if (!product) {
+          Alert.alert("Product not found", "This product could not be loaded.");
+          return;
+        }
+
+        onRestockProduct?.(product);
         break;
+      }
 
       case "view_product": {
         const productId = action.productId ?? notification.id;
@@ -204,7 +220,7 @@ const NotificationFeed: React.FC = () => {
       </View>
 
       <FlatList
-        data={DUMMY_NOTIFICATIONS.slice(0, 3)}
+        data={notifications.slice(0, 3)}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         ListEmptyComponent={

@@ -1,5 +1,6 @@
 import { useProductsData } from "@/hooks/useProductsData";
 import { Product as UIProduct } from "@/src/api/dummyData/dummyProducts";
+import type { ApiUserInventoryItem } from "@/src/api/products";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -65,30 +66,38 @@ const Inventory: React.FC = () => {
   // TanStack Query: fetch user inventory from API
   const {
     userInventory: userInventoryData,
-    dataLoading: loading,
+    loadingInventory: loading,
     // error: not exposed in unified hook, handle as needed
-  } = useProductsData(searchQuery);
+  } = useProductsData({
+    search: searchQuery.trim() || undefined,
+    page: 0,
+    page_size: 50,
+  });
 
   // Map API product to UI Product type
-  function mapApiProductToUI(p: ApiProduct): UIProduct {
+  function mapApiProductToUI(p: ApiUserInventoryItem): UIProduct {
     if (typeof p.barcode !== "string") {
       console.warn("API barcode is not string, got:", p.barcode);
     }
+
+    const costPrice = Number(p.cost_price || 0);
+    const sellingPrice = Number(p.selling_price || 0);
+
     return {
       id: String(p.id),
       name: p.name,
-      category: String(p.category),
+      category: p.category || "",
       barcode: String(p.barcode),
       image: p.image_url ? { uri: p.image_url } : null,
-      quantityType: p.quantity_type || "Single Items",
-      unitsInStock: p.quantity,
-      profitPerUnit: p.selling_price - p.buying_price,
-      costPrice: p.buying_price,
-      sellingPrice: p.selling_price,
-      lowStockThreshold: p.low_stock_threshold,
-      expiryDate: p.expiry_date,
-      supplier: { name: p.supplier_name, phone: p.supplier_phone },
-      dateAdded: new Date().toISOString(),
+      quantityType: p.quantity_type || p.unit_type || "Single Items",
+      unitsInStock: Number(p.units_in_stock || 0),
+      profitPerUnit: sellingPrice - costPrice,
+      costPrice,
+      sellingPrice,
+      lowStockThreshold: p.low_stock_threshold ?? 0,
+      expiryDate: p.expiry_date || "",
+      supplier: { name: p.supplier_name || "", phone: p.supplier_phone || "" },
+      dateAdded: p.added_at || p.updated_at || new Date().toISOString(),
       userId: "api-user",
     };
   }
@@ -117,10 +126,10 @@ const Inventory: React.FC = () => {
   // Map and set products when user inventory data changes
   useEffect(() => {
     if (userInventoryData && userInventoryData.results) {
-      const mapped = userInventoryData.results
+      const mapped: UIProduct[] = userInventoryData.results
         .map(mapApiProductToUI)
         .sort(
-          (a, b) =>
+          (a: UIProduct, b: UIProduct) =>
             new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime(),
         );
       setProducts(mapped);
@@ -128,40 +137,22 @@ const Inventory: React.FC = () => {
     }
   }, [userInventoryData]);
 
-  const performSearch = (q: string): UIProduct[] => {
-    if (!q.trim()) return products;
-    const searchTerm = q.toLowerCase().trim();
-    return products.filter((product) => {
-      const name = product.name?.toLowerCase() || "";
-      const category = product.category?.toLowerCase() || "";
-      const barcode = product.barcode?.toLowerCase() || "";
-      const supplier = product.supplier?.name?.toLowerCase() || "";
-      return (
-        name.includes(searchTerm) ||
-        category.includes(searchTerm) ||
-        barcode.includes(searchTerm) ||
-        supplier.includes(searchTerm)
-      );
-    });
-  };
-
   // Main filtering logic, including focusProductId
   useEffect(() => {
-    let filtered = searchQuery.trim()
-      ? performSearch(searchQuery)
-      : [...products];
+    let filtered = [...products];
 
     if (activeFilter === "inStock") {
       filtered = filtered.filter((p) => p.unitsInStock > 0);
     } else if (activeFilter === "outOfStock") {
-      filtered = filtered.filter((p) => p.unitsInStock === 0);
+      filtered = filtered.filter((p) => p.unitsInStock <= 0);
     } else if (activeFilter === "expiring") {
       const now = new Date();
       const tenDaysFromNow = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
+
       filtered = filtered.filter((p) => {
         if (!p.expiryDate) return false;
         const expiryDate = new Date(p.expiryDate);
-        return expiryDate <= tenDaysFromNow && expiryDate > now;
+        return expiryDate > now && expiryDate <= tenDaysFromNow;
       });
     }
 
@@ -330,6 +321,23 @@ const Inventory: React.FC = () => {
     </View>
   );
 
+  const renderFilterEmptyState = (): React.ReactElement => (
+    <View style={styles.emptyState}>
+      <Feather name="sliders" size={moderateScale(80)} color="#E0E0E0" />
+      <Text style={styles.emptyTitle}>No Products In This Filter</Text>
+      <Text style={styles.emptyDescription}>
+        Try another filter to see other products
+      </Text>
+      <TouchableOpacity
+        style={styles.clearSearchButton}
+        onPress={() => setActiveFilter("all")}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.clearSearchText}>Show All Products</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -389,18 +397,18 @@ const Inventory: React.FC = () => {
             ? renderEmptyState()
             : filteredProducts.length === 0 && searchQuery.length > 0
               ? renderSearchEmptyState()
-              : filteredProducts.map((product) => renderProductCard(product))}
+              : filteredProducts.length === 0 && activeFilter !== "all"
+                ? renderFilterEmptyState()
+                : filteredProducts.map((product) => renderProductCard(product))}
         </View>
         <View style={styles.bottomPadding} />
       </ScrollView>
 
-      {showAddProduct && (
-        <AddProductFlow
-          visible={showAddProduct}
-          onSaveProduct={() => {}}
-          onClose={() => setShowAddProduct(false)}
-        />
-      )}
+      <AddProductFlow
+        visible={showAddProduct}
+        onClose={() => setShowAddProduct(false)}
+        onSaveProduct={() => {}}
+      />
     </SafeAreaView>
   );
 };

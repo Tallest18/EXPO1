@@ -3,16 +3,16 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Dimensions,
-    FlatList,
-    Image,
-    SafeAreaView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Image,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { listSales } from "@/src/api";
@@ -117,7 +117,9 @@ const TotalSummaryScreen = () => {
             })
           : salesData;
 
-        setSales(filteredData);
+        const topThreeData = filteredData.slice(0, 3);
+
+        setSales(topThreeData);
         setTotalSales(filteredData.reduce((sum, i) => sum + i.amount, 0));
         setTotalProfit(filteredData.reduce((sum, i) => sum + i.profit, 0));
         setTotalTransactions(
@@ -125,11 +127,6 @@ const TotalSummaryScreen = () => {
             ? new Set(filteredData.map((i) => i.id.split("-")[0])).size
             : response.length,
         );
-
-        setSales(salesData);
-        setTotalSales(salesTotal);
-        setTotalProfit(profitTotal);
-        setTotalTransactions(response.length);
       } catch (error) {
         console.error("Error loading sales summary:", error);
       } finally {
@@ -183,7 +180,7 @@ const TotalSummaryScreen = () => {
       )}
       <View style={styles.itemInfo}>
         <Text style={styles.name}>
-          {item.name} {item.quantity}
+          {item.name} x{item.quantity}
         </Text>
         <Text style={styles.date}>{formatDate(item.date)}</Text>
       </View>

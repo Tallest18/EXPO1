@@ -2,7 +2,8 @@ import AllProducts from "@/components/sell/allProducts";
 import SalesHistory, { Sale } from "@/components/sell/saleHistory";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { useSales } from "@/hooks/useSales";
-import { ApiProduct, listProducts } from "@/src/api";
+import { ApiUserInventoryItem, listUserInventory } from "@/src/api";
+import type { ApiSale } from "@/src/api/sales";
 import Feather from "@expo/vector-icons/Feather";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -46,61 +47,53 @@ export interface Product {
 }
 
 export interface CartItem {
-  productId: string;
+  id: string;
   quantity: number;
+  product?: Product;
 }
 
 type TabType = "all" | "history";
 
 // ─── Mappers ──────────────────────────────────────────────────────────────────
 
-const mapApiProduct = (p: ApiProduct): Product => ({
+const mapApiProduct = (p: ApiUserInventoryItem): Product => ({
   id: String(p.id),
   name: p.name,
-  category: p.category_name || "",
+  category: p.category || "",
   barcode: p.barcode || "",
-  image: p.image
-    ? { uri: p.image }
+  image: p.image_url
+    ? { uri: p.image_url }
     : { uri: Image.resolveAssetSource(defaultProductImage).uri },
-  quantityType: p.quantity_type || "Single Items",
-  unitsInStock: p.quantity_left ?? p.quantity,
-  costPrice: Number(p.buying_price || 0),
+  quantityType: p.quantity_type || p.unit_type || "Single Items",
+  unitsInStock: Number(p.units_in_stock || 0),
+  costPrice: Number(p.cost_price || 0),
   sellingPrice: Number(p.selling_price || 0),
   lowStockThreshold: p.low_stock_threshold ?? 0,
   expiryDate: p.expiry_date || "",
   supplier: {
-    name: p.supplier_name || p.supplier_obj_name || "",
+    name: p.supplier_name || "",
     phone: p.supplier_phone || "",
   },
-  dateAdded: p.created_at || new Date().toISOString(),
+  dateAdded: p.added_at || p.updated_at || new Date().toISOString(),
   userId: "api-user",
 });
-
-// Map API Sale (from backend) to UI Sale (for SalesHistory)
-import type { Sale as ApiSale } from "@/hooks/useSales";
 
 const mapApiSale = (sale: ApiSale): Sale => ({
   id: String(sale.id),
   transactionId:
     sale.transaction_ref || `TXN-${String(sale.id).padStart(4, "0")}`,
   items: (sale.items || []).map((item: any) => ({
-    productId: String(
-      typeof item.product === "object" ? item.product.id : item.product,
-    ),
-    productName:
-      item.product_name ||
-      (typeof item.product === "object"
-        ? item.product.name
-        : "Unknown Product"),
+    productId: String(item.inventory ?? item.product ?? item.id),
+    productName: item.product_name || item.product_code || "Unknown Product",
     quantity: Number(item.quantity || 0),
     unitPrice: Number(item.unit_price || 0),
     totalPrice: Number(item.unit_price || 0) * Number(item.quantity || 0),
-    productImage: undefined,
+    productImage: item.product_image || undefined,
   })),
   totalAmount: Number(sale.total_amount || 0),
-  paymentMethod: (sale as any).payment_method || "cash",
-  date: sale.created_at || new Date().toISOString(),
-  timestamp: sale.created_at || new Date().toISOString(),
+  paymentMethod: sale.payment_method || "cash",
+  date: sale.sale_date || sale.created_at || new Date().toISOString(),
+  timestamp: sale.sale_date || sale.created_at || new Date().toISOString(),
 });
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -110,18 +103,14 @@ const Sell: React.FC = () => {
   const params = useLocalSearchParams();
 
   const [products, setProducts] = useState<Product[]>([]);
-  // const [sales, setSales] = useState<Sale[]>([]);
-  const {
-    data: salesData,
-    isLoading: salesLoading,
-    error: salesError,
-  } = useSales();
-
-  console.log("Sales data:", salesData);
-
+  const [productsLoading, setProductsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+  const { data: salesData, isLoading: salesLoading } = useSales({
+    search: searchQuery.trim() || undefined,
+    page: 0,
+    page_size: 25,
+  });
   const [cart, setCart] = useState<CartItem[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
@@ -139,10 +128,15 @@ const Sell: React.FC = () => {
 
   useEffect(() => {
     const loadProducts = async () => {
+      setProductsLoading(true);
       try {
-        const productsRes = await listProducts();
+        const productsRes = await listUserInventory({
+          search: searchQuery.trim() || undefined,
+          page: 0,
+          page_size: 50,
+        });
         setProducts(
-          productsRes
+          productsRes.results
             .map(mapApiProduct)
             .sort(
               (a, b) =>
@@ -153,11 +147,11 @@ const Sell: React.FC = () => {
       } catch (err: any) {
         Alert.alert("Error", err?.message || "Failed to load products");
       } finally {
-        setLoading(false);
+        setProductsLoading(false);
       }
     };
     loadProducts();
-  }, []);
+  }, [searchQuery]);
 
   const filteredProducts = useMemo(() => {
     const term = searchQuery.toLowerCase().trim();
@@ -171,23 +165,23 @@ const Sell: React.FC = () => {
 
   // ─── Cart handlers ───────────────────────────────────────────────────────
 
-  const handleAddToCart = (productId: string) => {
-    const product = products.find((p) => p.id === productId);
+  const handleAddToCart = (id: string) => {
+    const product = products.find((p) => p.id === id);
     if (!product) return;
     if (product.unitsInStock <= 0) {
       showModal("Out of Stock", "This product is currently out of stock.");
       return;
     }
     setCart((prev) => {
-      if (prev.find((item) => item.productId === productId)) return prev;
-      return [...prev, { productId, quantity: 1 }];
+      if (prev.find((item) => item.id === id)) return prev;
+      return [...prev, { id, quantity: 1, product }];
     });
   };
 
-  const handleIncrement = (productId: string) => {
-    const product = products.find((p) => p.id === productId);
+  const handleIncrement = (id: string) => {
+    const product = products.find((p) => p.id === id);
     if (!product) return;
-    const cartItem = cart.find((item) => item.productId === productId);
+    const cartItem = cart.find((item) => item.id === id);
     if ((cartItem?.quantity ?? 0) >= product.unitsInStock) {
       showModal(
         "Stock Limit",
@@ -197,24 +191,20 @@ const Sell: React.FC = () => {
     }
     setCart((prev) =>
       prev.map((item) =>
-        item.productId === productId
-          ? { ...item, quantity: item.quantity + 1 }
-          : item,
+        item.id === id ? { ...item, quantity: item.quantity + 1 } : item,
       ),
     );
   };
 
-  const handleDecrement = (productId: string) => {
+  const handleDecrement = (id: string) => {
     setCart((prev) => {
-      const existing = prev.find((item) => item.productId === productId);
+      const existing = prev.find((item) => item.id === id);
       if (existing && existing.quantity > 1) {
         return prev.map((item) =>
-          item.productId === productId
-            ? { ...item, quantity: item.quantity - 1 }
-            : item,
+          item.id === id ? { ...item, quantity: item.quantity - 1 } : item,
         );
       }
-      return prev.filter((item) => item.productId !== productId);
+      return prev.filter((item) => item.id !== id);
     });
   };
 
@@ -232,7 +222,7 @@ const Sell: React.FC = () => {
 
   // ─── Loading ─────────────────────────────────────────────────────────────
 
-  if (loading || salesLoading) {
+  if (productsLoading || salesLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>

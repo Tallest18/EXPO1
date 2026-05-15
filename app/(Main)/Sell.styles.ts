@@ -204,7 +204,7 @@ export const styles = StyleSheet.create({
   productDetails: { gap: scale(6) },
   productName: {
     fontSize: getFontSize(moderateScale(isSmallDevice ? 13 : 15)),
-    fontFamily: "DMSans_600Bold",
+    fontFamily: "DMSans_600SemiBold",
     textTransform: "capitalize",
     color: "#000",
     minHeight: verticalScale(36),
@@ -220,7 +220,7 @@ export const styles = StyleSheet.create({
   },
   productPrice: {
     fontSize: getFontSize(moderateScale(isSmallDevice ? 13 : 15)),
-    fontFamily: "DMSans_400Bold",
+    fontFamily: "DMSans_400Regular",
     color: "#000",
     flex: 1,
   },
