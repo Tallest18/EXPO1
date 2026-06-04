@@ -18,10 +18,10 @@ import {
   SlowMovingProduct,
   StockRecommendation,
   TopProduct,
-} from "./finance.types";
-import { styles } from "./FinanceSections.styles";
-import { formatCurrency, formatDateLabel } from "./formatters";
-import { H_PAD, moderateScale, scale, screenWidth } from "./scaling";
+} from "../app/types/finance.types";
+import { styles } from "../src/styles/FinanceSections.styles";
+import { formatCurrency, formatDateLabel } from "../utils/formatters";
+import { H_PAD, moderateScale, scale, screenWidth } from "../utils/scaling";
 // import { getFontSize } from "./scaling";
 
 // ─── Summary Cards ────────────────────────────────────────────────────────────

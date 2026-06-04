@@ -2,6 +2,7 @@
 import type { UploadableProfileImage } from "@/src/api";
 import { getProfile, updateProfile } from "@/src/api";
 import { Feather, Ionicons } from "@expo/vector-icons";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -21,35 +22,77 @@ import {
 
 const Profile = () => {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [profileImage, setProfileImage] = useState(""); // remote URL from backend
   const [localImageUri, setLocalImageUri] = useState(""); // local URI for display after picking
   const [businessName, setBusinessName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [businessType, setBusinessType] = useState("");
+  const [hasInitializedForm, setHasInitializedForm] = useState(false);
 
   // Holds the picked image asset until Save is pressed
   const pendingImageRef = useRef<UploadableProfileImage | null>(null);
 
-  // Fetch user data when screen loads
-  useEffect(() => {
-    const fetchUserData = async () => {
-      setLoading(true);
-      try {
-        const userData = await getProfile();
-        setBusinessName(userData.name || userData.business_name || "");
-        setPhoneNumber(userData.phone || "");
-        setBusinessType(userData.business_type || "");
-        setProfileImage(userData.profile_image || "");
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-        Alert.alert("Error", "Could not fetch profile data.");
-      }
-      setLoading(false);
-    };
+  const {
+    data: profile,
+    isLoading: loadingProfile,
+    isError: isProfileError,
+  } = useQuery({
+    queryKey: ["profile"],
+    queryFn: getProfile,
+  });
 
-    fetchUserData();
-  }, []);
+  useEffect(() => {
+    if (!profile || hasInitializedForm) return;
+    setBusinessName(profile.name || profile.business_name || "");
+    setPhoneNumber(profile.phone || "");
+    setBusinessType(profile.business_type || "");
+    setProfileImage(profile.profile_image || "");
+    setHasInitializedForm(true);
+  }, [profile, hasInitializedForm]);
+
+  useEffect(() => {
+    if (!isProfileError) return;
+    Alert.alert("Error", "Could not fetch profile data.");
+  }, [isProfileError]);
+
+  const updateProfileMutation = useMutation({
+    mutationFn: ({
+      name,
+      type,
+      image,
+    }: {
+      name: string;
+      type?: string;
+      image?: UploadableProfileImage;
+    }) =>
+      updateProfile(
+        {
+          name,
+          business_name: name,
+          business_type: type || undefined,
+        },
+        image,
+      ),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["profile"], updated);
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+
+      setBusinessName(updated.name || updated.business_name || "");
+      setPhoneNumber(updated.phone || "");
+      setBusinessType(updated.business_type || "");
+      setProfileImage(updated.profile_image || "");
+      setLocalImageUri("");
+      pendingImageRef.current = null;
+
+      Alert.alert("Success", "Profile details saved!");
+      router.back();
+    },
+    onError: (error) => {
+      console.error("Error saving profile:", error);
+      Alert.alert("Error", "Failed to save profile details.");
+    },
+  });
 
   // Convert ImagePickerAsset → UploadableProfileImage
   const asUploadable = (
@@ -115,33 +158,15 @@ const Profile = () => {
       return;
     }
 
-    setLoading(true);
     try {
-      const updated = await updateProfile(
-        {
-          name: businessName,
-          business_name: businessName,
-          business_type: businessType || undefined,
-          // NEVER add profile_image here as a string
-        },
-        // If user picked a new image, send it. Otherwise undefined = no change.
-        pendingImageRef.current ?? undefined,
-      );
-
-      // Update displayed image with what the backend confirms
-      if (updated.profile_image) {
-        setProfileImage(updated.profile_image);
-        setLocalImageUri(""); // clear local URI, use remote now
-      }
-
-      pendingImageRef.current = null;
-      Alert.alert("Success", "Profile details saved!");
-      router.back();
-    } catch (error) {
-      console.error("Error saving profile:", error);
-      Alert.alert("Error", "Failed to save profile details.");
+      await updateProfileMutation.mutateAsync({
+        name: businessName,
+        type: businessType || undefined,
+        image: pendingImageRef.current ?? undefined,
+      });
+    } catch {
+      // handled in mutation onError
     }
-    setLoading(false);
   };
 
   const showImagePickerOptions = () => {
@@ -162,6 +187,7 @@ const Profile = () => {
 
   // Display local URI if user just picked one, otherwise use remote URL
   const displayImage = localImageUri || profileImage;
+  const loading = loadingProfile || updateProfileMutation.isPending;
 
   return (
     <SafeAreaView style={styles.container}>

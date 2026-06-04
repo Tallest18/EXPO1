@@ -8,9 +8,8 @@ import {
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { styles } from "./Finance.styles";
+import { styles } from "../../src/styles/Finance.styles";
 
-import { Period } from "./finance.types";
 import {
   DailySummaryCard,
   MonthlyReportCard,
@@ -20,10 +19,11 @@ import {
   StockRecommendationsSection,
   SummaryCards,
   TopProductsSection,
-} from "./FinanceSections";
-import { verticalScale } from "./scaling";
-import { useFinanceData } from "./useFinanceData";
-import { usePdfReport } from "./usePdfReport";
+} from "../../components/FinanceSections";
+import { useFinanceData } from "../../hooks/useFinanceData";
+import { usePdfReport } from "../../hooks/usePdfReport";
+import { verticalScale } from "../../utils/scaling";
+import { Period } from "../types/finance.types";
 
 const Finance = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<Period>("Week");

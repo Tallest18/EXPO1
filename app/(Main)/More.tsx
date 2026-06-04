@@ -1,11 +1,13 @@
 import { clearTokens, getProfile, logout } from "@/src/api";
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
-import { styles } from "./More.styles";
+import React, { useState } from "react";
+import { styles } from "../../src/styles/More.styles";
 
 import {
   ActivityIndicator,
+  Image,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -32,31 +34,19 @@ type SectionConfig = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const More = () => {
-  const [userName, setUserName] = useState<string>("Guest User");
-  const [userPhone, setUserPhone] = useState<string>("");
-  const [loading, setLoading] = useState(true);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [notificationCount] = useState(3); // replace with real count when available
 
-  useEffect(() => {
-    fetchUserData();
-  }, []);
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ["profile"],
+    queryFn: getProfile,
+  });
 
-  const fetchUserData = async () => {
-    try {
-      const userData = await getProfile();
-      setUserName(userData.name || "Guest User");
-      setUserPhone(userData.phone || "");
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-      setUserName("Guest User");
-      setUserPhone("");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const userName = profile?.name || "Guest User";
+  const userPhone = profile?.phone || "";
+  const userProfileImage = profile?.profile_image || "";
 
   // ─── Section data ──────────────────────────────────────────────────────────
 
@@ -82,21 +72,7 @@ const More = () => {
         },
       ],
     },
-    {
-      title: "MY BUSINESS PROFILE",
-      options: [
-        {
-          title: "Business Information",
-          icon: "storefront-outline",
-          action: () => router.push("/(Routes)/Profile"),
-        },
-        {
-          title: "Change Profile Photo",
-          icon: "camera-outline",
-          action: () => router.push("/(Routes)/Profile"),
-        },
-      ],
-    },
+
     {
       title: "SUPPORT",
       options: [
@@ -174,7 +150,7 @@ const More = () => {
 
   // ─── Loading state ─────────────────────────────────────────────────────────
 
-  if (loading) {
+  if (isLoading) {
     return (
       <SafeAreaView style={[styles.safeArea, styles.centered]}>
         <ActivityIndicator size="large" color="#1155CC" />
@@ -204,7 +180,14 @@ const More = () => {
           activeOpacity={0.85}
         >
           <View style={styles.profileIcon}>
-            <Ionicons name="person" size={28} color="#fff" />
+            {userProfileImage ? (
+              <Image
+                source={{ uri: userProfileImage }}
+                style={styles.profileImage}
+              />
+            ) : (
+              <Ionicons name="person" size={28} color="#fff" />
+            )}
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{userName}</Text>

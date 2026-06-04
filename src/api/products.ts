@@ -4,6 +4,7 @@ import {
     PRODUCTS_ITEMS,
     PRODUCTS_USER_INVENTORY,
     PRODUCTS_USER_INVENTORY_ITEM,
+    RESTOCKS,
 } from "./endpoints";
 
 const normalizeEndpoint = (endpoint: string) =>
@@ -84,6 +85,22 @@ export interface ProductPayload {
   supplier_phone?: string;
 }
 
+export interface RestockPayload {
+  inventoryId: number;
+  quantity_added: number;
+  buying_price: string;
+  supplier: number;
+  supplier_name: string;
+  quantity_type: string;
+  cost_price: string;
+  selling_price: string;
+  low_stock_threshold: number;
+  supplier_phone: string;
+  date_arrived: string;
+  expiry_date?: string;
+  notes?: string;
+}
+
 export async function listProducts(params?: {
   search?: string;
   filter?: "inStock" | "outOfStock" | "expiring";
@@ -105,6 +122,7 @@ export async function listUserInventory(params?: {
   page?: number;
   page_size?: number;
   category?: number;
+  sort?: "recent" | "name" | "name_desc";
 }): Promise<PaginatedResponse<ApiUserInventoryItem>> {
   const response = await apiClient.get<
     PaginatedResponse<ApiUserInventoryItem> | ApiUserInventoryItem[]
@@ -127,6 +145,23 @@ export async function listUserInventory(params?: {
 export async function getProduct(id: string | number): Promise<ApiProduct> {
   const response = await apiClient.get<ApiProduct>(
     normalizeEndpoint(PRODUCTS_ITEM(id)),
+  );
+  return response.data;
+}
+
+export async function getUserInventoryItem(
+  id: string | number,
+): Promise<ApiUserInventoryItem> {
+  const response = await apiClient.get<ApiUserInventoryItem>(
+    normalizeEndpoint(PRODUCTS_USER_INVENTORY_ITEM(id)),
+  );
+  return response.data;
+}
+
+export async function createRestock(payload: RestockPayload): Promise<any> {
+  const response = await apiClient.post<any>(
+    normalizeEndpoint(RESTOCKS),
+    payload,
   );
   return response.data;
 }

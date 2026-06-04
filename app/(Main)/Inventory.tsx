@@ -17,7 +17,7 @@ import {
   View,
 } from "react-native";
 import AddProductFlow from "../(Routes)/AddProductFlow";
-import { styles } from "./Inventory.styles";
+import { styles } from "../../src/styles/Inventory.styles";
 
 type FilterType = "all" | "inStock" | "outOfStock" | "expiring";
 

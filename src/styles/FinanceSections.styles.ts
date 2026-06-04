@@ -1,11 +1,11 @@
 import {
-  getFontSize,
-  H_PAD,
-  isSmallDevice,
-  moderateScale,
-  scale,
-  verticalScale,
-} from "./scaling";
+    getFontSize,
+    H_PAD,
+    isSmallDevice,
+    moderateScale,
+    scale,
+    verticalScale,
+} from "../../utils/scaling";
 // import { getFontSize } from "./scaling";
 import { StyleSheet } from "react-native";
 

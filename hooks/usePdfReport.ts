@@ -3,13 +3,13 @@ import * as Sharing from "expo-sharing";
 import { useCallback, useState } from "react";
 import { Alert } from "react-native";
 import {
-  FinancialSummary,
-  MonthlyReport,
-  SlowMovingProduct,
-  StockRecommendation,
-  TopProduct,
-} from "./finance.types";
-import { formatCurrency } from "./formatters";
+    FinancialSummary,
+    MonthlyReport,
+    SlowMovingProduct,
+    StockRecommendation,
+    TopProduct,
+} from "../app/types/finance.types";
+import { formatCurrency } from "../utils/formatters";
 
 interface UsePdfReportParams {
   monthlyReport: MonthlyReport;

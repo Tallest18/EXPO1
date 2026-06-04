@@ -1,7 +1,14 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
-import { Alert, FlatList, Text, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  FlatList,
+  Pressable,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { moderateScale, scale, homeStyles as styles } from "./homeStyles";
 import { Notification, Product } from "./homeTypes";
 
@@ -101,30 +108,42 @@ interface NotificationFeedProps {
   notifications?: Notification[];
   inventory?: Product[];
   onRestockProduct?: (product: Product) => void;
+  onRestockById?: (productId: string) => Promise<void> | void;
 }
 
 const NotificationFeed: React.FC<NotificationFeedProps> = ({
   notifications = [],
   inventory = [],
   onRestockProduct,
+  onRestockById,
 }) => {
   const router = useRouter();
 
-  const handleNotificationAction = (
+  const handleNotificationAction = async (
     action: Exclude<Notification["actions"], undefined>[number],
     notification: Notification,
   ) => {
     switch (action.type) {
       case "restock": {
-        const targetId = String(action.productId ?? notification.id);
+        // For restock, always target the actual inventory product id.
+        const targetId = String(
+          action.productId ?? notification.productId ?? notification.id,
+        );
         const product = inventory.find((p) => String(p.id) === targetId);
 
-        if (!product) {
+        if (product) {
+          // out_of_stock uses the global AddProductFlow restock mode
+          // (prefilled product + starts from step 2).
+          onRestockProduct?.(product);
+          break;
+        }
+
+        if (!onRestockById) {
           Alert.alert("Product not found", "This product could not be loaded.");
           return;
         }
 
-        onRestockProduct?.(product);
+        await onRestockById(targetId);
         break;
       }
 
@@ -145,7 +164,7 @@ const NotificationFeed: React.FC<NotificationFeedProps> = ({
   // ─── Item renderer ──────────────────────────────────────────────────────────
 
   const renderItem = ({ item }: { item: Notification }) => (
-    <TouchableOpacity style={styles.notificationCard} activeOpacity={0.7}>
+    <View style={styles.notificationCard}>
       <View style={styles.notifLeftSection}>
         <View style={styles.notifIconBox}>
           {getNotificationIcon(item.type)}
@@ -166,27 +185,29 @@ const NotificationFeed: React.FC<NotificationFeedProps> = ({
           {item.actions && item.actions.length > 0 && (
             <View style={{ flexDirection: "row", gap: scale(8) }}>
               {item.actions.map((action, idx) => (
-                <TouchableOpacity
+                <Pressable
                   key={idx}
-                  onPress={() => handleNotificationAction(action, item)}
+                  onPress={() => {
+                    void handleNotificationAction(action, item);
+                  }}
+                  hitSlop={8}
                   style={{
                     paddingHorizontal: scale(8),
                     paddingVertical: scale(3),
                     backgroundColor: "#FFF",
                     borderRadius: 24,
                   }}
-                  activeOpacity={0.7}
                 >
                   <Text style={{ color: "#1155CC", fontSize: 12 }}>
                     {action.label}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               ))}
             </View>
           )}
         </View>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 
   // ─── Render ─────────────────────────────────────────────────────────────────

@@ -15,6 +15,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AddProductFlow from "./AddProductFlow";
 import { styles } from "./ProductDetails.styles";
 
@@ -118,6 +119,7 @@ const ProductDetails: React.FC = () => {
   const productId = rawId?.trim();
   console.log("[ProductDetails] Normalized productId:", productId);
 
+  const insets = useSafeAreaInsets();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -250,7 +252,11 @@ const ProductDetails: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Product image */}
         <View style={styles.imageContainer}>
           <Image

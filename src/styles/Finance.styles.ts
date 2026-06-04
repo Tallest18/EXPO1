@@ -7,7 +7,7 @@ import {
   moderateScale,
   scale,
   verticalScale,
-} from "./scaling";
+} from "../../utils/scaling";
 
 export const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#E7EEFA" },
@@ -35,17 +35,25 @@ export const styles = StyleSheet.create({
   },
 
   header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    display: "flex",
+    gap: scale(4),
+    flexWrap: "wrap",
+    alignItems: "center",
     paddingHorizontal: H_PAD,
     paddingTop: verticalScale(isTablet ? 20 : 14),
-    paddingBottom: verticalScale(12),
+    paddingBottom: verticalScale(isTablet ? 14 : 10),
+    backgroundColor: "#E7EEFA",
   },
   headerTitle: {
     fontSize: getFontSize(
-      moderateScale(isSmallDevice ? 20 : isTablet ? 30 : 24),
+      moderateScale(isSmallDevice ? 24 : isTablet ? 34 : 28),
     ),
-    color: "#1F2937",
-    marginBottom: verticalScale(4),
+    color: "#000",
     fontFamily: "DMSans_700Bold",
+    flexShrink: 1,
+    marginRight: scale(10),
   },
   headerSubtitle: {
     fontSize: getFontSize(moderateScale(isSmallDevice ? 12 : 14)),

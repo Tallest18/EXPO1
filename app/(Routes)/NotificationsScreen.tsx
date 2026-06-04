@@ -14,7 +14,7 @@ import {
 } from "react-native";
 
 import { listNotifications } from "@/src/api";
-import { getFontSize } from "../(Main)/scaling";
+import { getFontSize } from "../../utils/scaling";
 
 const { width, height } = Dimensions.get("window");
 

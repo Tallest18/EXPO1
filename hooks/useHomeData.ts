@@ -3,21 +3,21 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert } from "react-native";
 
 import {
-  Notification,
-  Product,
-  SalesSummaryItem,
-  UserData,
+    Notification,
+    Product,
+    SalesSummaryItem,
+    UserData,
 } from "@/components/homeTypes";
 import {
-  ApiNotification,
-  ApiProduct,
-  ApiSale,
-  ApiSaleItem,
-  getDashboardOverview,
-  getProfile,
-  listNotifications,
-  listSales,
-  listUserInventory,
+    ApiNotification,
+    ApiProduct,
+    ApiSale,
+    ApiSaleItem,
+    getDashboardOverview,
+    getProfile,
+    listNotifications,
+    listSales,
+    listUserInventory,
 } from "@/src/api";
 import type { ApiUserInventoryItem } from "@/src/api/products";
 
@@ -139,14 +139,18 @@ export const useHomeData = () => {
 
   const getNotificationActions = (
     type?: string,
-    productId?: string,
+    inventoryId?: string,
   ): Notification["actions"] => {
     switch (type) {
       case "low_stock":
       case "out_of_stock":
         return [
-          { label: "Tap to restock", type: "restock", productId },
-          { label: "View product page", type: "view_product", productId },
+          { label: "Tap to restock", type: "restock", productId: inventoryId },
+          {
+            label: "View product page",
+            type: "view_product",
+            productId: inventoryId,
+          },
         ];
       case "daily_summary":
         return [
@@ -164,6 +168,12 @@ export const useHomeData = () => {
       return response.results.map((n: ApiNotification) => {
         const createdAt = n.created_at || new Date().toISOString();
         const status = (n.status || "New") as Notification["status"];
+        const inventoryId =
+          n.inventoryId != null
+            ? String(n.inventoryId)
+            : n.product != null
+              ? String(n.product)
+              : undefined;
         const isRead =
           typeof n.is_read === "boolean"
             ? n.is_read
@@ -176,12 +186,9 @@ export const useHomeData = () => {
           message: n.description || n.message || "",
           time: getTimeAgo(createdAt),
           isRead,
-          productId: n.product ? String(n.product) : undefined,
+          productId: inventoryId,
           dateAdded: createdAt,
-          actions: getNotificationActions(
-            n.type,
-            n.product ? String(n.product) : undefined,
-          ),
+          actions: getNotificationActions(n.type, inventoryId),
           status,
           isNew: !isRead,
         };

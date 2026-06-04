@@ -22,7 +22,6 @@
       }
     },
     "preview": {
-      "distribution": "internal",
       "channel": "preview",
       "env": {
         "EXPO_NO_FABRIC": "1",

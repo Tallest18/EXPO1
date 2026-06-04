@@ -2,7 +2,7 @@ import { apiClient } from "@/src/api/client";
 import * as endpoints from "@/src/api/endpoints";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { ChartData, Period } from "./finance.types";
+import { ChartData, Period } from "../app/types/finance.types";
 
 const DEFAULT_CHART_DATA: ChartData = {
   labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],

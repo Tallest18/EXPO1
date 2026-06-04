@@ -68,16 +68,20 @@ export const styles = StyleSheet.create({
   //   backgroundColor: "#1a4591",
   // },
   cartItem: {
-    borderRadius: moderateScale(12),
     padding: scale(8),
-    marginBottom: verticalScale(12),
     flexDirection: "row",
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: "#000000",
-    borderTopWidth: 0,
-    borderLeftWidth: 0,
-    borderRightWidth: 0,
+  },
+  // Straight dashed separator built from small segments (see DashedSeparator).
+  dashedSeparator: {
+    flexDirection: "row",
+    overflow: "hidden",
+    marginBottom: verticalScale(12),
+  },
+  dash: {
+    width: scale(6),
+    height: 1,
+    marginRight: scale(4),
+    backgroundColor: "#000000",
   },
   productImageContainer: {
     padding: scale(4),

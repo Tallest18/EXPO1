@@ -35,7 +35,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ onAddProduct }) => {
           styles.actionBox,
           { backgroundColor: "#1155CC", cursor: "pointer" },
         ]}
-        onPress={() => router.push("/(Routes)/QuickSellScreen")}
+        onPress={() => router.push("/(Main)/Sell")}
         activeOpacity={0.8}
       >
         <Text style={{ color: "#fff", fontFamily: "DMSans_400Regular" }}>

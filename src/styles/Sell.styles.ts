@@ -1,7 +1,7 @@
 import { Dimensions, StyleSheet } from "react-native";
-import { getFontSize, moderateScale, verticalScale } from "./scaling";
+import { getFontSize, moderateScale, verticalScale } from "../../utils/scaling";
 
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 const isSmallDevice = width < 375;
 const isTablet = width >= 768;
 
@@ -12,15 +12,18 @@ const scale = (size: number) => {
   return size * ratio;
 };
 
-export const H_PAD = isTablet
-  ? scale(32)
-  : isSmallDevice
-    ? scale(14)
-    : scale(20);
-const CARD_GAP = scale(12);
+export const H_PAD = Math.round(
+  isTablet ? scale(32) : isSmallDevice ? scale(14) : scale(20),
+);
+const CARD_GAP = Math.round(scale(12));
 const NUM_COLS = isTablet ? 3 : 2;
+// Round the spacing to whole pixels and floor the card width (minus a 1px
+// safety margin) so rounding never pushes the row total past the container
+// width — otherwise flexWrap drops to a single card per row on small screens.
 export const CARD_WIDTH =
-  (width - H_PAD * 2 - CARD_GAP * (NUM_COLS - 1)) / NUM_COLS;
+  Math.floor(
+    (width - H_PAD * 2 - CARD_GAP * (NUM_COLS - 1)) / NUM_COLS,
+  ) - 1;
 
 export const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#E7EEFA" },
@@ -126,7 +129,8 @@ export const styles = StyleSheet.create({
     backgroundColor: "#ffff",
     borderRadius: moderateScale(12),
     width: scale(46),
-    height: scale(46),
+    // Stretch to match the search bar's (dynamic) height instead of a fixed value.
+    alignSelf: "stretch",
     justifyContent: "center",
     alignItems: "center",
   },

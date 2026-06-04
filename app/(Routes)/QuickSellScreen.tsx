@@ -4,22 +4,22 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    Alert,
-    FlatList,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import {
-    checkHighSelling,
-    checkLowStock,
-    notifySaleCompleted,
-} from "../notificationHelpers";
+  checkHighSelling,
+  checkLowStock,
+  notifySaleCompleted,
+} from "../../utils/notificationHelpers";
 
 interface Product {
   id: string;

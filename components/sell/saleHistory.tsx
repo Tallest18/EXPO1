@@ -1,7 +1,8 @@
-import { styles } from "@/app/(Main)/Sell.styles";
+import { styles } from "@/src/styles/Sell.styles";
 import Feather from "@expo/vector-icons/Feather";
+import { useRouter } from "expo-router";
 import React from "react";
-import { Image, ScrollView, Text, View } from "react-native";
+import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -94,12 +95,42 @@ const formatSaleTime = (dateString: string): string => {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 const SaleCard: React.FC<{ sale: Sale }> = ({ sale }) => {
+  const router = useRouter();
   const paymentColor = getPaymentColor(sale.paymentMethod);
   const firstItem = sale.items[0];
   const initial = firstItem?.productName?.charAt(0)?.toUpperCase() || "?";
 
+  const openDetails = () => {
+    // SalesDetailScreen re-fetches accurate data via getSale(id); the rest is
+    // passed as fallback in case the network request fails.
+    const payload = {
+      id: sale.id,
+      transactionId: sale.transactionId,
+      amount: sale.totalAmount,
+      date: sale.date,
+      paymentMethod: sale.paymentMethod,
+      name: firstItem?.productName,
+      quantity: firstItem?.quantity,
+      image: firstItem?.productImage,
+      items: sale.items.map((it) => ({
+        name: it.productName,
+        quantity: it.quantity,
+        subtotal: it.totalPrice,
+        productId: it.productId,
+      })),
+    };
+    router.push({
+      pathname: "/(Routes)/SalesDetailScreen" as any,
+      params: { sale: JSON.stringify(payload) },
+    });
+  };
+
   return (
-    <View style={styles.saleCard}>
+    <TouchableOpacity
+      style={styles.saleCard}
+      onPress={openDetails}
+      activeOpacity={0.7}
+    >
       {/* Thumbnail */}
       {firstItem?.productImage ? (
         <Image
@@ -148,7 +179,7 @@ const SaleCard: React.FC<{ sale: Sale }> = ({ sale }) => {
           {capitalise(sale.paymentMethod)}
         </Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 

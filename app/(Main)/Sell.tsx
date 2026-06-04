@@ -4,23 +4,21 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import { useSales } from "@/hooks/useSales";
 import { ApiUserInventoryItem, listUserInventory } from "@/src/api";
 import type { ApiSale } from "@/src/api/sales";
+import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
+import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
-  Image,
   SafeAreaView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { styles } from "./Sell.styles";
-
-// Import the default product image from assets
-const defaultProductImage = require("../../assets/images/coke.png");
+import { styles } from "../../src/styles/Sell.styles";
+import { moderateScale } from "../../utils/scaling";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,9 +59,7 @@ const mapApiProduct = (p: ApiUserInventoryItem): Product => ({
   name: p.name,
   category: p.category || "",
   barcode: p.barcode || "",
-  image: p.image_url
-    ? { uri: p.image_url }
-    : { uri: Image.resolveAssetSource(defaultProductImage).uri },
+  image: p.image_url ? { uri: p.image_url } : null,
   quantityType: p.quantity_type || p.unit_type || "Single Items",
   unitsInStock: Number(p.units_in_stock || 0),
   costPrice: Number(p.cost_price || 0),
@@ -102,10 +98,10 @@ const Sell: React.FC = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
 
-  const [products, setProducts] = useState<Product[]>([]);
-  const [productsLoading, setProductsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  // "recent" = newest first (default), "name" = alphabetical A-Z
+  const [sortOrder, setSortOrder] = useState<"recent" | "name">("recent");
   const { data: salesData, isLoading: salesLoading } = useSales({
     search: searchQuery.trim() || undefined,
     page: 0,
@@ -126,37 +122,35 @@ const Sell: React.FC = () => {
     if (params.tab === "history") setActiveTab("history");
   }, [params.tab]);
 
-  useEffect(() => {
-    const loadProducts = async () => {
-      setProductsLoading(true);
-      try {
-        const productsRes = await listUserInventory({
-          search: searchQuery.trim() || undefined,
-          page: 0,
-          page_size: 50,
-        });
-        setProducts(
-          productsRes.results
-            .map(mapApiProduct)
-            .sort(
-              (a, b) =>
-                new Date(b.dateAdded).getTime() -
-                new Date(a.dateAdded).getTime(),
-            ),
-        );
-      } catch (err: any) {
-        Alert.alert("Error", err?.message || "Failed to load products");
-      } finally {
-        setProductsLoading(false);
-      }
-    };
-    loadProducts();
-  }, [searchQuery]);
+  const { data: inventoryData, isLoading: productsLoading } = useQuery({
+    queryKey: ["user-inventory", searchQuery.trim() || undefined, undefined, 0, 50, sortOrder],
+    queryFn: () =>
+      listUserInventory({
+        search: searchQuery.trim() || undefined,
+        page: 0,
+        page_size: 50,
+        sort: sortOrder,
+      }),
+  });
+
+  const products = useMemo<Product[]>(() => {
+    const results = (inventoryData?.results ?? []).map(mapApiProduct);
+    // Mirror the API ordering client-side so the list stays correct even when
+    // results are served from cache or an unsorted source.
+    if (sortOrder === "name") {
+      return results.sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+      );
+    }
+    return results.sort(
+      (a, b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime(),
+    );
+  }, [inventoryData, sortOrder]);
 
   const filteredProducts = useMemo(() => {
     const term = searchQuery.toLowerCase().trim();
     if (!term) return products;
-    return products.filter((p) => {
+    return products.filter((p: Product) => {
       const name = p.name?.toLowerCase() || "";
       const category = p.category?.toLowerCase() || "";
       return name.includes(term) || category.includes(term);
@@ -272,8 +266,19 @@ const Sell: React.FC = () => {
             returnKeyType="search"
           />
         </View>
-        <TouchableOpacity style={styles.filterButton} activeOpacity={0.7}>
-          <Feather name="sliders" size={18} color="#0000" />
+
+        <TouchableOpacity
+          style={styles.filterButton}
+          activeOpacity={0.7}
+          onPress={() =>
+            setSortOrder((prev) => (prev === "recent" ? "name" : "recent"))
+          }
+        >
+          <AntDesign
+            name={sortOrder === "name" ? "sort-ascending" : "sort-descending"}
+            size={moderateScale(20)}
+            color="#333"
+          />
         </TouchableOpacity>
       </View>
 

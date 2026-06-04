@@ -12,7 +12,7 @@ import {
 import { AddProductContext } from "@/context/AddProductContext";
 import type { Product as AddProductModel } from "@/hooks/useAddProductForm";
 import { clearTokens, getAccessToken, getProfile } from "@/src/api";
-import { FONT_ASSETS, FONT_FAMILY } from "../constants/fonts";
+import { FONT_ASSETS } from "../constants/fonts";
 import AddProductFlow from "./(Routes)/AddProductFlow";
 
 SplashScreen.preventAutoHideAsync();
@@ -48,20 +48,12 @@ function AppContent() {
       ...(Text as any).defaultProps,
       allowFontScaling: false,
       maxFontSizeMultiplier: 1,
-      style: [
-        { fontFamily: FONT_FAMILY.regular },
-        (Text as any).defaultProps?.style,
-      ],
     };
 
     (TextInput as any).defaultProps = {
       ...(TextInput as any).defaultProps,
       allowFontScaling: false,
       maxFontSizeMultiplier: 1,
-      style: [
-        { fontFamily: FONT_FAMILY.regular },
-        (TextInput as any).defaultProps?.style,
-      ],
     };
   }, [fontsLoaded, fontError]);
 

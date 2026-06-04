@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    Dimensions,
     Image,
     SafeAreaView,
     ScrollView,
@@ -13,9 +14,21 @@ import {
 } from "react-native";
 import { styles } from "./components/Cart.styles";
 
+// Manual dashed separator: RN's `borderStyle: "dashed"` renders solid on iOS
+// unless borderRadius > 0 (which curves the edges), so we draw the line from
+// small segments instead — always straight and dashed across platforms.
+const DASH_COUNT = Math.ceil(Dimensions.get("window").width / 10);
+const DashedSeparator: React.FC = () => (
+  <View style={styles.dashedSeparator}>
+    {Array.from({ length: DASH_COUNT }).map((_, i) => (
+      <View key={i} style={styles.dash} />
+    ))}
+  </View>
+);
+
 import { apiClient } from "@/src/api";
 import { PRODUCTS_ITEM } from "@/src/api/endpoints";
-import { scale, verticalScale } from "../(Main)/scaling";
+import { scale, verticalScale } from "../../utils/scaling";
 
 const normalizeEndpoint = (endpoint: string) =>
   endpoint.startsWith("/api/") ? endpoint.replace(/^\/api/, "") : endpoint;
@@ -323,7 +336,12 @@ const Cart: React.FC = () => {
             showsVerticalScrollIndicator={false}
             // contentContainerStyle={styles.cartContentContainer}
           >
-            {cart.map((item, index) => renderCartItem(item, index))}
+            {cart.map((item, index) => (
+              <React.Fragment key={`${item.id}-${index}`}>
+                {renderCartItem(item, index)}
+                <DashedSeparator />
+              </React.Fragment>
+            ))}
           </ScrollView>
 
           {/* Total and Checkout */}

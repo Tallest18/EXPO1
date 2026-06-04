@@ -14,6 +14,8 @@ export interface ApiNotification {
   message?: string;
   status?: "New" | "Read" | "Archived" | string;
   is_read?: boolean;
+  inventoryId?: number | null;
+  inventory_name?: string | null;
   product?: number | null;
   product_name?: string | null;
   created_at?: string;

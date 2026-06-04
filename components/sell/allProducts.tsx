@@ -1,5 +1,5 @@
 import { Product } from "@/app/(Main)/Sell";
-import { styles } from "@/app/(Main)/Sell.styles";
+import { styles } from "@/src/styles/Sell.styles";
 import Feather from "@expo/vector-icons/Feather";
 import React from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";

@@ -2,16 +2,17 @@ import { FormData } from "@/hooks/useAddProductForm";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
-  ActivityIndicator,
-  Dimensions,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Dimensions,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 const isSmall = width < 360;
@@ -104,29 +105,35 @@ export const ProductInfoStep: React.FC<ProductInfoStepProps> = ({
   imageUploading,
   onPickImage,
   onScanBarcode,
-}) => (
-  <ScrollView
-    style={styles.stepContent}
-    contentContainerStyle={styles.stepContentContainer}
-    showsVerticalScrollIndicator={false}
-    keyboardShouldPersistTaps="handled"
-  >
-    {/* Card 1: Product Name, SKU, and Category */}
-    <View style={styles.card}>
-      {/* Product Name */}
-      <View style={styles.fieldGroup}>
-        <FieldLabel label="Product Name" required />
-        <TextInput
-          style={styles.input}
-          placeholder="Type here..."
-          placeholderTextColor="#CBD5E0"
-          value={formData.productName}
-          onChangeText={(v) => updateFormData("productName", v)}
-        />
-      </View>
+}) => {
+  const insets = useSafeAreaInsets();
 
-      {/* SKU / Barcode */}
-      {/* <View style={styles.fieldGroup}>
+  return (
+    <ScrollView
+      style={styles.stepContent}
+      contentContainerStyle={[
+        styles.stepContentContainer,
+        { paddingBottom: 36 + insets.bottom },
+      ]}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
+      {/* Card 1: Product Name, SKU, and Category */}
+      <View style={styles.card}>
+        {/* Product Name */}
+        <View style={styles.fieldGroup}>
+          <FieldLabel label="Product Name" required />
+          <TextInput
+            style={styles.input}
+            placeholder="Type here..."
+            placeholderTextColor="#CBD5E0"
+            value={formData.productName}
+            onChangeText={(v) => updateFormData("productName", v)}
+          />
+        </View>
+
+        {/* SKU / Barcode */}
+        {/* <View style={styles.fieldGroup}>
         <FieldLabel label="SKU / Barcode" required />
         <View style={styles.skuRow}>
           <TextInput
@@ -144,139 +151,142 @@ export const ProductInfoStep: React.FC<ProductInfoStepProps> = ({
         </View>
       </View> */}
 
-      {/* Product Category */}
-      <View style={[styles.fieldGroup, { marginBottom: 0 }]}>
-        <FieldLabel label="Product Category" required />
-        <TouchableOpacity
-          style={styles.dropdown}
-          onPress={() =>
-            !categoriesLoading &&
-            availableCategories.length > 0 &&
-            setShowCategoryDropdown(!showCategoryDropdown)
-          }
-        >
-          <Text
-            style={
-              formData.category
-                ? styles.dropdownText
-                : styles.dropdownPlaceholder
+        {/* Product Category */}
+        <View style={[styles.fieldGroup, { marginBottom: 0 }]}>
+          <FieldLabel label="Product Category" required />
+          <TouchableOpacity
+            style={styles.dropdown}
+            onPress={() =>
+              !categoriesLoading &&
+              availableCategories.length > 0 &&
+              setShowCategoryDropdown(!showCategoryDropdown)
             }
           >
-            {categoriesLoading
-              ? "Loading categories..."
-              : formData.category || "Category"}
-          </Text>
-          <Ionicons
-            name={showCategoryDropdown ? "chevron-up" : "chevron-down"}
-            size={18}
-            color="#718096"
-          />
-        </TouchableOpacity>
-
-        {showCategoryDropdown && (
-          <View style={styles.dropdownMenu}>
-            {availableCategories.map((category) => (
-              <TouchableOpacity
-                key={category.id}
-                style={styles.dropdownItem}
-                onPress={() => {
-                  updateFormData("category", category.name);
-                  setShowCategoryDropdown(false);
-                }}
-              >
-                <Text style={styles.dropdownItemText}>{category.name}</Text>
-                {formData.category === category.name && (
-                  <Ionicons name="checkmark" size={18} color="#1155CC" />
-                )}
-              </TouchableOpacity>
-            ))}
-            {!availableCategories.length && (
-              <View style={styles.dropdownItem}>
-                <Text style={styles.dropdownItemText}>
-                  No categories available
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-      </View>
-    </View>
-
-    {/* Card 2: Upload Product Image */}
-    <View style={styles.card}>
-      <View style={styles.fieldGroup}>
-        <FieldLabel label="Upload Product Image" required />
-
-        {formData.productImage ? (
-          /* ── Image uploaded state ── */
-          <View style={styles.imageUploadBox}>
-            <Image
-              source={{ uri: formData.productImage.uri }}
-              style={styles.uploadedImage}
-              resizeMode="contain"
+            <Text
+              style={
+                formData.category
+                  ? styles.dropdownText
+                  : styles.dropdownPlaceholder
+              }
+            >
+              {categoriesLoading
+                ? "Loading categories..."
+                : formData.category || "Category"}
+            </Text>
+            <Ionicons
+              name={showCategoryDropdown ? "chevron-up" : "chevron-down"}
+              size={18}
+              color="#718096"
             />
-            <TouchableOpacity
-              style={styles.removeImageBtn}
-              onPress={() => updateFormData("productImage", null)}
-            >
-              <Text style={styles.removeImageBtnText}>Remove</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          /* ── Empty upload state ── */
-          <View style={styles.imageUploadBox}>
-            {/* Mountain / image icon */}
-            <View style={styles.imageIconCircle}>
-              <Ionicons name="image" size={40} color="#1155CC" />
+          </TouchableOpacity>
+
+          {showCategoryDropdown && (
+            <View style={styles.dropdownMenu}>
+              {availableCategories.map((category) => (
+                <TouchableOpacity
+                  key={category.id}
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    updateFormData("category", category.name);
+                    setShowCategoryDropdown(false);
+                  }}
+                >
+                  <Text style={styles.dropdownItemText}>{category.name}</Text>
+                  {formData.category === category.name && (
+                    <Ionicons name="checkmark" size={18} color="#1155CC" />
+                  )}
+                </TouchableOpacity>
+              ))}
+              {!availableCategories.length && (
+                <View style={styles.dropdownItem}>
+                  <Text style={styles.dropdownItemText}>
+                    No categories available
+                  </Text>
+                </View>
+              )}
             </View>
-
-            <Text style={styles.imageUploadTitle}>
-              Click to take a picture, or select{"\n"}from gallery
-            </Text>
-
-            {/* Take Picture button */}
-            <TouchableOpacity
-              style={styles.takePictureBtn}
-              onPress={() => onPickImage(true)}
-              disabled={imageUploading}
-            >
-              <Text style={styles.takePictureBtnText}>Take Picture</Text>
-            </TouchableOpacity>
-
-            {/* Select from gallery link */}
-            <TouchableOpacity
-              onPress={() => onPickImage(false)}
-              disabled={imageUploading}
-            >
-              <Text style={styles.selectGalleryLink}>Select from gallery</Text>
-            </TouchableOpacity>
-
-            {/* File info */}
-            <Text style={styles.imageUploadInfo}>
-              Files Supported: PNG, JPG, SVG.{"\n"}Maximum Size 1MB
-            </Text>
-
-            {imageUploading && (
-              <ActivityIndicator
-                size="small"
-                color="#1155CC"
-                style={{ marginTop: 8 }}
-              />
-            )}
-
-            <Text style={styles.orSeparator}>or</Text>
-
-            {/* Search online inside the dashed box */}
-            <View style={styles.searchOnlineInner}>
-              <Ionicons name="search-outline" size={16} color="#718096" />
-              <Text style={styles.searchOnlineInnerText}>Search online</Text>
-            </View>
-          </View>
-        )}
+          )}
+        </View>
       </View>
-    </View>
-  </ScrollView>
-);
+
+      {/* Card 2: Upload Product Image */}
+      <View style={styles.card}>
+        <View style={styles.fieldGroup}>
+          <FieldLabel label="Upload Product Image" required />
+
+          {formData.productImage ? (
+            /* ── Image uploaded state ── */
+            <View style={styles.imageUploadBox}>
+              <Image
+                source={{ uri: formData.productImage.uri }}
+                style={styles.uploadedImage}
+                resizeMode="contain"
+              />
+              <TouchableOpacity
+                style={styles.removeImageBtn}
+                onPress={() => updateFormData("productImage", null)}
+              >
+                <Text style={styles.removeImageBtnText}>Remove</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            /* ── Empty upload state ── */
+            <View style={styles.imageUploadBox}>
+              {/* Mountain / image icon */}
+              <View style={styles.imageIconCircle}>
+                <Ionicons name="image" size={40} color="#1155CC" />
+              </View>
+
+              <Text style={styles.imageUploadTitle}>
+                Click to take a picture, or select{"\n"}from gallery
+              </Text>
+
+              {/* Take Picture button */}
+              <TouchableOpacity
+                style={styles.takePictureBtn}
+                onPress={() => onPickImage(true)}
+                disabled={imageUploading}
+              >
+                <Text style={styles.takePictureBtnText}>Take Picture</Text>
+              </TouchableOpacity>
+
+              {/* Select from gallery link */}
+              <TouchableOpacity
+                onPress={() => onPickImage(false)}
+                disabled={imageUploading}
+              >
+                <Text style={styles.selectGalleryLink}>
+                  Select from gallery
+                </Text>
+              </TouchableOpacity>
+
+              {/* File info */}
+              <Text style={styles.imageUploadInfo}>
+                Files Supported: PNG, JPG, SVG.{"\n"}Maximum Size 1MB
+              </Text>
+
+              {imageUploading && (
+                <ActivityIndicator
+                  size="small"
+                  color="#1155CC"
+                  style={{ marginTop: 8 }}
+                />
+              )}
+
+              <Text style={styles.orSeparator}>or</Text>
+
+              {/* Search online inside the dashed box */}
+              <View style={styles.searchOnlineInner}>
+                <Ionicons name="search-outline" size={16} color="#718096" />
+                <Text style={styles.searchOnlineInnerText}>Search online</Text>
+              </View>
+            </View>
+          )}
+        </View>
+      </View>
+    </ScrollView>
+  );
+};
 
 // ─── Step 2: Pricing & Packaging ─────────────────────────────────────────────
 
@@ -288,101 +298,108 @@ interface PricingStepProps {
 export const PricingStep: React.FC<PricingStepProps> = ({
   formData,
   updateFormData,
-}) => (
-  <ScrollView
-    style={styles.stepContent}
-    contentContainerStyle={styles.stepContentContainer}
-    showsVerticalScrollIndicator={false}
-  >
-    <View style={styles.card}>
-      <View style={styles.fieldGroup}>
-        <FieldLabel label="Quantity Type:" required />
-        <View style={styles.radioGroup}>
-          {["Single Items", "Carton", "Both"].map((type) => (
-            <TouchableOpacity
-              key={type}
-              style={styles.radioOption}
-              onPress={() => updateFormData("quantityType", type)}
-            >
-              <View
-                style={[
-                  styles.radioCircle,
-                  formData.quantityType === type && styles.radioCircleActive,
-                ]}
+}) => {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <ScrollView
+      style={styles.stepContent}
+      contentContainerStyle={[
+        styles.stepContentContainer,
+        { paddingBottom: 36 + insets.bottom },
+      ]}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.card}>
+        <View style={styles.fieldGroup}>
+          <FieldLabel label="Quantity Type:" required />
+          <View style={styles.radioGroup}>
+            {["Single Items", "Carton", "Both"].map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={styles.radioOption}
+                onPress={() => updateFormData("quantityType", type)}
               >
-                {formData.quantityType === type && (
-                  <View style={styles.radioInner} />
-                )}
-              </View>
-              <Text style={styles.radioText}>{type}</Text>
-            </TouchableOpacity>
-          ))}
+                <View
+                  style={[
+                    styles.radioCircle,
+                    formData.quantityType === type && styles.radioCircleActive,
+                  ]}
+                >
+                  {formData.quantityType === type && (
+                    <View style={styles.radioInner} />
+                  )}
+                </View>
+                <Text style={styles.radioText}>{type}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
+
+        {formData.quantityType === "Single Items" && (
+          <>
+            <NumericField
+              label="No. of Items (Unit)"
+              placeholder="How many pieces dey inside one carton?"
+              value={formData.numberOfItems}
+              onChange={(v) => updateFormData("numberOfItems", v)}
+            />
+            <PriceField
+              label="Cost Price (How much you buy am?)"
+              value={formData.costPrice}
+              onChange={(v) => updateFormData("costPrice", v)}
+            />
+            <PriceField
+              label="Selling Price (How much you won sell am?)"
+              value={formData.sellingPrice}
+              onChange={(v) => updateFormData("sellingPrice", v)}
+            />
+          </>
+        )}
+
+        {(formData.quantityType === "Carton" ||
+          formData.quantityType === "Both") && (
+          <>
+            <NumericField
+              label="Units per Carton"
+              placeholder="How many pieces dey inside one carton?"
+              value={formData.unitsPerCarton}
+              onChange={(v) => updateFormData("unitsPerCarton", v)}
+            />
+            <NumericField
+              label="No. of Cartons"
+              placeholder="How many carton?"
+              value={formData.numberOfCartons}
+              onChange={(v) => updateFormData("numberOfCartons", v)}
+            />
+            <PriceField
+              label="Cost Price (How much you buy 1 carton?)"
+              value={formData.costPricePerCarton}
+              onChange={(v) => updateFormData("costPricePerCarton", v)}
+            />
+            <PriceField
+              label={
+                formData.quantityType === "Both"
+                  ? "Selling Price (for 1 carton?)"
+                  : "Selling Price (How much you won sell am?)"
+              }
+              value={formData.sellingPricePerCarton}
+              onChange={(v) => updateFormData("sellingPricePerCarton", v)}
+            />
+          </>
+        )}
+
+        {formData.quantityType === "Both" && (
+          <PriceField
+            label="Selling Price (for 1 unit item inside?)"
+            value={formData.sellingPricePerUnit}
+            onChange={(v) => updateFormData("sellingPricePerUnit", v)}
+          />
+        )}
       </View>
-
-      {formData.quantityType === "Single Items" && (
-        <>
-          <NumericField
-            label="No. of Items (Unit)"
-            placeholder="How many pieces dey inside one carton?"
-            value={formData.numberOfItems}
-            onChange={(v) => updateFormData("numberOfItems", v)}
-          />
-          <PriceField
-            label="Cost Price (How much you buy am?)"
-            value={formData.costPrice}
-            onChange={(v) => updateFormData("costPrice", v)}
-          />
-          <PriceField
-            label="Selling Price (How much you won sell am?)"
-            value={formData.sellingPrice}
-            onChange={(v) => updateFormData("sellingPrice", v)}
-          />
-        </>
-      )}
-
-      {(formData.quantityType === "Carton" ||
-        formData.quantityType === "Both") && (
-        <>
-          <NumericField
-            label="Units per Carton"
-            placeholder="How many pieces dey inside one carton?"
-            value={formData.unitsPerCarton}
-            onChange={(v) => updateFormData("unitsPerCarton", v)}
-          />
-          <NumericField
-            label="No. of Cartons"
-            placeholder="How many carton?"
-            value={formData.numberOfCartons}
-            onChange={(v) => updateFormData("numberOfCartons", v)}
-          />
-          <PriceField
-            label="Cost Price (How much you buy 1 carton?)"
-            value={formData.costPricePerCarton}
-            onChange={(v) => updateFormData("costPricePerCarton", v)}
-          />
-          <PriceField
-            label={
-              formData.quantityType === "Both"
-                ? "Selling Price (for 1 carton?)"
-                : "Selling Price (How much you won sell am?)"
-            }
-            value={formData.sellingPricePerCarton}
-            onChange={(v) => updateFormData("sellingPricePerCarton", v)}
-          />
-        </>
-      )}
-
-      {formData.quantityType === "Both" && (
-        <PriceField
-          label="Selling Price (for 1 unit item inside?)"
-          value={formData.sellingPricePerUnit}
-          onChange={(v) => updateFormData("sellingPricePerUnit", v)}
-        />
-      )}
-    </View>
-  </ScrollView>
-);
+    </ScrollView>
+  );
+};
 
 // ─── Step 3: Stock & Extras ───────────────────────────────────────────────────
 
@@ -394,87 +411,94 @@ interface StockExtrasStepProps {
 export const StockExtrasStep: React.FC<StockExtrasStepProps> = ({
   formData,
   updateFormData,
-}) => (
-  <ScrollView
-    style={styles.stepContent}
-    contentContainerStyle={styles.stepContentContainer}
-    showsVerticalScrollIndicator={false}
-  >
-    {/* Card 1: Stock settings */}
-    <View style={styles.card}>
-      <View style={styles.fieldGroup}>
-        <FieldLabel label="Low stock Threshold" required />
-        <TextInput
-          style={styles.input}
-          placeholder="Select Number"
-          placeholderTextColor="#CBD5E0"
-          value={formData.lowStockThreshold}
-          onChangeText={(v) => updateFormData("lowStockThreshold", v)}
-          keyboardType="numeric"
-        />
+}) => {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <ScrollView
+      style={styles.stepContent}
+      contentContainerStyle={[
+        styles.stepContentContainer,
+        { paddingBottom: 36 + insets.bottom },
+      ]}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Card 1: Stock settings */}
+      <View style={styles.card}>
+        <View style={styles.fieldGroup}>
+          <FieldLabel label="Low stock Threshold" required />
+          <TextInput
+            style={styles.input}
+            placeholder="Select Number"
+            placeholderTextColor="#CBD5E0"
+            value={formData.lowStockThreshold}
+            onChangeText={(v) => updateFormData("lowStockThreshold", v)}
+            keyboardType="numeric"
+          />
+        </View>
+
+        <View style={[styles.fieldGroup, { marginBottom: 0 }]}>
+          <Text style={styles.label}>Expiry Date</Text>
+          <View style={styles.dateRow}>
+            <TextInput
+              style={styles.dateBox}
+              placeholder="DD"
+              placeholderTextColor="#CBD5E0"
+              value={formData.expiryDate.day}
+              onChangeText={(v) => updateFormData("expiryDate.day", v)}
+              keyboardType="numeric"
+              maxLength={2}
+            />
+            <TextInput
+              style={styles.dateBox}
+              placeholder="MM"
+              placeholderTextColor="#CBD5E0"
+              value={formData.expiryDate.month}
+              onChangeText={(v) => updateFormData("expiryDate.month", v)}
+              keyboardType="numeric"
+              maxLength={2}
+            />
+            <TextInput
+              style={styles.dateBox}
+              placeholder="YYYY"
+              placeholderTextColor="#CBD5E0"
+              value={formData.expiryDate.year}
+              onChangeText={(v) => updateFormData("expiryDate.year", v)}
+              keyboardType="numeric"
+              maxLength={4}
+            />
+          </View>
+        </View>
       </View>
 
-      <View style={[styles.fieldGroup, { marginBottom: 0 }]}>
-        <Text style={styles.label}>Expiry Date</Text>
-        <View style={styles.dateRow}>
+      {/* Card 2: Supplier info — separate card as per UI */}
+      <View style={styles.card}>
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Supplier</Text>
           <TextInput
-            style={styles.dateBox}
-            placeholder="DD"
+            style={styles.input}
+            placeholder="Full Name..."
             placeholderTextColor="#CBD5E0"
-            value={formData.expiryDate.day}
-            onChangeText={(v) => updateFormData("expiryDate.day", v)}
-            keyboardType="numeric"
-            maxLength={2}
+            value={formData.supplier.name}
+            onChangeText={(v) => updateFormData("supplier.name", v)}
           />
+        </View>
+
+        <View style={[styles.fieldGroup, { marginBottom: 0 }]}>
+          <Text style={styles.label}>Phone Number</Text>
           <TextInput
-            style={styles.dateBox}
-            placeholder="MM"
+            style={styles.input}
+            placeholder="Type here..."
             placeholderTextColor="#CBD5E0"
-            value={formData.expiryDate.month}
-            onChangeText={(v) => updateFormData("expiryDate.month", v)}
-            keyboardType="numeric"
-            maxLength={2}
-          />
-          <TextInput
-            style={styles.dateBox}
-            placeholder="YYYY"
-            placeholderTextColor="#CBD5E0"
-            value={formData.expiryDate.year}
-            onChangeText={(v) => updateFormData("expiryDate.year", v)}
-            keyboardType="numeric"
-            maxLength={4}
+            value={formData.supplier.phone}
+            onChangeText={(v) => updateFormData("supplier.phone", v)}
+            keyboardType="phone-pad"
           />
         </View>
       </View>
-    </View>
-
-    {/* Card 2: Supplier info — separate card as per UI */}
-    <View style={styles.card}>
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>Supplier</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Full Name..."
-          placeholderTextColor="#CBD5E0"
-          value={formData.supplier.name}
-          onChangeText={(v) => updateFormData("supplier.name", v)}
-        />
-      </View>
-
-      <View style={[styles.fieldGroup, { marginBottom: 0 }]}>
-        <Text style={styles.label}>Phone Number</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Type here..."
-          placeholderTextColor="#CBD5E0"
-          value={formData.supplier.phone}
-          onChangeText={(v) => updateFormData("supplier.phone", v)}
-          keyboardType="phone-pad"
-        />
-      </View>
-    </View>
-  </ScrollView>
-);
+    </ScrollView>
+  );
+};
 
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
@@ -493,6 +517,7 @@ export const ProductSummary: React.FC<ProductSummaryProps> = ({
   barcodeScanning,
   onConfirm,
 }) => {
+  const insets = useSafeAreaInsets();
   const totalUnits =
     (parseInt(formData.unitsPerCarton) || 0) *
     (parseInt(formData.numberOfCartons) || 0);
@@ -505,7 +530,10 @@ export const ProductSummary: React.FC<ProductSummaryProps> = ({
   return (
     <ScrollView
       style={styles.stepContent}
-      contentContainerStyle={styles.stepContentContainer}
+      contentContainerStyle={[
+        styles.stepContentContainer,
+        { paddingBottom: 48 + insets.bottom },
+      ]}
       showsVerticalScrollIndicator={false}
     >
       {formData.productImage && (

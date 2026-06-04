@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "inventra",
-    "icon": "./assets/images/logo1.png",
+    "icon": "./assets/images/logo.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
 
@@ -18,7 +18,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "INVENTRA2.W",
       "googleServicesFile": "./GoogleService-info.plist",
-      "icon": "./assets/images/logo1.png",
+      "icon": "./assets/images/logo.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
@@ -27,7 +27,7 @@
 
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo1.png",
+        "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#1155CC"
       },
       "edgeToEdgeEnabled": true,
@@ -52,7 +52,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/loginSplashScreen.png",
+          "image": "./assets/images/logo.png",
           "resizeMode": "cover",
           "backgroundColor": "#1155CC"
         }

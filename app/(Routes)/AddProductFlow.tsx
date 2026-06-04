@@ -26,7 +26,8 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showFormModal, setShowFormModal] = useState(!!initialProduct);
   const [hasPrefilled, setHasPrefilled] = useState(false);
-  const isEditMode = !!initialProduct;
+  const isRestockMode = !!initialProduct && startStep === 1;
+  const isEditMode = !!initialProduct && !isRestockMode;
   const {
     formData,
     saving,
@@ -36,7 +37,12 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
     populateFromProduct,
     handleSaveProduct,
     setShowSuccessModal,
-  } = useAddProductForm(onSaveProduct);
+  } = useAddProductForm(onSaveProduct, {
+    isRestockMode,
+    restockInventoryId: initialProduct?.id,
+    isEditMode,
+    editInventoryId: initialProduct?.id,
+  });
 
   const closeFlow = () => {
     if (onClose) {
@@ -131,14 +137,32 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
         updateFormData={updateFormData}
         onSave={handleSaveProduct}
         onClose={handleFormClose}
-        title={isEditMode ? "Edit Product" : "Add Product"}
+        title={
+          isRestockMode
+            ? "Restock Product"
+            : isEditMode
+              ? "Edit Product"
+              : "Add Product"
+        }
         initialStep={startStep}
       />
 
       <SuccessModal
         visible={showSuccessModal}
-        title="Product Added!"
-        subtitle="Your product has been successfully added."
+        title={
+          isRestockMode
+            ? "Product Restocked!"
+            : isEditMode
+              ? "Product Updated!"
+              : "Product Added!"
+        }
+        subtitle={
+          isRestockMode
+            ? "Your inventory has been successfully restocked."
+            : isEditMode
+              ? "Your product details have been successfully updated."
+              : "Your product has been successfully added."
+        }
         iconName="checkmark-circle-outline"
         iconColor="#1BC47D"
         buttonText="Done"

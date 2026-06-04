@@ -13,6 +13,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
     PricingStep,
     ProductInfoStep,
@@ -49,6 +50,7 @@ const ProductFormModal: React.FC<Props> = ({
   title,
   initialStep = 0,
 }) => {
+  const insets = useSafeAreaInsets();
   const [currentStep, setCurrentStep] = useState(0);
   const [imageUploading] = useState(false);
   const { categories, loadingCategories } = useProductsData();
@@ -153,7 +155,9 @@ const ProductFormModal: React.FC<Props> = ({
       animationType="slide"
       presentationStyle="pageSheet"
     >
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView
+        style={[styles.container, { paddingBottom: insets.bottom }]}
+      >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{title}</Text>
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
@@ -195,7 +199,12 @@ const ProductFormModal: React.FC<Props> = ({
         )}
 
         {currentStep < 3 && (
-          <View style={styles.navigationButtons}>
+          <View
+            style={[
+              styles.navigationButtons,
+              { paddingBottom: insets.bottom ? insets.bottom + 12 : 12 },
+            ]}
+          >
             <TouchableOpacity
               style={[styles.backBtn, currentStep === 0 && { opacity: 0.5 }]}
               onPress={prevStep}

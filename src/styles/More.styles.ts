@@ -88,6 +88,11 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  profileImage: {
+    width: scale(52),
+    height: scale(52),
+    borderRadius: moderateScale(26),
+  },
   profileInfo: {
     marginLeft: scale(12),
     flex: 1,

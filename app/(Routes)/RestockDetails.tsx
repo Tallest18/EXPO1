@@ -5,14 +5,14 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 
 import {
-  Image,
-  SafeAreaView,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { moderateScale } from "../(Main)/scaling";
+import { moderateScale } from "../../utils/scaling";
 import AddProductFlow from "./AddProductFlow";
 import { styles } from "./RestockDetails.styles";
 
@@ -169,7 +169,11 @@ const RestockDetails: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{ paddingBottom: moderateScale(40) }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Main Card with Product Info */}
         <View style={styles.mainCard}>
           <View style={styles.productHeader}>
