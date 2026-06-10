@@ -1,3 +1,4 @@
+import { getFontSize, isSmallDevice, isTablet } from "@/components/homeStyles";
 import { Dimensions, StyleSheet } from "react-native";
 
 const { width, height } = Dimensions.get("window");
@@ -54,11 +55,13 @@ export const styles = StyleSheet.create({
 
   header: {
     paddingHorizontal: scale(20),
-    paddingTop: verticalScale(30),
-    paddingBottom: verticalScale(20),
+    paddingTop: verticalScale(isTablet ? 20 : 14),
+    paddingBottom: verticalScale(isTablet ? 14 : 10),
   },
   headerTitle: {
-    fontSize: moderateScale(28),
+    fontSize: getFontSize(
+      moderateScale(isSmallDevice ? 24 : isTablet ? 34 : 28),
+    ),
     color: COLOR.textPrimary,
     marginBottom: verticalScale(4),
     fontFamily: "DMSans_700Bold",

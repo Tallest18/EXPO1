@@ -1,3 +1,4 @@
+import { useMarkNotificationRead } from "@/hooks/useNotifications";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
@@ -118,6 +119,15 @@ const NotificationFeed: React.FC<NotificationFeedProps> = ({
   onRestockById,
 }) => {
   const router = useRouter();
+  const markRead = useMarkNotificationRead();
+
+  const openNotification = (id: string) => {
+    markRead.mutate(id);
+    router.push({
+      pathname: "/(Routes)/RestockDetails",
+      params: { notificationId: id },
+    });
+  };
 
   const handleNotificationAction = async (
     action: Exclude<Notification["actions"], undefined>[number],
@@ -164,7 +174,11 @@ const NotificationFeed: React.FC<NotificationFeedProps> = ({
   // ─── Item renderer ──────────────────────────────────────────────────────────
 
   const renderItem = ({ item }: { item: Notification }) => (
-    <View style={styles.notificationCard}>
+    <TouchableOpacity
+      style={styles.notificationCard}
+      activeOpacity={0.7}
+      onPress={() => openNotification(item.id)}
+    >
       <View style={styles.notifLeftSection}>
         <View style={styles.notifIconBox}>
           {getNotificationIcon(item.type)}
@@ -207,7 +221,7 @@ const NotificationFeed: React.FC<NotificationFeedProps> = ({
           )}
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   // ─── Render ─────────────────────────────────────────────────────────────────

@@ -10,7 +10,25 @@ interface StatCardsProps {
   transactions: number;
   stockLeft: number;
   dailyPercentageIncrease: number;
+  dailyTransactionPercentage: number;
 }
+
+// Build the % pill text + style: magnitude only (no minus sign),
+// green when positive/zero, red when negative.
+const buildPercent = (value: number) => {
+  const pct = Number(value) || 0;
+  const isNegative = pct < 0;
+  const magnitude = Math.round(Math.abs(pct) * 10) / 10;
+  return {
+    text: `${isNegative ? "" : "+"}${magnitude}%`,
+    isNegative,
+  };
+};
+
+const NEGATIVE_RATE_STYLE = {
+  backgroundColor: "#FEE2E2",
+  color: "#EF4444",
+} as const;
 
 const StatCards: React.FC<StatCardsProps> = ({
   todaySales,
@@ -18,12 +36,10 @@ const StatCards: React.FC<StatCardsProps> = ({
   transactions,
   stockLeft,
   dailyPercentageIncrease,
+  dailyTransactionPercentage,
 }) => {
-  const pct = Number(dailyPercentageIncrease) || 0;
-  const isNegative = pct < 0;
-  // Show the magnitude only (no minus sign); colour flips green -> red.
-  const pctMagnitude = Math.round(Math.abs(pct) * 10) / 10;
-  const pctText = `${isNegative ? "" : "+"}${pctMagnitude}%`;
+  const salesPct = buildPercent(dailyPercentageIncrease);
+  const transactionPct = buildPercent(dailyTransactionPercentage);
 
   return (
     <>
@@ -39,13 +55,10 @@ const StatCards: React.FC<StatCardsProps> = ({
           <Text
             style={[
               styles.salesRate,
-              isNegative && {
-                backgroundColor: "#FEE2E2",
-                color: "#EF4444",
-              },
+              salesPct.isNegative && NEGATIVE_RATE_STYLE,
             ]}
           >
-            {pctText}
+            {salesPct.text}
           </Text>
         </View>
         <Text style={styles.salesAmount} numberOfLines={1} adjustsFontSizeToFit>
@@ -64,7 +77,14 @@ const StatCards: React.FC<StatCardsProps> = ({
         <View style={styles.infoBox}>
           <View style={styles.transactionRow}>
             <Text style={styles.infoLabel}>Transactions</Text>
-            <Text style={styles.salesRate}>+6.5%</Text>
+            <Text
+              style={[
+                styles.salesRate,
+                transactionPct.isNegative && NEGATIVE_RATE_STYLE,
+              ]}
+            >
+              {transactionPct.text}
+            </Text>
           </View>
           <Text style={styles.infoValue}>{transactions}</Text>
         </View>

@@ -53,7 +53,7 @@ export const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: getFontSize(
-      moderateScale(isSmallDevice ? 22 : isTablet ? 32 : 26),
+      moderateScale(isSmallDevice ? 24 : isTablet ? 34 : 28),
     ),
     color: "#000",
     fontFamily: "DMSans_700Bold",

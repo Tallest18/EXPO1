@@ -1,11 +1,10 @@
 import { apiClient } from "@/src/api/client";
-import { API_BASE_URL, API_PREFIX } from "@/src/api/constants";
 import {
     PRODUCTS_USER_INVENTORY_ADD,
     PRODUCTS_USER_INVENTORY_ITEM,
 } from "@/src/api/endpoints";
+import { MULTIPART_CONFIG, readImage, toFormData } from "@/src/api/formData";
 import { createRestock } from "@/src/api/products";
-import { getAccessToken } from "@/src/api/tokenStorage";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Alert } from "react-native";
@@ -308,44 +307,27 @@ export function useAddProductForm(
           PRODUCTS_USER_INVENTORY_ITEM(options.editInventoryId),
         );
 
-        const localEditImage =
-          formData.productImage?.uri &&
-          !formData.productImage.uri.startsWith("http")
-            ? formData.productImage
-            : null;
+        const imageFile = readImage(formData.productImage);
 
         let updated: any;
 
-        if (localEditImage) {
-          // Single multipart PATCH: all fields + image together via fetch
-          const token = await getAccessToken();
-          const fd = new FormData();
-          Object.entries(editPayload).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
-              fd.append(key, String(value));
-            }
+        if (imageFile) {
+          // Multipart PATCH: all fields + image together via the axios client
+          // (keeps auth/refresh interceptors; correct multipart boundary).
+          const fd = toFormData({
+            ...editPayload,
+            // buying_price is also required by the server
+            buying_price: editPayload.cost_price || "0",
+            image: imageFile,
           });
-          // buying_price is also required by the server
-          fd.append("buying_price", editPayload.cost_price || "0");
-          fd.append("image", {
-            uri: localEditImage.uri,
-            name: localEditImage.fileName || `product-${Date.now()}.jpg`,
-            type: localEditImage.type || "image/jpeg",
-          } as any);
-
-          const fullUrl = `${API_BASE_URL}${API_PREFIX}${editEndpoint}`;
-          const res = await fetch(fullUrl, {
-            method: "PATCH",
-            headers: { Authorization: `Bearer ${token}` },
-            body: fd as any,
-          });
-          if (!res.ok) {
-            const text = await res.text();
-            throw new Error(`${res.status}: ${text}`);
-          }
-          updated = await res.json();
+          const { data } = await apiClient.patch(
+            editEndpoint,
+            fd,
+            MULTIPART_CONFIG,
+          );
+          updated = data;
         } else {
-          // No local image — plain JSON PATCH
+          // No new local image — plain JSON PATCH.
           if (formData.productImage?.uri?.startsWith("http")) {
             editPayload.image_url = formData.productImage.uri;
           }
@@ -428,39 +410,18 @@ export function useAddProductForm(
         supplier_phone: formData.supplier.phone || "",
       };
 
-      const localImage =
-        formData.productImage?.uri &&
-        !formData.productImage.uri.startsWith("http")
-          ? formData.productImage
-          : null;
+      const imageFile = readImage(formData.productImage);
 
-      if (localImage) {
-        // Single multipart POST: all fields + image together via fetch
-        const token = await getAccessToken();
-        const fd = new FormData();
-        Object.entries(payload).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
-            fd.append(key, String(value));
-          }
+      if (imageFile) {
+        // Multipart POST: all fields + image together via the axios client.
+        const fd = toFormData({
+          ...payload,
+          buying_price: buyingPrice,
+          image: imageFile,
         });
-        fd.append("buying_price", buyingPrice);
-        fd.append("image", {
-          uri: localImage.uri,
-          name: localImage.fileName || `product-${Date.now()}.jpg`,
-          type: localImage.type || "image/jpeg",
-        } as any);
-        const fullUrl = `${API_BASE_URL}${API_PREFIX}${PRODUCTS_USER_INVENTORY_ADD}`;
-        const res = await fetch(fullUrl, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: fd as any,
-        });
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`${res.status}: ${text}`);
-        }
+        await apiClient.post(PRODUCTS_USER_INVENTORY_ADD, fd, MULTIPART_CONFIG);
       } else {
-        // No image — plain JSON POST
+        // No image — plain JSON POST.
         await apiClient.post(PRODUCTS_USER_INVENTORY_ADD, payload);
       }
 

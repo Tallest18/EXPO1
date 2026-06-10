@@ -41,12 +41,6 @@ const businessTypes: BusinessType[] = [
     description:
       "For supermarkets, provision stores, boutiques, pharmacies, and other product sellers.",
   },
-  {
-    id: "service",
-    title: "Service Business",
-    description:
-      "For salons, barbers, tailors, mechanics, and similar service providers.",
-  },
 ];
 
 const BusinessSelectionScreen: React.FC = () => {

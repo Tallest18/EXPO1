@@ -6,6 +6,7 @@ import {
     PRODUCTS_USER_INVENTORY_ITEM,
     RESTOCKS,
 } from "./endpoints";
+import { MULTIPART_CONFIG, readImage, toFormData } from "./formData";
 
 const normalizeEndpoint = (endpoint: string) =>
   endpoint.startsWith("/api/") ? endpoint.replace(/^\/api/, "") : endpoint;
@@ -184,28 +185,15 @@ export async function createProductWithImage(
     return createProduct(payload);
   }
 
-  const formData = new FormData();
-  Object.entries(payload).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) {
-      formData.append(key, String(value));
-    }
+  const formData = toFormData({
+    ...payload,
+    image: readImage(imageObj),
   });
-
-  // Debug: log the image object before appending
-  console.log("Uploading image object:", imageObj);
-  formData.append("image", {
-    uri: imageObj.uri,
-    name: imageObj.fileName || `product-${Date.now()}.jpg`,
-    type: imageObj.type || "image/jpeg",
-  } as any);
 
   const response = await apiClient.post<ApiProduct>(
     normalizeEndpoint(PRODUCTS_ITEMS),
     formData,
-    {
-      headers: { "Content-Type": undefined },
-      transformRequest: [(data: any) => data],
-    },
+    MULTIPART_CONFIG,
   );
   return response.data;
 }
@@ -230,29 +218,17 @@ export async function updateProductWithImage(
     return updateProduct(id, payload);
   }
 
-  const formData = new FormData();
-  Object.entries(payload).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) {
-      formData.append(key, String(value));
-    }
+  // A remote (http) image is already uploaded — send the URL as a plain field;
+  // a local uri is normalised into a { uri, name, type } file part.
+  const formData = toFormData({
+    ...payload,
+    image: imageUri.startsWith("http") ? imageUri : readImage({ uri: imageUri }),
   });
-
-  if (imageUri.startsWith("http")) {
-    formData.append("image", imageUri);
-  } else {
-    formData.append("image", {
-      uri: imageUri,
-      name: `product-${Date.now()}.jpg`,
-      type: "image/jpeg",
-    } as any);
-  }
 
   const response = await apiClient.patch<ApiProduct>(
     normalizeEndpoint(PRODUCTS_USER_INVENTORY_ITEM(id)),
     formData,
-    {
-      headers: { "Content-Type": "multipart/form-data" },
-    },
+    MULTIPART_CONFIG,
   );
   return response.data;
 }

@@ -44,7 +44,7 @@
 
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favnoImg.jpg"
+      "favicon": "./assets/images/logo.png"
     },
 
     "plugins": [
@@ -52,8 +52,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/logo.png",
-          "resizeMode": "cover",
+          "image": "./assets/images/splashScreen.png",
+          "resizeMode": "contain",
           "backgroundColor": "#1155CC"
         }
       ],

@@ -39,7 +39,7 @@ const Onboarding1 = () => {
         <View style={styles.logoRow}>
           {/* <View style={styles.logoIcon}> */}
           <Image
-            source={require("../../assets/images/logo1.png")}
+            source={require("../../assets/images/logo.png")}
             style={styles.image}
           />
           {/* </View> */}

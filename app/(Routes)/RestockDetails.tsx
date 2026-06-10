@@ -1,10 +1,12 @@
-import { DUMMY_NOTIFICATIONS } from "@/components/NotificationFeed";
-import { DUMMY_PRODUCTS } from "@/src/api/dummyData/dummyProducts";
+import { getNotification, getUserInventoryItem } from "@/src/api";
+import { Product as AddProductModel } from "@/hooks/useAddProductForm";
 import { Feather, Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import {
+    ActivityIndicator,
     Image,
     SafeAreaView,
     ScrollView,
@@ -16,75 +18,120 @@ import { moderateScale } from "../../utils/scaling";
 import AddProductFlow from "./AddProductFlow";
 import { styles } from "./RestockDetails.styles";
 
-// Notification and Product interfaces (import if you have them elsewhere)
-interface Notification {
-  id: string;
-  type:
-    | "low_stock"
-    | "out_of_stock"
-    | "high_selling"
-    | "zero_sales"
-    | "daily_summary"
-    | "weekly_summary"
-    | "expense"
-    | "expiry"
-    | "backup"
-    | "app_update"
-    | "product_added"
-    | "sale"
-    | "general";
-  title: string;
-  message: string;
-  time: string;
-  isRead: boolean;
-  productId?: string;
-  dateAdded: number | string;
-  actions?: { label: string; type: string; productId?: string }[];
-}
+// Friendly label shown above the product name in the blue card.
+const TYPE_LABELS: Record<string, string> = {
+  low_stock: "Low Stock Alert",
+  out_of_stock: "Out of Stock Alert",
+  high_selling: "High Selling Product",
+  zero_sales: "Zero Sales Alert",
+  expiry: "Expiry Alert",
+  daily_summary: "Daily Summary",
+  weekly_summary: "Weekly Summary",
+  expense: "Expense Alert",
+  sale: "New Sale",
+  product_added: "Product Added",
+};
 
-interface Product {
-  id: string;
-  name: string;
-  image?: { uri: string } | null;
-  unitsInStock: number;
-  lastRestocked?: string;
-  // ...other fields as needed
-}
+const getTipMessage = (type?: string) => {
+  switch (type) {
+    case "low_stock":
+      return "This item sells fast. Consider restocking soon.";
+    case "out_of_stock":
+      return "Out of stock items can lead to lost sales. Restock immediately.";
+    case "high_selling":
+      return "This product is performing well. Keep it in stock!";
+    case "expiry":
+      return "Check expiry dates regularly to avoid losses.";
+    default:
+      return "Stay on top of your inventory for better sales.";
+  }
+};
+
+const formatDate = (dateString?: string | null) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "N/A";
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const formatTime = (dateString?: string | null) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "N/A";
+  return date.toLocaleString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    month: "short",
+    day: "numeric",
+  });
+};
 
 const RestockDetails: React.FC = () => {
   const router = useRouter();
-  const { productId } = useLocalSearchParams<{ productId?: string }>();
+  // Primary param is the notification id; productId kept for backwards links.
+  const { notificationId, productId } = useLocalSearchParams<{
+    notificationId?: string;
+    productId?: string;
+  }>();
   const [showRestockModal, setShowRestockModal] = useState(false);
 
-  // Find the notification that references this productId
-  const notification = useMemo(() => {
-    if (!productId) return undefined;
-    return DUMMY_NOTIFICATIONS.find(
-      (n) =>
-        n.productId === productId ||
-        n.actions?.some((a) => a.productId === productId),
+  // ─── Fetch the notification ──────────────────────────────────────────────
+  const {
+    data: notification,
+    isLoading: loadingNotification,
+    isError,
+  } = useQuery({
+    queryKey: ["notification", notificationId],
+    queryFn: () => getNotification(notificationId as string),
+    enabled: !!notificationId,
+  });
+
+  // The inventory item this notification points to (for stock + restock).
+  const inventoryId =
+    notification?.inventoryId != null
+      ? String(notification.inventoryId)
+      : notification?.product != null
+        ? String(notification.product)
+        : productId;
+
+  const { data: inventoryItem, isLoading: loadingInventory } = useQuery({
+    queryKey: ["inventory-item", inventoryId],
+    queryFn: () => getUserInventoryItem(inventoryId as string),
+    enabled: !!inventoryId,
+  });
+
+  const loading =
+    (!!notificationId && loadingNotification) ||
+    (!!inventoryId && loadingInventory);
+
+  // ─── Loading / error states ──────────────────────────────────────────────
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
+          <ActivityIndicator size="large" color="#1155CC" />
+        </View>
+      </SafeAreaView>
     );
-  }, [productId]);
+  }
 
-  // Find the product
-  const productData = useMemo(() => {
-    if (!productId) return undefined;
-    return DUMMY_PRODUCTS.find((p) => p.id === productId);
-  }, [productId]);
-
-  // Fallback UI for invalid notification or product
-  if (!productId || !notification || !productData) {
+  if (!notificationId || isError || !notification) {
     return (
       <SafeAreaView style={styles.container}>
         <View
           style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
         >
           <Text style={{ color: "#B91C1C", fontSize: 18, marginBottom: 12 }}>
-            {!productId
-              ? "No product specified."
-              : !notification
-                ? "Notification not found."
-                : "Product not found."}
+            {!notificationId
+              ? "No notification specified."
+              : "Notification not found."}
           </Text>
           <TouchableOpacity
             onPress={() => router.back()}
@@ -97,62 +144,63 @@ const RestockDetails: React.FC = () => {
     );
   }
 
-  // Format date
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "N/A";
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-    } catch {
-      return "N/A";
-    }
-  };
+  // ─── Derived display values ──────────────────────────────────────────────
+  const typeLabel =
+    TYPE_LABELS[notification.type] || notification.title || "Notification";
+  const productName =
+    inventoryItem?.name ||
+    notification.inventory_name ||
+    notification.product_name ||
+    notification.title ||
+    "Product";
+  const tipMessage = notification.description || getTipMessage(notification.type);
+  const imageUri = inventoryItem?.image_url || null;
 
-  // Format time
-  const formatTime = (dateString?: string) => {
-    if (!dateString && notification) return notification.time;
-    try {
-      const date = new Date(dateString!);
-      return date.toLocaleString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-        month: "short",
-        day: "numeric",
-      });
-    } catch {
-      return notification?.time || "";
-    }
-  };
+  // Remaining stock now comes straight from the notification payload;
+  // fall back to the inventory item only if it's missing.
+  const remainingStock =
+    notification.remainingStock != null && notification.remainingStock !== ""
+      ? notification.remainingStock
+      : inventoryItem?.units_in_stock;
 
-  // Get tip message based on notification type
-  const getTipMessage = () => {
-    switch (notification?.type) {
-      case "low_stock":
-        return "This item sells fast. Consider restocking soon.";
-      case "out_of_stock":
-        return "Out of stock items can lead to lost sales. Restock immediately.";
-      case "high_selling":
-        return "This product is performing well. Keep it in stock!";
-      case "expiry":
-        return "Check expiry dates regularly to avoid losses.";
-      default:
-        return "Stay on top of your inventory for better sales.";
-    }
-  };
+  const showActions =
+    notification.type === "low_stock" ||
+    notification.type === "out_of_stock";
 
-  const handleRestockNow = () => {
-    setShowRestockModal(true);
-  };
+  // Map the inventory item to the model AddProductFlow / ProductDetails expect.
+  const productModel: AddProductModel | undefined = inventoryItem
+    ? {
+        id: String(inventoryItem.id),
+        name: inventoryItem.name,
+        category: inventoryItem.category || "",
+        barcode: inventoryItem.barcode || "",
+        image: inventoryItem.image_url ? { uri: inventoryItem.image_url } : null,
+        quantityType:
+          inventoryItem.quantity_type ||
+          inventoryItem.unit_type ||
+          "Single Items",
+        unitsInStock: Number(inventoryItem.units_in_stock || 0),
+        costPrice: Number(inventoryItem.cost_price || 0),
+        sellingPrice: Number(inventoryItem.selling_price || 0),
+        lowStockThreshold: Number(inventoryItem.low_stock_threshold || 0),
+        expiryDate: inventoryItem.expiry_date || "",
+        supplier: {
+          name: inventoryItem.supplier_name || "",
+          phone: inventoryItem.supplier_phone || "",
+        },
+        dateAdded:
+          inventoryItem.added_at ||
+          inventoryItem.updated_at ||
+          new Date().toISOString(),
+        userId: "api-user",
+      }
+    : undefined;
 
   const handleViewProduct = () => {
+    if (!inventoryId) return;
     router.push({
       pathname: "/(Routes)/ProductDetails",
-      params: { productId: productData.id },
+      params: { productId: inventoryId },
     });
   };
 
@@ -160,7 +208,7 @@ const RestockDetails: React.FC = () => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Restock Details</Text>
+        <Text style={styles.headerTitle}>Notification Details</Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
@@ -177,34 +225,32 @@ const RestockDetails: React.FC = () => {
         {/* Main Card with Product Info */}
         <View style={styles.mainCard}>
           <View style={styles.productHeader}>
-            {
-              <Image
-                source={
-                  productData?.image?.uri
-                    ? { uri: productData.image.uri }
-                    : require("../../assets/images/noImg.jpg")
-                }
-                style={styles.productImage}
-              />
-            }
+            <Image
+              source={
+                imageUri
+                  ? { uri: imageUri }
+                  : require("../../assets/images/noImg.jpg")
+              }
+              style={styles.productImage}
+            />
             <View style={styles.productInfo}>
-              <Text style={styles.notificationType}>{notification.title}</Text>
+              <Text style={styles.notificationType}>{typeLabel}</Text>
               <Text
                 style={[styles.productName, { fontSize: moderateScale(20) }]}
               >
-                {productData?.name || notification.message}
+                {productName}
               </Text>
             </View>
           </View>
         </View>
 
         {/* Action Buttons */}
-        {(notification.type === "low_stock" ||
-          notification.type === "out_of_stock") && (
+        {showActions && (
           <View style={styles.actionButtons}>
             <TouchableOpacity
               style={[styles.actionButton, styles.restockButton]}
-              onPress={handleRestockNow}
+              onPress={() => setShowRestockModal(true)}
+              disabled={!productModel}
             >
               <Text style={styles.actionButtonText}>Restock Now</Text>
               <Ionicons name="add" size={28} color="#fff" />
@@ -212,6 +258,7 @@ const RestockDetails: React.FC = () => {
             <TouchableOpacity
               style={[styles.actionButton, styles.viewProductButton]}
               onPress={handleViewProduct}
+              disabled={!inventoryId}
             >
               <Text style={styles.actionButtonText}>View Product</Text>
               <Feather name="folder" size={22} color="#fff" />
@@ -226,27 +273,27 @@ const RestockDetails: React.FC = () => {
           <View style={styles.detailsCard}>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Product:</Text>
-              <Text style={styles.detailValue}>{productData.name}</Text>
+              <Text style={styles.detailValue}>{productName}</Text>
             </View>
 
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Remaining Stock:</Text>
               <Text style={[styles.detailValue, styles.stockValue]}>
-                {productData?.unitsInStock || 0} Units
+                {remainingStock != null ? `${remainingStock} Units` : "N/A"}
               </Text>
             </View>
 
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Last Restocked:</Text>
               <Text style={styles.detailValue}>
-                {formatDate(productData?.dateAdded)}
+                {formatDate(inventoryItem?.updated_at || inventoryItem?.added_at)}
               </Text>
             </View>
 
             <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
               <Text style={styles.detailLabel}>Notification Time:</Text>
               <Text style={styles.detailValue}>
-                {formatTime(productData?.dateAdded)}
+                {formatTime(notification.created_at)}
               </Text>
             </View>
           </View>
@@ -255,15 +302,19 @@ const RestockDetails: React.FC = () => {
         {/* Tip Card */}
         <View style={styles.tipCard}>
           <Text style={styles.tipTitle}>Tip</Text>
-          <Text style={styles.tipMessage}>{getTipMessage()}</Text>
+          <Text style={styles.tipMessage}>{tipMessage}</Text>
         </View>
       </ScrollView>
-      <AddProductFlow
-        visible={showRestockModal}
-        onClose={() => setShowRestockModal(false)}
-        onSaveProduct={() => setShowRestockModal(false)}
-        initialProduct={productData}
-      />
+
+      {productModel && (
+        <AddProductFlow
+          visible={showRestockModal}
+          onClose={() => setShowRestockModal(false)}
+          onSaveProduct={() => setShowRestockModal(false)}
+          initialProduct={productModel}
+          startStep={1}
+        />
+      )}
     </SafeAreaView>
   );
 };

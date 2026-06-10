@@ -1,7 +1,9 @@
+import { useUnreadNotificationsCount } from "@/hooks/useNotifications";
 import { useRouter } from "expo-router";
 import { Bell, MessageCircleQuestionMark } from "lucide-react-native";
-import React from "react";
-import { Image, Text, TouchableOpacity, View } from "react-native";
+import React, { useState } from "react";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import ProfileSheet from "./ProfileSheet";
 import { moderateScale, scale, homeStyles as styles } from "./homeStyles";
 
 interface HomeHeaderProps {
@@ -11,6 +13,8 @@ interface HomeHeaderProps {
 
 const HomeHeader: React.FC<HomeHeaderProps> = ({ name, profileImage }) => {
   const router = useRouter();
+  const [showProfileSheet, setShowProfileSheet] = useState(false);
+  const unreadCount = useUnreadNotificationsCount();
 
   return (
     <View style={styles.header}>
@@ -37,7 +41,16 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ name, profileImage }) => {
             onPress={() => router.push("/(Routes)/NotificationsScreen")}
             activeOpacity={0.7}
           >
-            <Bell size={moderateScale(24)} color="black" />
+            <View>
+              <Bell size={moderateScale(24)} color="black" />
+              {unreadCount > 0 && (
+                <View style={badgeStyles.badge}>
+                  <Text style={badgeStyles.badgeText}>
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -48,22 +61,50 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ name, profileImage }) => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => router.push("/(Routes)/Profile")}
+            onPress={() => setShowProfileSheet(true)}
             activeOpacity={0.7}
           >
             <Image
               source={
                 profileImage
                   ? { uri: profileImage }
-                  : require("/assets/images/noImg.jpg")
+                  : require("../assets/images/noImg.jpg")
               }
               style={styles.avatar}
             />
           </TouchableOpacity>
         </View>
       </View>
+
+      <ProfileSheet
+        visible={showProfileSheet}
+        onClose={() => setShowProfileSheet(false)}
+      />
     </View>
   );
 };
+
+const badgeStyles = StyleSheet.create({
+  badge: {
+    position: "absolute",
+    top: -scale(6),
+    right: -scale(7),
+    minWidth: scale(16),
+    height: scale(16),
+    paddingHorizontal: scale(3),
+    borderRadius: scale(8),
+    backgroundColor: "#EF4444",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+  },
+  badgeText: {
+    color: "#FFFFFF",
+    fontSize: moderateScale(9),
+    fontFamily: "DMSans_700Bold",
+    lineHeight: moderateScale(12),
+  },
+});
 
 export default HomeHeader;

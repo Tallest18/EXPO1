@@ -1,3 +1,4 @@
+import { useUnreadNotificationsCount } from "@/hooks/useNotifications";
 import { clearTokens, getProfile, logout } from "@/src/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -37,7 +38,7 @@ const More = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [notificationCount] = useState(3); // replace with real count when available
+  const notificationCount = useUnreadNotificationsCount();
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["profile"],
@@ -67,7 +68,7 @@ const More = () => {
         {
           title: "Notifications",
           icon: "notifications-outline",
-          action: () => {}, //router.push("/(Routes)/Notifications"),
+          action: () => router.push("/(Routes)/NotificationsScreen"),
           badge: notificationCount,
         },
       ],

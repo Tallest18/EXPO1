@@ -27,6 +27,8 @@ export const PRODUCTS_FINANCE_SUMMARY = "/products/finance/summary";
 export const PRODUCTS_FINANCE_TOP_PRODUCTS = "/products/finance/top-products";
 export const PRODUCTS_FINANCE_TRENDS = "/products/finance/trends";
 export const PRODUCTS_ITEMS = "/products/items/";
+export const PRODUCTS_ITEM = (id: string | number) =>
+  `/products/items/${id}/`;
 
 export const PRODUCTS_SUPPLIERS = "/api/products/suppliers/";
 export const PRODUCTS_SUPPLIER = (id: string | number) =>

@@ -13,6 +13,7 @@ import {
     View,
 } from "react-native";
 
+import { useMarkNotificationRead } from "@/hooks/useNotifications";
 import { listNotifications } from "@/src/api";
 import { getFontSize } from "../../utils/scaling";
 
@@ -88,6 +89,21 @@ const NotificationsScreen = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const markRead = useMarkNotificationRead();
+
+  const openNotification = (item: Notification) => {
+    if (!item.isRead) {
+      markRead.mutate(item.id);
+      // Optimistically mark it read in the local list.
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === item.id ? { ...n, isRead: true } : n)),
+      );
+    }
+    router.push({
+      pathname: "/(Routes)/RestockDetails",
+      params: { notificationId: item.id },
+    });
+  };
 
   useEffect(() => {
     const getTimeAgo = (dateString?: string): string => {
@@ -215,12 +231,7 @@ const NotificationsScreen = () => {
       <TouchableOpacity
         key={item.id}
         style={styles.notificationCard}
-        onPress={() =>
-          router.push({
-            pathname: "/(Routes)/RestockDetails",
-            params: { notification: JSON.stringify(item) },
-          })
-        }
+        onPress={() => openNotification(item)}
         activeOpacity={0.7}
       >
         {/* Icon */}

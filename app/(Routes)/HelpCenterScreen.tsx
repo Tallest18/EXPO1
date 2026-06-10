@@ -3,15 +3,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 interface HelpTopic {
@@ -21,12 +21,14 @@ interface HelpTopic {
 }
 
 const iconByType: Record<string, any> = {
-  low_stock: require("../../assets/images/image.png"),
-  out_of_stock: require("../../assets/images/image 1776.png"),
-  sale: require("../../assets/images/image 1776 (5).png"),
-  product_added: require("../../assets/images/image 1776 (2).png"),
-  expiry: require("../../assets/images/image 1776 (4).png"),
-  general: require("../../assets/images/image 1776 (3).png"),
+  low_stock: require("../../assets/images/noImg.jpg"),
+  out_of_stock: require("../../assets/images/noImg.jpg"),
+  low_selling: require("../../assets/images/noImg.jpg"),
+  high_selling: require("../../assets/images/noImg.jpg"),
+  sale: require("../../assets/images/noImg.jpg"),
+  product_added: require("../../assets/images/noImg.jpg"),
+  expiry: require("../../assets/images/noImg.jpg"),
+  general: require("../../assets/images/noImg.jpg"),
 };
 
 const HelpCenterScreen = () => {

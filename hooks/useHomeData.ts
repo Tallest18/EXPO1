@@ -133,6 +133,7 @@ const DEFAULT_USER_DATA: UserData = {
   transactions: 0,
   stockLeft: 0,
   dailyPercentageIncrease: 0,
+  dailyTransactionPercentage: 0,
   salesSummary: [],
 };
 
@@ -246,6 +247,9 @@ export const useHomeData = () => {
       }, 0),
       dailyPercentageIncrease: Number(
         dailySummary?.dailyPercentageIncrease || 0,
+      ),
+      dailyTransactionPercentage: Number(
+        dailySummary?.dailyTransactionPercentage || 0,
       ),
       salesSummary,
     }));
