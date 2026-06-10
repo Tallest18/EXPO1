@@ -1,5 +1,6 @@
 import React from "react";
 import { Dimensions, StyleSheet, Text } from "react-native";
+import { formatNumber } from "../utils/formatters";
 
 export const { width, height } = Dimensions.get("window");
 
@@ -38,7 +39,7 @@ export const formatCurrency = (value: number | undefined) =>
     React.createElement(
       Text,
       { style: { fontFamily: "DMSans_400Regular" } },
-      (value || 0).toFixed(2),
+      formatNumber(value, 2),
     ),
   );
 

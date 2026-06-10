@@ -67,6 +67,8 @@ export interface UserData {
   profit: number;
   transactions: number;
   stockLeft: number;
+  /** % change in today's sales vs yesterday (negative = down). */
+  dailyPercentageIncrease: number;
   salesSummary: SalesSummaryItem[];
 }
 

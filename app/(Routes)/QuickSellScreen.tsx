@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { formatCurrency } from "../../utils/formatters";
 import {
   checkHighSelling,
   checkLowStock,
@@ -217,9 +218,7 @@ const QuickSellScreen = () => {
 
       Alert.alert(
         "Success! x}0",
-        `Sale completed!\nTotal: ₦${totalAmount.toFixed(
-          0,
-        )}\nProfit: ₦${totalProfit.toFixed(0)}`,
+        `Sale completed!\nTotal: ${formatCurrency(totalAmount)}\nProfit: ${formatCurrency(totalProfit)}`,
         [
           {
             text: "OK",
@@ -247,7 +246,7 @@ const QuickSellScreen = () => {
       <View style={styles.cartItemInfo}>
         <Text style={styles.cartItemName}>{item.name}</Text>
         <Text style={styles.cartItemPrice}>
-          ₦{item.sellingPrice.toFixed(0)}
+          {formatCurrency(item.sellingPrice)}
         </Text>
       </View>
       <View style={styles.quantityControls}>
@@ -291,7 +290,7 @@ const QuickSellScreen = () => {
         <Text style={styles.productName}>{item.name}</Text>
         <Text style={styles.productStock}>Stock: {item.unitsInStock}</Text>
       </View>
-      <Text style={styles.productPrice}>₦{item.sellingPrice.toFixed(0)}</Text>
+      <Text style={styles.productPrice}>{formatCurrency(item.sellingPrice)}</Text>
     </TouchableOpacity>
   );
 
@@ -374,20 +373,20 @@ const QuickSellScreen = () => {
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Subtotal</Text>
             <Text style={styles.summaryValue}>
-              ₦{calculateTotal().toFixed(0)}
+              {formatCurrency(calculateTotal())}
             </Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Profit</Text>
             <Text style={[styles.summaryValue, styles.profitText]}>
-              ₦{calculateProfit().toFixed(0)}
+              {formatCurrency(calculateProfit())}
             </Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.summaryRow}>
             <Text style={styles.totalLabel}>Total</Text>
             <Text style={styles.totalValue}>
-              ₦{calculateTotal().toFixed(0)}
+              {formatCurrency(calculateTotal())}
             </Text>
           </View>
           <TouchableOpacity

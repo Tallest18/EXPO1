@@ -16,6 +16,7 @@ import {
 } from "react-native";
 
 import { listSales } from "@/src/api";
+import { formatNumber } from "@/utils/formatters";
 
 const { width, height } = Dimensions.get("window");
 
@@ -144,7 +145,7 @@ const TotalSummaryScreen = () => {
   }, [router]);
 
   const formatCurrency = (value: number) => {
-    return `₦${(value || 0).toFixed(2)}`;
+    return `₦${formatNumber(value, 2)}`;
   };
 
   const formatDate = (dateString: string) => {

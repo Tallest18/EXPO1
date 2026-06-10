@@ -19,6 +19,8 @@ import {
     listSales,
     listUserInventory,
 } from "@/src/api";
+import { apiClient } from "@/src/api/client";
+import * as endpoints from "@/src/api/endpoints";
 import type { ApiUserInventoryItem } from "@/src/api/products";
 
 const isUserInventoryProduct = (
@@ -130,6 +132,7 @@ const DEFAULT_USER_DATA: UserData = {
   profit: 0,
   transactions: 0,
   stockLeft: 0,
+  dailyPercentageIncrease: 0,
   salesSummary: [],
 };
 
@@ -198,13 +201,19 @@ export const useHomeData = () => {
   });
 
   const loadHomeData = useCallback(async () => {
-    const [profileResult, overviewResult, inventoryResult, salesResult] =
-      await Promise.allSettled([
-        getProfile(),
-        getDashboardOverview(),
-        listUserInventory({ page: 0, page_size: 50 }),
-        listSales({ page: 0, page_size: 10 }),
-      ]);
+    const [
+      profileResult,
+      overviewResult,
+      inventoryResult,
+      salesResult,
+      dailySummaryResult,
+    ] = await Promise.allSettled([
+      getProfile(),
+      getDashboardOverview(),
+      listUserInventory({ page: 0, page_size: 50 }),
+      listSales({ page: 0, page_size: 10 }),
+      apiClient.get(endpoints.PRODUCTS_FINANCE_DAILY_SUMMARY),
+    ]);
 
     const profile =
       profileResult.status === "fulfilled" ? profileResult.value : null;
@@ -214,6 +223,10 @@ export const useHomeData = () => {
       inventoryResult.status === "fulfilled" ? inventoryResult.value : null;
     const salesResponse =
       salesResult.status === "fulfilled" ? salesResult.value : [];
+    const dailySummary =
+      dailySummaryResult.status === "fulfilled"
+        ? dailySummaryResult.value.data
+        : null;
 
     const mappedProducts = (inventoryResponse?.results || []).map(
       mapApiProduct,
@@ -231,6 +244,9 @@ export const useHomeData = () => {
       stockLeft: mappedProducts.reduce((sum: number, p: Product) => {
         return sum + (p.unitsInStock || 0);
       }, 0),
+      dailyPercentageIncrease: Number(
+        dailySummary?.dailyPercentageIncrease || 0,
+      ),
       salesSummary,
     }));
   }, []);

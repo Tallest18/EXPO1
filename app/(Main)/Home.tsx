@@ -62,6 +62,7 @@ const Home = () => {
         profit={userData.profit}
         transactions={userData.transactions}
         stockLeft={userData.stockLeft}
+        dailyPercentageIncrease={userData.dailyPercentageIncrease}
       />
       <ActionButtons onAddProduct={openAddProduct} />
       <SalesSummary salesSummary={userData.salesSummary} />

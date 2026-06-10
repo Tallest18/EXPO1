@@ -20,6 +20,7 @@ import {
     ProductSummary,
     StockExtrasStep,
 } from "./ProductFormSteps";
+import ImageCropper from "./ImageCropper";
 import { useImagePicker } from "./useImagePicker";
 
 const { width } = Dimensions.get("window");
@@ -62,9 +63,8 @@ const ProductFormModal: React.FC<Props> = ({
   }));
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
-  const { pickImage } = useImagePicker((image) =>
-    updateFormData("productImage", image),
-  );
+  const { pickImage, pendingImage, handleCropComplete, handleCropCancel } =
+    useImagePicker((image) => updateFormData("productImage", image));
 
   // (category fetching now handled by TanStack Query)
 
@@ -150,6 +150,7 @@ const ProductFormModal: React.FC<Props> = ({
   );
 
   return (
+    <>
     <Modal
       visible={visible}
       animationType="slide"
@@ -189,15 +190,6 @@ const ProductFormModal: React.FC<Props> = ({
             updateFormData={updateFormData}
           />
         )}
-        {currentStep === 3 && (
-          <ProductSummary
-            formData={formData}
-            saving={saving}
-            imageUploading={imageUploading}
-            onConfirm={onSave}
-          />
-        )}
-
         {currentStep < 3 && (
           <View
             style={[
@@ -241,6 +233,23 @@ const ProductFormModal: React.FC<Props> = ({
         )}
       </SafeAreaView>
     </Modal>
+
+      <ImageCropper
+        visible={!!pendingImage}
+        image={pendingImage}
+        onDone={handleCropComplete}
+        onCancel={handleCropCancel}
+      />
+
+      <ProductSummary
+        visible={currentStep === 3}
+        formData={formData}
+        saving={saving}
+        imageUploading={imageUploading}
+        onConfirm={onSave}
+        onClose={prevStep}
+      />
+    </>
   );
 };
 

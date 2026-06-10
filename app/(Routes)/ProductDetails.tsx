@@ -5,18 +5,19 @@ import { Feather, MaterialIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { formatCurrency } from "@/utils/formatters";
 import AddProductFlow from "./AddProductFlow";
+import ProductSummaryView from "./components/ProductSummaryView";
 import { styles } from "./ProductDetails.styles";
 
 const normalizeEndpoint = (endpoint: string) =>
@@ -257,98 +258,66 @@ const ProductDetails: React.FC = () => {
         contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Product image */}
-        <View style={styles.imageContainer}>
-          <Image
-            source={
-              product.image?.uri
-                ? { uri: product.image.uri }
-                : require("../../assets/images/noImg.jpg")
-            }
-            style={styles.productImage}
-          />
-        </View>
-
-        {/* Product info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Product Info</Text>
-          {[
-            { label: "Name", value: product.name },
-            { label: "Category", value: product.category },
-            { label: "Barcode", value: product.barcode },
-          ].map(({ label, value }) => (
-            <View key={label} style={styles.row}>
-              <Text style={styles.rowLabel}>{label}:</Text>
-              <Text style={styles.rowValue}>{value}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Quantity & pricing */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quantity & Pricing</Text>
-          {[
-            { label: "Units in Stock", value: String(product.unitsInStock) },
-            { label: "Unit Type", value: product.quantityType },
+        <ProductSummaryView
+          imageUri={product.image?.uri}
+          sections={[
             {
-              label: "Cost Price",
-              value: `₦${(product.costPrice ?? 0).toLocaleString()}`,
+              title: "Product Info",
+              rows: [
+                { label: "Name:", value: product.name },
+                { label: "Category:", value: product.category },
+                { label: "Barcode:", value: product.barcode },
+              ],
             },
             {
-              label: "Selling Price",
-              value: `₦${(product.sellingPrice ?? 0).toLocaleString()}`,
-            },
-          ].map(({ label, value }) => (
-            <View key={label} style={styles.row}>
-              <Text style={styles.rowLabel}>{label}:</Text>
-              <Text style={styles.rowValue}>{value}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Stock settings */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Stock Settings</Text>
-          {[
-            {
-              label: "Low Stock Threshold",
-              value: String(product.lowStockThreshold),
+              title: "Quantity & Pricing",
+              rows: [
+                {
+                  label: "Units in Stock:",
+                  value: String(product.unitsInStock),
+                },
+                { label: "Unit Type:", value: product.quantityType },
+                {
+                  label: "Cost Price:",
+                  value: formatCurrency(product.costPrice ?? 0),
+                },
+                {
+                  label: "Selling Price:",
+                  value: formatCurrency(product.sellingPrice ?? 0),
+                },
+              ],
             },
             {
-              label: "Expiry Date",
-              value: formatExpiryDate(product.expiryDate),
+              title: "Stock Settings",
+              rows: [
+                {
+                  label: "Low Stock Threshold:",
+                  value: String(product.lowStockThreshold),
+                },
+                {
+                  label: "Expiry Date:",
+                  value: formatExpiryDate(product.expiryDate),
+                },
+              ],
             },
-          ].map(({ label, value }) => (
-            <View key={label} style={styles.row}>
-              <Text style={styles.rowLabel}>{label}:</Text>
-              <Text style={styles.rowValue}>{value}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Supplier info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Supplier Info</Text>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Name:</Text>
-            <Text style={styles.rowValue}>{product.supplier.name}</Text>
-          </View>
-          <View style={[styles.row, { borderBottomWidth: 0 }]}>
-            <Text style={styles.rowLabel}>Phone no:</Text>
-            <Text style={styles.rowValue}>{product.supplier.phone}</Text>
-          </View>
-        </View>
-
-        {/* Edit button */}
-        <View style={styles.bottomContainer}>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => setShowEditModal(true)}
-          >
-            <Feather name="edit-2" size={18} color="#1155CC" />
-            <Text style={styles.editButtonText}>Edit Product</Text>
-          </TouchableOpacity>
-        </View>
+            {
+              title: "Supplier Info",
+              rows: [
+                { label: "Name:", value: product.supplier.name },
+                { label: "Phone no:", value: product.supplier.phone },
+              ],
+            },
+          ]}
+          footer={
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => setShowEditModal(true)}
+            >
+              <Feather name="edit-2" size={18} color="#1155CC" />
+              <Text style={styles.editButtonText}>Edit Product</Text>
+            </TouchableOpacity>
+          }
+        />
       </ScrollView>
 
       <DeleteModal

@@ -1,4 +1,5 @@
 import { styles } from "@/src/styles/Sell.styles";
+import { formatCurrency } from "@/utils/formatters";
 import Feather from "@expo/vector-icons/Feather";
 import { useRouter } from "expo-router";
 import React from "react";
@@ -173,7 +174,7 @@ const SaleCard: React.FC<{ sale: Sale }> = ({ sale }) => {
       {/* Amount + payment label */}
       <View style={styles.saleRight}>
         <Text style={styles.saleAmount} numberOfLines={1} adjustsFontSizeToFit>
-          ₦{(sale.totalAmount ?? 0).toLocaleString()}
+          {formatCurrency(sale.totalAmount ?? 0)}
         </Text>
         <Text style={[styles.salePaymentLabel, { color: paymentColor }]}>
           {capitalise(sale.paymentMethod)}

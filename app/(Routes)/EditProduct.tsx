@@ -4,6 +4,7 @@ import {
   listSuppliers,
   updateProductWithImage,
 } from "@/src/api";
+import { formatCurrency } from "@/utils/formatters";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -772,7 +773,7 @@ const EditProduct: React.FC = () => {
             style={styles.priceOption}
             onPress={() => updateFormData("costPrice", "1000")}
           >
-            <Text style={styles.priceOptionText}>₦1000</Text>
+            <Text style={styles.priceOptionText}>₦1,000</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -821,7 +822,7 @@ const EditProduct: React.FC = () => {
             style={styles.priceOption}
             onPress={() => updateFormData("sellingPrice", "1000")}
           >
-            <Text style={styles.priceOptionText}>₦1000</Text>
+            <Text style={styles.priceOptionText}>₦1,000</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -943,11 +944,11 @@ const EditProduct: React.FC = () => {
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Cost Price:</Text>
-          <Text style={styles.summaryValue}>₦{formData.costPrice}</Text>
+          <Text style={styles.summaryValue}>{formatCurrency(formData.costPrice)}</Text>
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Selling Price:</Text>
-          <Text style={styles.summaryValue}>₦{formData.sellingPrice}</Text>
+          <Text style={styles.summaryValue}>{formatCurrency(formData.sellingPrice)}</Text>
         </View>
       </View>
 

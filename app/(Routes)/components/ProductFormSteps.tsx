@@ -1,34 +1,50 @@
 import { FormData } from "@/hooks/useAddProductForm";
+import { formatCurrency, formatNumber } from "@/utils/formatters";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Dimensions,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import ProductSummaryView, {
+  SummaryRowData,
+  SummarySection,
+} from "./ProductSummaryView";
 
 const { width } = Dimensions.get("window");
 const isSmall = width < 360;
 
-const PRICE_CHIPS = ["100", "200", "500", "800", "1000"];
+const PRICE_CHIPS = ["100", "500", "1000", "5000", "10000", "15000"];
+
+const LOW_STOCK_OPTIONS = ["5", "10", "15", "20", "25", "50", "100"];
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
 
 const FieldLabel: React.FC<{ label: string; required?: boolean }> = ({
   label,
   required,
-}) => (
-  <Text style={styles.label}>
-    {label} {required && <Text style={styles.required}>*</Text>}
-  </Text>
-);
+}) => {
+  const hintIndex = label.indexOf("(");
+  const mainLabel =
+    hintIndex >= 0 ? label.slice(0, hintIndex).trimEnd() : label;
+  const hintLabel = hintIndex >= 0 ? label.slice(hintIndex) : "";
+  return (
+    <Text style={styles.label}>
+      {mainLabel}
+      {hintLabel ? <Text style={styles.labelHint}> {hintLabel}</Text> : null}
+      {required && <Text style={styles.required}> *</Text>}
+    </Text>
+  );
+};
 
 const PriceField: React.FC<{
   label: string;
@@ -37,8 +53,10 @@ const PriceField: React.FC<{
 }> = ({ label, value, onChange }) => (
   <View style={styles.fieldGroup}>
     <FieldLabel label={label} required />
-    <View style={styles.priceInputWrapper}>
-      <Text style={styles.currency}>₦</Text>
+    <View style={styles.priceInputRow}>
+      <View style={styles.currencyBox}>
+        <Text style={styles.currency}>₦</Text>
+      </View>
       <TextInput
         style={styles.priceInput}
         placeholder="0.00"
@@ -55,7 +73,7 @@ const PriceField: React.FC<{
           style={styles.priceChip}
           onPress={() => onChange(price)}
         >
-          <Text style={styles.priceChipText}>₦{price}</Text>
+          <Text style={styles.priceChipText}>₦{formatNumber(price)}</Text>
         </TouchableOpacity>
       ))}
     </View>
@@ -216,18 +234,32 @@ export const ProductInfoStep: React.FC<ProductInfoStepProps> = ({
 
           {formData.productImage ? (
             /* ── Image uploaded state ── */
-            <View style={styles.imageUploadBox}>
-              <Image
-                source={{ uri: formData.productImage.uri }}
-                style={styles.uploadedImage}
-                resizeMode="contain"
-              />
-              <TouchableOpacity
-                style={styles.removeImageBtn}
-                onPress={() => updateFormData("productImage", null)}
-              >
-                <Text style={styles.removeImageBtnText}>Remove</Text>
-              </TouchableOpacity>
+            <View>
+              <View style={styles.uploadedImageWrap}>
+                <Image
+                  source={{ uri: formData.productImage.uri }}
+                  style={styles.uploadedImage}
+                  resizeMode="cover"
+                />
+              </View>
+              <View style={styles.imageActionsRow}>
+                <TouchableOpacity
+                  style={styles.changeImageBtn}
+                  onPress={() => onPickImage(false)}
+                  disabled={imageUploading}
+                >
+                  <Ionicons name="crop-outline" size={16} color="#1155CC" />
+                  <Text style={styles.changeImageBtnText}>Change / Crop</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.removeImageBtn}
+                  onPress={() => updateFormData("productImage", null)}
+                  disabled={imageUploading}
+                >
+                  <Ionicons name="trash-outline" size={16} color="#E53E3E" />
+                  <Text style={styles.removeImageBtnText}>Remove</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ) : (
             /* ── Empty upload state ── */
@@ -238,27 +270,30 @@ export const ProductInfoStep: React.FC<ProductInfoStepProps> = ({
               </View>
 
               <Text style={styles.imageUploadTitle}>
-                Click to take a picture, or select{"\n"}from gallery
+                Take a photo or choose from your gallery.{"\n"}You can crop it
+                before saving.
               </Text>
 
-              {/* Take Picture button */}
-              <TouchableOpacity
-                style={styles.takePictureBtn}
-                onPress={() => onPickImage(true)}
-                disabled={imageUploading}
-              >
-                <Text style={styles.takePictureBtnText}>Take Picture</Text>
-              </TouchableOpacity>
+              {/* Take Photo + Gallery buttons */}
+              <View style={styles.imageActionsRow}>
+                <TouchableOpacity
+                  style={styles.takePhotoBtn}
+                  onPress={() => onPickImage(true)}
+                  disabled={imageUploading}
+                >
+                  <Ionicons name="camera-outline" size={18} color="#FFFFFF" />
+                  <Text style={styles.takePhotoBtnText}>Take Photo</Text>
+                </TouchableOpacity>
 
-              {/* Select from gallery link */}
-              <TouchableOpacity
-                onPress={() => onPickImage(false)}
-                disabled={imageUploading}
-              >
-                <Text style={styles.selectGalleryLink}>
-                  Select from gallery
-                </Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.galleryBtn}
+                  onPress={() => onPickImage(false)}
+                  disabled={imageUploading}
+                >
+                  <Ionicons name="images-outline" size={18} color="#1155CC" />
+                  <Text style={styles.galleryBtnText}>Gallery</Text>
+                </TouchableOpacity>
+              </View>
 
               {/* File info */}
               <Text style={styles.imageUploadInfo}>
@@ -413,6 +448,7 @@ export const StockExtrasStep: React.FC<StockExtrasStepProps> = ({
   updateFormData,
 }) => {
   const insets = useSafeAreaInsets();
+  const [showThresholdDropdown, setShowThresholdDropdown] = useState(false);
 
   return (
     <ScrollView
@@ -427,14 +463,45 @@ export const StockExtrasStep: React.FC<StockExtrasStepProps> = ({
       <View style={styles.card}>
         <View style={styles.fieldGroup}>
           <FieldLabel label="Low stock Threshold" required />
-          <TextInput
-            style={styles.input}
-            placeholder="Select Number"
-            placeholderTextColor="#CBD5E0"
-            value={formData.lowStockThreshold}
-            onChangeText={(v) => updateFormData("lowStockThreshold", v)}
-            keyboardType="numeric"
-          />
+          <TouchableOpacity
+            style={styles.dropdown}
+            onPress={() => setShowThresholdDropdown(!showThresholdDropdown)}
+          >
+            <Text
+              style={
+                formData.lowStockThreshold
+                  ? styles.dropdownText
+                  : styles.dropdownPlaceholder
+              }
+            >
+              {formData.lowStockThreshold || "Select Number"}
+            </Text>
+            <Ionicons
+              name={showThresholdDropdown ? "chevron-up" : "chevron-down"}
+              size={18}
+              color="#718096"
+            />
+          </TouchableOpacity>
+
+          {showThresholdDropdown && (
+            <View style={styles.dropdownMenu}>
+              {LOW_STOCK_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    updateFormData("lowStockThreshold", option);
+                    setShowThresholdDropdown(false);
+                  }}
+                >
+                  <Text style={styles.dropdownItemText}>{option}</Text>
+                  {formData.lowStockThreshold === option && (
+                    <Ionicons name="checkmark" size={18} color="#1155CC" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
         <View style={[styles.fieldGroup, { marginBottom: 0 }]}>
@@ -503,19 +570,23 @@ export const StockExtrasStep: React.FC<StockExtrasStepProps> = ({
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 interface ProductSummaryProps {
+  visible: boolean;
   formData: FormData;
   saving: boolean;
   imageUploading: boolean;
   barcodeScanning?: boolean;
   onConfirm: () => void;
+  onClose: () => void;
 }
 
 export const ProductSummary: React.FC<ProductSummaryProps> = ({
+  visible,
   formData,
   saving,
   imageUploading,
   barcodeScanning,
   onConfirm,
+  onClose,
 }) => {
   const insets = useSafeAreaInsets();
   const totalUnits =
@@ -527,128 +598,139 @@ export const ProductSummary: React.FC<ProductSummaryProps> = ({
       ? `${getMonthName(formData.expiryDate.month)} ${formData.expiryDate.year}`
       : "N/A";
 
+  // Product Info
+  const infoRows: SummaryRowData[] = [
+    { label: "Name:", value: formData.productName || "N/A" },
+    { label: "Category:", value: formData.category || "N/A" },
+  ];
+  if (formData.barcode) {
+    infoRows.push({ label: "Barcode:", value: formData.barcode });
+  }
+
+  // Quantity & Pricing (varies by quantity type)
+  const pricingRows: SummaryRowData[] = [];
+  if (formData.quantityType === "Single Items") {
+    pricingRows.push(
+      { label: "Units in Stock:", value: formatNumber(formData.numberOfItems) },
+      { label: "Unit Type:", value: "Single" },
+      { label: "Cost Price:", value: formatCurrency(formData.costPrice) },
+      {
+        label: "Selling Price:",
+        value: formatCurrency(formData.sellingPrice),
+      },
+    );
+  }
+  if (
+    formData.quantityType === "Carton" ||
+    formData.quantityType === "Both"
+  ) {
+    pricingRows.push(
+      {
+        label: "Units per Carton:",
+        value: formatNumber(formData.unitsPerCarton),
+      },
+      {
+        label: "Number of Cartons:",
+        value: formatNumber(formData.numberOfCartons),
+      },
+      { label: "Total Units:", value: formatNumber(totalUnits) },
+      { label: "Unit Type:", value: "Carton" },
+      {
+        label: "Cost Price (per carton):",
+        value: formatCurrency(formData.costPricePerCarton),
+      },
+      {
+        label: "Selling Price (per carton):",
+        value: formatCurrency(formData.sellingPricePerCarton),
+      },
+    );
+  }
+  if (formData.quantityType === "Both") {
+    pricingRows.push({
+      label: "Selling Price (per unit):",
+      value: formatCurrency(formData.sellingPricePerUnit),
+    });
+  }
+
+  const sections: SummarySection[] = [
+    { title: "Product Info", rows: infoRows },
+    { title: "Quantity & Pricing", rows: pricingRows },
+    {
+      title: "Stock Settings",
+      rows: [
+        {
+          label: "Low Stock Threshold:",
+          value: formData.lowStockThreshold || "10",
+        },
+        { label: "Expiry Date:", value: expiryDisplay },
+      ],
+    },
+    {
+      title: "Supplier Info",
+      rows: [
+        { label: "Name:", value: formData.supplier.name || "N/A" },
+        { label: "Phone no:", value: formData.supplier.phone || "N/A" },
+      ],
+    },
+  ];
+
   return (
-    <ScrollView
-      style={styles.stepContent}
-      contentContainerStyle={[
-        styles.stepContentContainer,
-        { paddingBottom: 48 + insets.bottom },
-      ]}
-      showsVerticalScrollIndicator={false}
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+      statusBarTranslucent
     >
-      {formData.productImage && (
-        <View style={styles.summaryImageContainer}>
-          <Image
-            source={{ uri: formData.productImage.uri }}
-            style={styles.summaryImage}
-            resizeMode="contain"
-          />
+      <View style={styles.summaryOverlay}>
+        <View style={[styles.summarySheet, { height: "94%" }]}>
+          {/* Grabber handle */}
+          <View style={styles.summaryGrabber} />
+
+          {/* Header */}
+          <View style={styles.summarySheetHeader}>
+            <Text style={styles.summarySheetTitle}>Summary</Text>
+            <TouchableOpacity
+              style={styles.summaryCloseBtn}
+              onPress={onClose}
+              hitSlop={10}
+            >
+              <Ionicons name="close" size={24} color="#1A202C" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            style={styles.summaryScroll}
+            contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}
+            showsVerticalScrollIndicator={false}
+          >
+            <ProductSummaryView
+              imageUri={formData.productImage?.uri}
+              sections={sections}
+              footer={
+                <TouchableOpacity
+                  style={[
+                    styles.confirmBtn,
+                    (saving || imageUploading) && { opacity: 0.7 },
+                  ]}
+                  onPress={onConfirm}
+                  disabled={saving || imageUploading}
+                >
+                  {saving || imageUploading ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <>
+                      <Text style={styles.confirmBtnText}>Save Product</Text>
+                      <Ionicons name="checkmark" size={20} color="#FFF" />
+                    </>
+                  )}
+                </TouchableOpacity>
+              }
+            />
+          </ScrollView>
         </View>
-      )}
-
-      {/* Product Info */}
-      <View style={styles.card}>
-        <Text style={styles.summaryHeader}>PRODUCT INFO</Text>
-        <SummaryRow label="Name:" value={formData.productName || "N/A"} />
-        <SummaryRow label="Category:" value={formData.category || "N/A"} />
-        {formData.barcode ? (
-          <SummaryRow label="Barcode:" value={formData.barcode} />
-        ) : null}
       </View>
-
-      {/* Quantity & Pricing */}
-      <View style={styles.card}>
-        <Text style={styles.summaryHeader}>QUANTITY & PRICING</Text>
-
-        {formData.quantityType === "Single Items" && (
-          <>
-            <SummaryRow
-              label="Units in Stock:"
-              value={formData.numberOfItems || "0"}
-            />
-            <SummaryRow label="Unit Type:" value="Single" />
-            <SummaryRow
-              label="Cost Price:"
-              value={`₦${formData.costPrice || "0.00"}`}
-            />
-            <SummaryRow
-              label="Selling Price:"
-              value={`₦${formData.sellingPrice || "0.00"}`}
-            />
-          </>
-        )}
-
-        {(formData.quantityType === "Carton" ||
-          formData.quantityType === "Both") && (
-          <>
-            <SummaryRow
-              label="Units per Carton:"
-              value={formData.unitsPerCarton || "0"}
-            />
-            <SummaryRow
-              label="Number of Cartons:"
-              value={formData.numberOfCartons || "0"}
-            />
-            <SummaryRow label="Total Units:" value={String(totalUnits)} />
-            <SummaryRow label="Unit Type:" value="Carton" />
-            <SummaryRow
-              label="Cost Price (per carton):"
-              value={`₦${formData.costPricePerCarton || "0.00"}`}
-            />
-            <SummaryRow
-              label="Selling Price (per carton):"
-              value={`₦${formData.sellingPricePerCarton || "0.00"}`}
-            />
-          </>
-        )}
-
-        {formData.quantityType === "Both" && (
-          <SummaryRow
-            label="Selling Price (per unit):"
-            value={`₦${formData.sellingPricePerUnit || "0.00"}`}
-          />
-        )}
-      </View>
-
-      {/* Stock Settings */}
-      <View style={styles.card}>
-        <Text style={styles.summaryHeader}>STOCK SETTINGS</Text>
-        <SummaryRow
-          label="Low Stock Threshold:"
-          value={formData.lowStockThreshold || "10"}
-        />
-        <SummaryRow label="Expiry Date:" value={expiryDisplay} />
-      </View>
-
-      {/* Supplier Info */}
-      <View style={styles.card}>
-        <Text style={styles.summaryHeader}>SUPPLIER INFO</Text>
-        <SummaryRow label="Name:" value={formData.supplier.name || "N/A"} />
-        <SummaryRow
-          label="Phone no:"
-          value={formData.supplier.phone || "N/A"}
-        />
-      </View>
-
-      {/* Save Product button */}
-      <TouchableOpacity
-        style={[
-          styles.confirmBtn,
-          (saving || imageUploading) && { opacity: 0.7 },
-        ]}
-        onPress={onConfirm}
-        disabled={saving || imageUploading}
-      >
-        {saving || imageUploading ? (
-          <ActivityIndicator color="#FFFFFF" size="small" />
-        ) : (
-          <>
-            <Text style={styles.confirmBtnText}>Save Product</Text>
-            <Ionicons name="checkmark" size={20} color="#FFF" />
-          </>
-        )}
-      </TouchableOpacity>
-    </ScrollView>
+    </Modal>
   );
 };
 
@@ -675,16 +757,6 @@ function getMonthName(month: string): string {
   return month;
 }
 
-const SummaryRow: React.FC<{ label: string; value: string }> = ({
-  label,
-  value,
-}) => (
-  <View style={styles.summaryRow}>
-    <Text style={styles.summaryLabel}>{label}</Text>
-    <Text style={styles.summaryValue}>{value}</Text>
-  </View>
-);
-
 // ─── Shared styles ────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
@@ -692,6 +764,48 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: isSmall ? 10 : 16,
     paddingTop: isSmall ? 10 : 16,
+  },
+  // Review/summary step renders the shared ProductSummaryView (white sections),
+  // so it uses a plain white scroll surface like the ProductDetails screen.
+  summaryScroll: {
+    flex: 1,
+    backgroundColor: "#FFF",
+  },
+  // Summary bottom-sheet modal
+  summaryOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  summarySheet: {
+    backgroundColor: "#FFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: "hidden",
+  },
+  summaryGrabber: {
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "#CBD5E0",
+    alignSelf: "center",
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  summarySheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  summarySheetTitle: {
+    fontSize: 24,
+    color: "#1C1C1C",
+    fontFamily: "DMSans_700Bold",
+  },
+  summaryCloseBtn: {
+    padding: 4,
   },
   stepContentContainer: {
     paddingBottom: 20,
@@ -704,12 +818,19 @@ const styles = StyleSheet.create({
   },
   fieldGroup: {
     marginBottom: isSmall ? 10 : 16,
+    display: "flex",
+    flexDirection: "column",
+    gap: isSmall ? 6 : 8,
   },
   label: {
     fontSize: isSmall ? 11 : 13,
     color: "#2D3748",
     marginBottom: 5,
     fontFamily: "DMSans_600SemiBold",
+  },
+  labelHint: {
+    color: "#718096",
+    fontFamily: "DMSans_400Regular",
   },
   required: {
     color: "#E53E3E",
@@ -817,27 +938,38 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontFamily: "DMSans_500Medium",
   },
-  // "Take Picture" — outlined button
-  takePictureBtn: {
+  // "Take Photo" — filled primary button
+  takePhotoBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#1155CC",
+    borderRadius: 8,
+    paddingVertical: isSmall ? 9 : 11,
+  },
+  takePhotoBtnText: {
+    fontSize: isSmall ? 12 : 14,
+    color: "#FFFFFF",
+    fontFamily: "DMSans_500Medium",
+  },
+  // "Gallery" — outlined secondary button
+  galleryBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
     borderWidth: 1,
     borderColor: "#1155CC",
-    borderRadius: 6,
-    paddingHorizontal: isSmall ? 20 : 32,
-    paddingVertical: isSmall ? 8 : 10,
-    marginBottom: isSmall ? 8 : 10,
+    borderRadius: 8,
+    paddingVertical: isSmall ? 9 : 11,
   },
-  takePictureBtnText: {
-    fontSize: isSmall ? 11 : 13,
+  galleryBtnText: {
+    fontSize: isSmall ? 12 : 14,
     color: "#1155CC",
     fontFamily: "DMSans_500Medium",
-  },
-  // "Select from gallery" — underlined text link
-  selectGalleryLink: {
-    fontSize: isSmall ? 11 : 13,
-    color: "#1155CC",
-    fontFamily: "DMSans_500Medium",
-    textDecorationLine: "underline",
-    marginBottom: isSmall ? 10 : 14,
   },
   imageUploadInfo: {
     fontSize: isSmall ? 9 : 11,
@@ -871,18 +1003,52 @@ const styles = StyleSheet.create({
   },
 
   // Uploaded image state
+  uploadedImageWrap: {
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
   uploadedImage: {
     width: "100%",
-    height: isSmall ? 160 : 200,
-    borderRadius: 6,
+    height: "100%",
+  },
+  imageActionsRow: {
+    flexDirection: "row",
+    width: "100%",
+    gap: isSmall ? 8 : 12,
+    marginTop: isSmall ? 10 : 12,
     marginBottom: isSmall ? 10 : 12,
   },
+  changeImageBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#1155CC",
+    borderRadius: 8,
+    paddingVertical: isSmall ? 9 : 11,
+  },
+  changeImageBtnText: {
+    fontSize: isSmall ? 12 : 14,
+    color: "#1155CC",
+    fontFamily: "DMSans_500Medium",
+  },
   removeImageBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
     borderWidth: 1,
     borderColor: "#E53E3E",
-    borderRadius: 6,
-    paddingHorizontal: isSmall ? 24 : 40,
-    paddingVertical: isSmall ? 8 : 10,
+    borderRadius: 8,
+    paddingVertical: isSmall ? 9 : 11,
   },
   removeImageBtnText: {
     fontSize: isSmall ? 12 : 14,
@@ -926,43 +1092,51 @@ const styles = StyleSheet.create({
   },
 
   // Price fields
-  priceInputWrapper: {
+  priceInputRow: {
     flexDirection: "row",
+    alignItems: "stretch",
+    gap: isSmall ? 6 : 10,
+    marginBottom: isSmall ? 10 : 12,
+  },
+  currencyBox: {
+    width: isSmall ? 44 : 56,
     backgroundColor: "#EDF2F7",
     borderRadius: 6,
     alignItems: "center",
-    paddingLeft: isSmall ? 8 : 12,
-    marginBottom: 8,
+    justifyContent: "center",
   },
   currency: {
-    fontSize: isSmall ? 11 : 13,
-    color: "#718096",
-    marginRight: 4,
-    fontFamily: "DMSans_400Regular",
+    fontSize: isSmall ? 13 : 15,
+    color: "#4A5568",
+    fontFamily: "DMSans_500Medium",
   },
   priceInput: {
     flex: 1,
-    paddingVertical: isSmall ? 8 : 12,
-    paddingLeft: 0,
-    paddingRight: 10,
-    fontSize: isSmall ? 11 : 13,
+    backgroundColor: "#EDF2F7",
+    borderRadius: 6,
+    paddingVertical: isSmall ? 10 : 14,
+    paddingHorizontal: isSmall ? 12 : 14,
+    fontSize: isSmall ? 12 : 14,
     color: "#2D3748",
     fontFamily: "DMSans_400Regular",
   },
   priceOptionsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: isSmall ? 5 : 8,
+    justifyContent: "space-between",
+    rowGap: isSmall ? 8 : 12,
   },
   priceChip: {
+    width: "31.5%",
     backgroundColor: "#EDF2F7",
-    borderRadius: 4,
-    paddingHorizontal: isSmall ? 8 : 14,
-    paddingVertical: isSmall ? 4 : 6,
+    borderRadius: 6,
+    paddingVertical: isSmall ? 10 : 14,
+    alignItems: "center",
+    justifyContent: "center",
   },
   priceChipText: {
-    fontSize: isSmall ? 10 : 12,
-    color: "#1155CC",
+    fontSize: isSmall ? 11 : 13,
+    color: "#4A5568",
     fontFamily: "DMSans_500Medium",
   },
 
@@ -985,41 +1159,6 @@ const styles = StyleSheet.create({
   },
 
   // Summary
-  summaryImageContainer: {
-    alignItems: "center",
-    marginBottom: isSmall ? 10 : 14,
-  },
-  summaryImage: {
-    width: isSmall ? 80 : 100,
-    height: isSmall ? 80 : 100,
-    borderRadius: 10,
-  },
-  summaryHeader: {
-    fontSize: isSmall ? 10 : 11,
-    color: "#2D3748",
-    marginBottom: 8,
-    letterSpacing: 0.5,
-    fontFamily: "DMSans_700Bold",
-  },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  summaryLabel: {
-    fontSize: isSmall ? 11 : 12,
-    color: "#718096",
-    flex: 1,
-    fontFamily: "DMSans_400Regular",
-  },
-  summaryValue: {
-    fontSize: isSmall ? 11 : 12,
-    color: "#2D3748",
-    flex: 1,
-    textAlign: "right",
-    fontFamily: "DMSans_500Medium",
-  },
   confirmBtn: {
     flexDirection: "row",
     alignItems: "center",

@@ -12,6 +12,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { formatCurrency } from "@/utils/formatters";
 import { styles } from "./components/Cart.styles";
 
 // Manual dashed separator: RN's `borderStyle: "dashed"` renders solid on iOS
@@ -256,7 +257,7 @@ const Cart: React.FC = () => {
 
           <View style={styles.priceQuantityRow}>
             <Text style={styles.productPrice}>
-              ₦{(item.product.sellingPrice ?? 0).toLocaleString()}
+              {formatCurrency(item.product.sellingPrice ?? 0)}
             </Text>
           </View>
 
@@ -349,7 +350,7 @@ const Cart: React.FC = () => {
             <View style={styles.totalContainer}>
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalAmount}>
-                ₦{(calculateTotal() ?? 0).toLocaleString()}
+                {formatCurrency(calculateTotal() ?? 0)}
               </Text>
             </View>
 

@@ -17,6 +17,7 @@ import {
 } from "react-native";
 
 import { getSale } from "@/src/api";
+import { formatNumber } from "@/utils/formatters";
 
 const { width, height } = Dimensions.get("window");
 
@@ -79,8 +80,7 @@ const formatSaleMeta = (dateString: string): string => {
   }
 };
 
-const formatCurrency = (amount: number) =>
-  `₦${(amount || 0).toLocaleString()}`;
+const formatCurrency = (amount: number) => `₦${formatNumber(amount)}`;
 
 const mapItems = (rawItems: any[], fallback: SaleLineItem[]): SaleLineItem[] => {
   if (Array.isArray(rawItems) && rawItems.length > 0) {

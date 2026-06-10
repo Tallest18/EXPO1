@@ -1,11 +1,6 @@
-import { Alert, PermissionsAndroid, Platform } from "react-native";
-import {
-  Asset,
-  ImagePickerResponse,
-  launchCamera,
-  launchImageLibrary,
-  MediaType,
-} from "react-native-image-picker";
+import * as ImagePicker from "expo-image-picker";
+import { useState } from "react";
+import { Alert } from "react-native";
 
 export interface PickedImage {
   uri: string;
@@ -13,57 +8,63 @@ export interface PickedImage {
   fileName?: string;
 }
 
+// Raw image handed off to the in-app cropper before it becomes a PickedImage.
+export interface RawImage {
+  uri: string;
+  width: number;
+  height: number;
+  fileName?: string;
+}
+
 export function useImagePicker(onImagePicked: (image: PickedImage) => void) {
+  // Image waiting to be cropped. When set, the caller should render the cropper.
+  const [pendingImage, setPendingImage] = useState<RawImage | null>(null);
+
+  const handleAsset = (asset: ImagePicker.ImagePickerAsset | undefined) => {
+    if (!asset?.uri) return;
+    setPendingImage({
+      uri: asset.uri,
+      width: asset.width,
+      height: asset.height,
+      fileName:
+        asset.fileName ??
+        asset.uri.split("/").pop() ??
+        `product-${Date.now()}.jpg`,
+    });
+  };
+
   const pickImage = async (useCamera: boolean) => {
-    if (useCamera && Platform.OS === "android") {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.CAMERA,
-        {
-          title: "Camera Permission",
-          message: "The app needs camera access to take pictures.",
-          buttonNeutral: "Ask Me Later",
-          buttonNegative: "Cancel",
-          buttonPositive: "OK",
-        },
-      );
-      if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-        Alert.alert(
-          "Permission Denied",
-          "You need to grant camera permission to use this feature.",
-        );
-        return;
-      }
-    }
-
-    const options = { mediaType: "photo" as MediaType, includeBase64: false };
-
     try {
-      let response: ImagePickerResponse;
       if (useCamera) {
-        response = await launchCamera(options);
-      } else {
-        response = await launchImageLibrary(options);
-      }
-
-      if (response.didCancel) return;
-
-      if (response.errorCode) {
-        Alert.alert(
-          "Error",
-          response.errorMessage || "An unknown error occurred.",
-        );
-        return;
-      }
-
-      if (response.assets && response.assets.length > 0) {
-        const asset: Asset = response.assets[0];
-        if (asset.uri) {
-          onImagePicked({
-            uri: asset.uri,
-            type: asset.type,
-            fileName: asset.fileName,
-          });
+        const { granted } = await ImagePicker.requestCameraPermissionsAsync();
+        if (!granted) {
+          Alert.alert(
+            "Permission Denied",
+            "You need to grant camera permission to take a picture.",
+          );
+          return;
         }
+        // No allowsEditing: we crop in-app for a consistent experience.
+        const result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ["images"],
+          quality: 1,
+        });
+        if (!result.canceled) handleAsset(result.assets?.[0]);
+      } else {
+        const { granted } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!granted) {
+          Alert.alert(
+            "Permission Denied",
+            "You need to grant photo library permission to select an image.",
+          );
+          return;
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
+          quality: 1,
+        });
+        if (!result.canceled) handleAsset(result.assets?.[0]);
       }
     } catch (error) {
       console.log("Caught an unexpected error:", error);
@@ -74,5 +75,13 @@ export function useImagePicker(onImagePicked: (image: PickedImage) => void) {
     }
   };
 
-  return { pickImage };
+  // Called by the cropper once the user confirms the crop.
+  const handleCropComplete = (image: PickedImage) => {
+    onImagePicked(image);
+    setPendingImage(null);
+  };
+
+  const handleCropCancel = () => setPendingImage(null);
+
+  return { pickImage, pendingImage, handleCropComplete, handleCropCancel };
 }

@@ -14,6 +14,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { formatCurrency, formatNumber } from "@/utils/formatters";
 import { styles } from "./Checkout.styles";
 
 import { apiClient } from "@/src/api";
@@ -279,7 +280,7 @@ const Checkout: React.FC = () => {
       await saleMutation.mutateAsync(payload);
       setProcessing(false);
       showAppToast(
-        `Checkout successful: ₦${calculateTotal().toLocaleString()} via ${selectedPayment}`,
+        `Checkout successful: ${formatCurrency(calculateTotal())} via ${selectedPayment}`,
         "success",
       );
       setTimeout(() => {
@@ -485,7 +486,7 @@ const Checkout: React.FC = () => {
                       onPress={() => setAmountOwed(amount.toString())}
                     >
                       <Text style={styles.quickAmountText}>
-                        ₦{amount.toLocaleString()}
+                        ₦{formatNumber(amount)}
                       </Text>
                     </TouchableOpacity>
                   ))}

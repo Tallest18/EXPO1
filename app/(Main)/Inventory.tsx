@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { formatCurrency } from "@/utils/formatters";
 import AddProductFlow from "../(Routes)/AddProductFlow";
 import { styles } from "../../src/styles/Inventory.styles";
 
@@ -256,7 +257,7 @@ const Inventory: React.FC = () => {
                   numberOfLines={1}
                   adjustsFontSizeToFit
                 >
-                  ₦{(product.sellingPrice ?? 0).toLocaleString()}
+                  {formatCurrency(product.sellingPrice ?? 0)}
                 </Text>
               </View>
 
@@ -274,7 +275,7 @@ const Inventory: React.FC = () => {
                     numberOfLines={1}
                     adjustsFontSizeToFit
                   >
-                    ₦{(product?.profitPerUnit ?? 0).toLocaleString()}
+                    {formatCurrency(product?.profitPerUnit ?? 0)}
                   </Text>
                 </View>
               </View>
@@ -356,14 +357,6 @@ const Inventory: React.FC = () => {
         <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>
           Inventory
         </Text>
-        <TouchableOpacity
-          style={styles.newProductButton}
-          onPress={() => setShowAddProduct(true)}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.newProductButtonText}>New Product</Text>
-          <Feather name="plus" size={moderateScale(16)} color="white" />
-        </TouchableOpacity>
       </View>
 
       {/* Search Bar */}
@@ -403,6 +396,15 @@ const Inventory: React.FC = () => {
         </View>
         <View style={styles.bottomPadding} />
       </ScrollView>
+
+      {/* Floating Add Product Button */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => setShowAddProduct(true)}
+        activeOpacity={0.85}
+      >
+        <Feather name="plus" size={moderateScale(28)} color="white" />
+      </TouchableOpacity>
 
       <AddProductFlow
         visible={showAddProduct}

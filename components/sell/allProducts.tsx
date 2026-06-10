@@ -1,5 +1,6 @@
 import { Product } from "@/app/(Main)/Sell";
 import { styles } from "@/src/styles/Sell.styles";
+import { formatCurrency } from "@/utils/formatters";
 import Feather from "@expo/vector-icons/Feather";
 import React from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
@@ -64,7 +65,7 @@ const AllProducts: React.FC<AllProductsProps> = ({
                 numberOfLines={1}
                 adjustsFontSizeToFit
               >
-                ₦{(product.sellingPrice ?? 0).toLocaleString()}
+                {formatCurrency(product.sellingPrice ?? 0)}
               </Text>
             )}
 

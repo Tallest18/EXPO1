@@ -9,6 +9,7 @@ interface StatCardsProps {
   profit: number;
   transactions: number;
   stockLeft: number;
+  dailyPercentageIncrease: number;
 }
 
 const StatCards: React.FC<StatCardsProps> = ({
@@ -16,7 +17,14 @@ const StatCards: React.FC<StatCardsProps> = ({
   profit,
   transactions,
   stockLeft,
+  dailyPercentageIncrease,
 }) => {
+  const pct = Number(dailyPercentageIncrease) || 0;
+  const isNegative = pct < 0;
+  // Show the magnitude only (no minus sign); colour flips green -> red.
+  const pctMagnitude = Math.round(Math.abs(pct) * 10) / 10;
+  const pctText = `${isNegative ? "" : "+"}${pctMagnitude}%`;
+
   return (
     <>
       {/* Today Sales Box with Gradient */}
@@ -27,8 +35,18 @@ const StatCards: React.FC<StatCardsProps> = ({
         style={styles.salesBox}
       >
         <View style={styles.salesTop}>
-          <Text style={styles.salesLabel}>Today Sales</Text>
-          <Text style={styles.salesRate}>+6.5%</Text>
+          <Text style={styles.salesLabel}>Today's Sales</Text>
+          <Text
+            style={[
+              styles.salesRate,
+              isNegative && {
+                backgroundColor: "#FEE2E2",
+                color: "#EF4444",
+              },
+            ]}
+          >
+            {pctText}
+          </Text>
         </View>
         <Text style={styles.salesAmount} numberOfLines={1} adjustsFontSizeToFit>
           {formatCurrency(todaySales)}
