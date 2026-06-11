@@ -1,0 +1,20 @@
+Resolved "production" environment for the build. Learn more: https://docs.expo.dev/eas/environment-variables/#setting-the-environment-for-your-builds
+No environment variables with visibility "Plain text" and "Sensitive" found for the "production" environment on EAS.
+Environment variables loaded from the "preview" build profile "env" configuration: EXPO_NO_FABRIC, IS_NEW_ARCHITECTURE_ENABLED, REACT_NATIVE_FABRIC_ENABLED.
+
+
+
+✔ Using remote Android credentials (Expo server)
+✔ Using Keystore from configuration: Build Credentials UpbYMAIGTW (default)
+
+Compressing project files and uploading to EAS Build. Learn more: https://expo.fyi/eas-build-archive
+- Compressing project files
+- Uploading to EAS Build (0 / 4.9 MB)
+✔ Uploaded to EAS 10s
+- Computing project fingerprint
+✔ Computed project fingerprint
+
+See logs: https://expo.dev/accounts/cyberiah/projects/EXPO1/builds/193009c6-275a-48f1-b6bb-cd422e829cfb
+
+Waiting for build to complete. You can press Ctrl+C to exit.
+- Waiting for build to complete.

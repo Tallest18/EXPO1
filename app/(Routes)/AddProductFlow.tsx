@@ -142,7 +142,7 @@ const AddProductFlow: React.FC<AddProductFlowProps> = ({
             ? "Restock Product"
             : isEditMode
               ? "Edit Product"
-              : "Add Product"
+              : "New Product"
         }
         initialStep={startStep}
       />

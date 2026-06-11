@@ -7,7 +7,6 @@ import {
     Dimensions,
     Modal,
     SafeAreaView,
-    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -53,6 +52,11 @@ const ProductFormModal: React.FC<Props> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const [currentStep, setCurrentStep] = useState(0);
+  // Bumped once the modal finishes its open animation so the step's ScrollView
+  // remounts and measures against the settled modal height. Without this the
+  // ScrollView is measured mid-slide, caches "content fits", and won't scroll
+  // until a later relayout (e.g. the keyboard opening) forces a remeasure.
+  const [layoutKey, setLayoutKey] = useState(0);
   const [imageUploading] = useState(false);
   const { categories, loadingCategories } = useProductsData();
   const availableCategories = (
@@ -117,11 +121,7 @@ const ProductFormModal: React.FC<Props> = ({
 
   const renderProgressBar = () => (
     <View style={styles.progressBarWrapper}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.progressContainer}
-      >
+      <View style={styles.progressContainer}>
         {STEPS.map((step, index) => (
           <View key={index} style={styles.stepItem}>
             <Text
@@ -132,6 +132,7 @@ const ProductFormModal: React.FC<Props> = ({
                   : styles.stepTextInactive,
               ]}
               numberOfLines={1}
+              adjustsFontSizeToFit
             >
               {step}
             </Text>
@@ -145,7 +146,7 @@ const ProductFormModal: React.FC<Props> = ({
             />
           </View>
         ))}
-      </ScrollView>
+      </View>
     </View>
   );
 
@@ -155,6 +156,7 @@ const ProductFormModal: React.FC<Props> = ({
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
+      onShow={() => setLayoutKey((k) => k + 1)}
     >
       <SafeAreaView
         style={[styles.container, { paddingBottom: insets.bottom }]}
@@ -170,6 +172,7 @@ const ProductFormModal: React.FC<Props> = ({
 
         {currentStep === 0 && (
           <ProductInfoStep
+            key={`info-${layoutKey}`}
             formData={formData}
             updateFormData={updateFormData}
             availableCategories={availableCategories}
@@ -293,21 +296,18 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: isSmall ? 6 : 10,
-    minWidth: "100%",
   },
   stepItem: {
-    alignItems: "center",
-    minWidth: 100, // Ensures enough width for long text
-    marginRight: isSmall ? 6 : 10,
+    flex: 1,
+    alignItems: "flex-start",
   },
   stepText: {
     fontSize: isSmall ? 9 : 12,
     fontFamily: "DMSans_500Medium",
     marginBottom: 5,
-    minWidth: 80,
-    textAlign: "center",
+    textAlign: "left",
   },
   stepTextActive: { color: "#1155CC" },
   stepTextInactive: { color: "#A0AEC0" },

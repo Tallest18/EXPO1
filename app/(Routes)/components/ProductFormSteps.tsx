@@ -264,40 +264,42 @@ export const ProductInfoStep: React.FC<ProductInfoStepProps> = ({
           ) : (
             /* ── Empty upload state ── */
             <View style={styles.imageUploadBox}>
-              {/* Mountain / image icon */}
-              <View style={styles.imageIconCircle}>
-                <Ionicons name="image" size={40} color="#1155CC" />
-              </View>
+              {/* Image icon */}
+              <Ionicons
+                name="image-outline"
+                size={40}
+                color="#1155CC"
+                style={styles.imageIcon}
+              />
 
               <Text style={styles.imageUploadTitle}>
-                Take a photo or choose from your gallery.{"\n"}You can crop it
-                before saving.
+                Click to take a picture, or select{"\n"}from gallery
               </Text>
 
-              {/* Take Photo + Gallery buttons */}
-              <View style={styles.imageActionsRow}>
-                <TouchableOpacity
-                  style={styles.takePhotoBtn}
-                  onPress={() => onPickImage(true)}
-                  disabled={imageUploading}
-                >
-                  <Ionicons name="camera-outline" size={18} color="#FFFFFF" />
-                  <Text style={styles.takePhotoBtnText}>Take Photo</Text>
-                </TouchableOpacity>
+              {/* Take Picture — single outlined button */}
+              <TouchableOpacity
+                style={styles.takePictureBtn}
+                onPress={() => onPickImage(true)}
+                disabled={imageUploading}
+              >
+                <Text style={styles.takePictureBtnText}>Take Picture</Text>
+              </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.galleryBtn}
-                  onPress={() => onPickImage(false)}
-                  disabled={imageUploading}
-                >
-                  <Ionicons name="images-outline" size={18} color="#1155CC" />
-                  <Text style={styles.galleryBtnText}>Gallery</Text>
-                </TouchableOpacity>
-              </View>
+              {/* Select from gallery — text link */}
+              <TouchableOpacity
+                onPress={() => onPickImage(false)}
+                disabled={imageUploading}
+                hitSlop={8}
+              >
+                <Text style={styles.galleryLinkText}>Select from gallery</Text>
+              </TouchableOpacity>
 
               {/* File info */}
               <Text style={styles.imageUploadInfo}>
-                Files Supported: PNG, JPG, SVG.{"\n"}Maximum Size 1MB
+                Files Supported:{" "}
+                <Text style={styles.imageUploadInfoBold}>PNG, JPG, SVG</Text>.
+                {"\n"}Maximum Size{" "}
+                <Text style={styles.imageUploadInfoBold}>1MB</Text>
               </Text>
 
               {imageUploading && (
@@ -927,57 +929,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: isSmall ? 12 : 16,
     alignItems: "center",
   },
-  imageIconCircle: {
-    marginBottom: isSmall ? 8 : 10,
+  imageIcon: {
+    marginBottom: isSmall ? 8 : 12,
   },
   imageUploadTitle: {
-    fontSize: isSmall ? 11 : 13,
-    color: "#4A5568",
-    marginBottom: isSmall ? 12 : 16,
-    textAlign: "center",
-    lineHeight: 20,
-    fontFamily: "DMSans_500Medium",
-  },
-  // "Take Photo" — filled primary button
-  takePhotoBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: "#1155CC",
-    borderRadius: 8,
-    paddingVertical: isSmall ? 9 : 11,
-  },
-  takePhotoBtnText: {
     fontSize: isSmall ? 12 : 14,
-    color: "#FFFFFF",
-    fontFamily: "DMSans_500Medium",
+    color: "#94A3B8",
+    marginBottom: isSmall ? 14 : 18,
+    textAlign: "center",
+    lineHeight: 22,
+    fontFamily: "DMSans_400Regular",
   },
-  // "Gallery" — outlined secondary button
-  galleryBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
+  // "Take Picture" — single outlined button, centered
+  takePictureBtn: {
+    alignSelf: "center",
+    backgroundColor: "#FFF",
     borderWidth: 1,
     borderColor: "#1155CC",
     borderRadius: 8,
-    paddingVertical: isSmall ? 9 : 11,
+    paddingVertical: isSmall ? 10 : 12,
+    paddingHorizontal: isSmall ? 32 : 48,
+    marginBottom: isSmall ? 12 : 16,
   },
-  galleryBtnText: {
+  takePictureBtnText: {
+    fontSize: isSmall ? 13 : 15,
+    color: "#1155CC",
+    fontFamily: "DMSans_500Medium",
+    textAlign: "center",
+  },
+  // "Select from gallery" — underlined text link
+  galleryLinkText: {
     fontSize: isSmall ? 12 : 14,
     color: "#1155CC",
     fontFamily: "DMSans_500Medium",
+    textDecorationLine: "underline",
+    marginBottom: isSmall ? 14 : 18,
   },
   imageUploadInfo: {
     fontSize: isSmall ? 9 : 11,
-    color: "#718096",
+    color: "#94A3B8",
     textAlign: "center",
     fontFamily: "DMSans_400Regular",
     lineHeight: 16,
     marginBottom: isSmall ? 6 : 8,
+  },
+  imageUploadInfoBold: {
+    color: "#4A5568",
+    fontFamily: "DMSans_600SemiBold",
   },
   orSeparator: {
     fontSize: isSmall ? 10 : 12,
